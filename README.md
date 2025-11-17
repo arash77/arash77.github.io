@@ -68,11 +68,12 @@ Welcome to my personal website! I am a **Software Engineer** with expertise in P
 
 ## Projects
 
-### **FastAPI Backend for Galaxy Project**
-- Enhanced data validation with Pydantic V2 and improved API endpoints.
+📂 **[View My Complete Project Portfolio & Contributions →](content/projects/)**
 
-### **IoT-based Environmental Monitoring System**
-- Designed a system to monitor and control environmental conditions using sensors and IoT protocols.
+Explore my repositories and open-source contributions across:
+- **Galaxy Project** (scientific workflows, bioinformatics)
+- **Python Backend & Automation** (FastAPI, bots, APIs)
+- **DevOps & Infrastructure** (Ansible, Docker, CI/CD, Monitoring)
 
 ---
 
