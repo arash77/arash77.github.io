@@ -1,0 +1,31 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* Simple improvements */
+.main-content h2 {
+  color: #155799;
+  border-bottom: 2px solid #159957;
+  padding-bottom: 0.3em;
+}
+
+.main-content h3 {
+  color: #159957;
+}
+
+/* Back to home link */
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  color: #155799;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: #159957;
+}
+
+.back-link:before {
+  content: "← ";
+}

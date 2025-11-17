@@ -3,6 +3,8 @@ title: "Projects & Contributions"
 description: "A curated list of my technical work, open-source contributions, and PRs across GitHub"
 ---
 
+<a href="/" class="back-link">Back to Home</a>
+
 # Projects & Open-Source Contributions
 
 ## Bioinformatics & Scientific Computing
