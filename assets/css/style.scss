@@ -3,6 +3,20 @@
 
 @import "{{ site.theme }}";
 
+/* Profile avatar */
+.page-header::before {
+  content: "";
+  display: block;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 2rem;
+  background-image: url('https://github.com/arash77.png');
+  background-size: cover;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
 /* Simple improvements */
 .main-content h2 {
   color: #155799;
