@@ -27,7 +27,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Install dependencies
-        run: uv pip install PyGithub openai
+        run: uv pip install --system PyGithub openai
       
       - name: Fetch recent contributions
         env:
