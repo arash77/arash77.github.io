@@ -2,6 +2,8 @@
 
 Welcome to my personal website! I am a **Software Engineer** with expertise in Python, backend development, and a strong background in Mechatronics and embedded systems.
 
+📄 **[Download My Resume (PDF)](assets/resume.pdf)**
+
 ---
 
 ## About Me
