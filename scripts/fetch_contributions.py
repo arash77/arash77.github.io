@@ -53,7 +53,7 @@ Write ONLY the description text, no additional formatting or labels. Make it sou
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-5",
                 messages=[
                     {
                         "role": "system",
