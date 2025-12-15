@@ -11,7 +11,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from github import Github
+from github import Auth, Github
 from openai import OpenAI
 
 
@@ -75,7 +75,7 @@ Write ONLY the description text, no additional formatting or labels. Make it sou
 class ContributionsFetcher:
     def __init__(self, username: str, token: str):
         self.username = username
-        self.github = Github(token)
+        self.github = Github(auth=Auth.Token(token))
         self.ai_client = GitHubModelsClient(token)
 
     def fetch_recent_prs(self, days: int = 30) -> List[Dict]:
