@@ -51,6 +51,9 @@ Community-driven social media automation for the Galaxy Project ecosystem.
 
 ## Notable Open-Source Contributions
 
+### Other Open-Source Projects
+- **[ERGA-consortium/EARs](https://github.com/ERGA-consortium/EARs)** - The contributor refactored the PR activity checks and label management system within the EARBotReviewer module. They implemented a method to assess pull request activity and dynamically manage labels, enhancing the tracking and notification processes for stalled or inactive PRs. This improvement ensures more efficient and automated handling of pull request statuses. ([PRs](https://github.com/ERGA-consortium/EARs/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
+
 ### Galaxy Project Core
 - **[galaxyproject/galaxy](https://github.com/galaxyproject/galaxy)** - Core Galaxy platform contributions ([PRs](https://github.com/galaxyproject/galaxy/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 - **[bgruening/galaxytools](https://github.com/bgruening/galaxytools)** - Galaxy tool wrappers and utilities ([PRs](https://github.com/bgruening/galaxytools/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
@@ -59,6 +62,7 @@ Community-driven social media automation for the Galaxy Project ecosystem.
 - **[galaxyproject/tools-iuc](https://github.com/galaxyproject/tools-iuc)** - Tool updates (Tesseract 5.5.1) ([PRs](https://github.com/galaxyproject/tools-iuc/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 - **[galaxyproject/planemo](https://github.com/galaxyproject/planemo)** - Bug fixes for URL error handling ([PRs](https://github.com/galaxyproject/planemo/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 - **[bgruening/docker-galaxy](https://github.com/bgruening/docker-galaxy)** - Documentation deployment and GitHub Actions ([PRs](https://github.com/bgruening/docker-galaxy/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
+- **[galaxyproject/galaxy-mcp](https://github.com/galaxyproject/galaxy-mcp)** - The contributor added a `server.json` configuration file and updated project documentation to prepare the repository for integration with the MCP Registry. Their work ensures compatibility with the registry's standards, enabling streamlined publication and broader accessibility within the Model Context Protocol ecosystem. ([PRs](https://github.com/galaxyproject/galaxy-mcp/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 
 ### Galaxy Training & Community
 - **Galaxy Training Materials** - Enhanced XML feeds, external links, and GitHub Actions updates ([PRs](https://github.com/galaxyproject/training-material/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
@@ -68,6 +72,7 @@ Community-driven social media automation for the Galaxy Project ecosystem.
 - **Infrastructure Playbook** - AI/ML tool integrations: ChatGPT, WhisperX, FLUX, LLM Hub with monitoring and TPV workflows ([PRs](https://github.com/usegalaxy-eu/infrastructure-playbook/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 - **UseGalaxy.eu Tools** - Tool installations, retry logic, and lock file management ([PRs](https://github.com/usegalaxy-eu/usegalaxy-eu-tools/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 - **VGCN Infrastructure** - GitHub Actions for resource conflict detection ([PRs](https://github.com/usegalaxy-eu/vgcn-infrastructure/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
+- **[usegalaxy-eu/website](https://github.com/usegalaxy-eu/website)** - The contributor focused on maintaining and upgrading the technical infrastructure of the usegalaxy-eu/website repository. They updated Ruby dependencies, upgraded the Ruby version in the environment configuration to 3.4 for compatibility with newer features, and enhanced CI workflows by improving permissions, updating GitHub Actions, and resolving dependency-related errors. These contributions improve performance, security, and compatibility across the project's development environment. ([PRs](https://github.com/usegalaxy-eu/website/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 
 ### Python Libraries
 - **[PyGithub/PyGithub](https://github.com/PyGithub/PyGithub)** - Added minimize/unminimize functions for IssueComment class ([PRs](https://github.com/PyGithub/PyGithub/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
