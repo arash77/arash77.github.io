@@ -53,6 +53,7 @@ Community-driven social media automation for the Galaxy Project ecosystem.
 
 ### Other Open-Source Projects
 - **[ERGA-consortium/EARs](https://github.com/ERGA-consortium/EARs)** - The contributor refactored the PR activity checks and label management system within the EARBotReviewer module. They implemented a method to assess pull request activity and dynamically manage labels, enhancing the tracking and notification processes for stalled or inactive PRs. This improvement ensures more efficient and automated handling of pull request statuses. ([PRs](https://github.com/ERGA-consortium/EARs/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
+- **[galaxyproject/gxy.io](https://github.com/galaxyproject/gxy.io)** - Contributed 1 pull request to improve functionality and fix issues. ([PRs](https://github.com/galaxyproject/gxy.io/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 
 ### Galaxy Project Core
 - **[galaxyproject/galaxy](https://github.com/galaxyproject/galaxy)** - Core Galaxy platform contributions ([PRs](https://github.com/galaxyproject/galaxy/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
@@ -63,6 +64,7 @@ Community-driven social media automation for the Galaxy Project ecosystem.
 - **[galaxyproject/planemo](https://github.com/galaxyproject/planemo)** - Bug fixes for URL error handling ([PRs](https://github.com/galaxyproject/planemo/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 - **[bgruening/docker-galaxy](https://github.com/bgruening/docker-galaxy)** - Documentation deployment and GitHub Actions ([PRs](https://github.com/bgruening/docker-galaxy/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 - **[galaxyproject/galaxy-mcp](https://github.com/galaxyproject/galaxy-mcp)** - The contributor added a `server.json` configuration file and updated project documentation to prepare the repository for integration with the MCP Registry. Their work ensures compatibility with the registry's standards, enabling streamlined publication and broader accessibility within the Model Context Protocol ecosystem. ([PRs](https://github.com/galaxyproject/galaxy-mcp/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
+- **[galaxyproject/planemo-ci-action](https://github.com/galaxyproject/planemo-ci-action)** - Contributed 1 pull request to improve functionality and fix issues. ([PRs](https://github.com/galaxyproject/planemo-ci-action/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 
 ### Galaxy Training & Community
 - **Galaxy Training Materials** - Enhanced XML feeds, external links, and GitHub Actions updates ([PRs](https://github.com/galaxyproject/training-material/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
