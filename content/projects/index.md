@@ -54,6 +54,7 @@ Community-driven social media automation for the Galaxy Project ecosystem.
 ### Other Open-Source Projects
 - **[ERGA-consortium/EARs](https://github.com/ERGA-consortium/EARs)** - The contributor refactored the PR activity checks and label management system within the EARBotReviewer module. They implemented a method to assess pull request activity and dynamically manage labels, enhancing the tracking and notification processes for stalled or inactive PRs. This improvement ensures more efficient and automated handling of pull request statuses. ([PRs](https://github.com/ERGA-consortium/EARs/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 - **[galaxyproject/gxy.io](https://github.com/galaxyproject/gxy.io)** - Contributed 1 pull request to improve functionality and fix issues. ([PRs](https://github.com/galaxyproject/gxy.io/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
+- **[galaxyproject/ephemeris](https://github.com/galaxyproject/ephemeris)** - Contributed 1 pull request to improve functionality and fix issues. ([PRs](https://github.com/galaxyproject/ephemeris/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
 
 ### Galaxy Project Core
 - **[galaxyproject/galaxy](https://github.com/galaxyproject/galaxy)** - Core Galaxy platform contributions ([PRs](https://github.com/galaxyproject/galaxy/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged))
