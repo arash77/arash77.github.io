@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 Fetch recent GitHub contributions and update the projects page.
-Uses GitHub Models AI to create comprehensive project descriptions based on PR activity.
+Uses Gemini AI to create comprehensive project descriptions based on PR activity.
 Integrates new contributions into existing categories.
 """
 
 import json
 import os
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -15,12 +16,20 @@ from github import Auth, Github
 from openai import OpenAI
 
 
-class GitHubModelsClient:
-    """Client for GitHub Models AI API."""
+GEMINI_MODELS = [
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+]
+
+
+class GeminiClient:
+    """Client for Gemini AI API with model cascade fallback."""
 
     def __init__(self, token: str):
         self.client = OpenAI(
-            base_url="https://models.github.ai/inference",
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             api_key=token,
         )
 
@@ -29,7 +38,6 @@ class GitHubModelsClient:
     ) -> Optional[str]:
         """Generate a comprehensive project description based on PRs."""
 
-        # Prepare PR details for AI
         pr_details = []
         for pr in prs[:15]:  # Limit to most recent 15
             pr_details.append(
@@ -51,32 +59,38 @@ Pull Requests:
 
 Write ONLY the description text, no additional formatting or labels. Make it sound professional and technical."""
 
-        try:
-            response = self.client.chat.completions.create(
-                model="gpt-5",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a technical writer creating concise project descriptions based on GitHub contributions. Write in third person, focusing on technical impact.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.7,
-                max_tokens=200,
-            )
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a technical writer creating concise project descriptions based on GitHub contributions. Write in third person, focusing on technical impact.",
+            },
+            {"role": "user", "content": prompt},
+        ]
 
-            return response.choices[0].message.content.strip()
+        for model in GEMINI_MODELS:
+            try:
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=1000,
+                )
+                content = response.choices[0].message.content
+                if content:
+                    print(f"  Used {model}")
+                    return content.strip()
+            except Exception as e:
+                print(f"  {model} failed: {e}")
 
-        except Exception as e:
-            print(f"Warning: AI description generation failed for {repo_name}: {e}")
-            return None
+        return None
 
 
 class ContributionsFetcher:
     def __init__(self, username: str, token: str):
         self.username = username
         self.github = Github(auth=Auth.Token(token))
-        self.ai_client = GitHubModelsClient(token)
+        gemini_token = os.environ.get("GEMINI_TOKEN", "")
+        self.ai_client = GeminiClient(gemini_token) if gemini_token else None
 
     def fetch_recent_prs(self, days: int = 30) -> List[Dict]:
         """Fetch recently merged PRs from the past N days."""
@@ -89,7 +103,6 @@ class ContributionsFetcher:
             for issue in issues[:100]:
                 prs.append(
                     {
-                        "html_url": issue.html_url,
                         "title": issue.title,
                         "body": issue.body,
                         "repository_url": issue.repository.url,
@@ -116,6 +129,14 @@ class ContributionsFetcher:
             if repo_full_name.startswith(f"{self.username}/"):
                 continue
 
+            # Skip private repositories
+            try:
+                if self.github.get_repo(repo_full_name).private:
+                    print(f"  Skipping private repo: {repo_full_name}")
+                    continue
+            except Exception:
+                continue
+
             grouped[repo_full_name].append(pr)
 
         return dict(grouped)
@@ -136,15 +157,15 @@ class ContributionsFetcher:
                 "bgruening/docker-galaxy",
             ]
         ):
-            return "Galaxy Project Core"
+            return "Galaxy Core"
         elif any(x in repo_lower for x in ["training-material", "galaxyecology"]):
-            return "Galaxy Training & Community"
+            return "Galaxy Training"
         elif any(x in repo_lower for x in ["usegalaxy-eu/", "vgcn"]):
-            return "UseGalaxy.eu Infrastructure"
+            return "UseGalaxy.eu"
         elif "research-software-ecosystem" in repo_lower:
-            return "Research Software Ecosystem"
+            return "Bioinformatics"
         else:
-            return "Other Open-Source Projects"
+            return "Other"
 
     def generate_project_entries(
         self, prs_by_repo: Dict[str, List[Dict]]
@@ -161,7 +182,11 @@ class ContributionsFetcher:
             print(f"Generating description for {repo}...")
 
             # Generate AI description
-            description = self.ai_client.generate_project_description(repo, prs)
+            description = (
+                self.ai_client.generate_project_description(repo, prs)
+                if self.ai_client
+                else None
+            )
 
             # Fallback description if AI fails
             if not description:
@@ -186,14 +211,6 @@ class ContributionsFetcher:
         return dict(categorized)
 
 
-CATEGORY_MAP = {
-    "Galaxy Project Core": "Galaxy Core",
-    "Galaxy Training & Community": "Galaxy Training",
-    "UseGalaxy.eu Infrastructure": "UseGalaxy.eu",
-    "Research Software Ecosystem": "Bioinformatics",
-    "Other Open-Source Projects": "Bioinformatics",
-}
-
 VALID_CATEGORIES = [
     "Bioinformatics",
     "Python Projects",
@@ -202,13 +219,12 @@ VALID_CATEGORIES = [
     "UseGalaxy.eu",
     "Python Libraries",
     "Crypto",
+    "Other",
 ]
 
 
 def _slug(text: str) -> str:
     """Convert text to a filename-safe slug."""
-    import re
-
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
@@ -221,23 +237,20 @@ def update_projects_file(
     Each project becomes/updates a JSON file under src/content/projects/.
     This replaces the legacy Markdown update approach.
     """
-    import json as _json
-    import os as _os
-
     if not categorized_entries:
         print("No new contributions to add")
         return
 
-    _os.makedirs(content_dir, exist_ok=True)
+    os.makedirs(content_dir, exist_ok=True)
 
     # Load existing files to check for duplicates
     existing_repos: set = set()
-    for fname in _os.listdir(content_dir):
+    for fname in os.listdir(content_dir):
         if fname.endswith(".json"):
-            fpath = _os.path.join(content_dir, fname)
+            fpath = os.path.join(content_dir, fname)
             try:
                 with open(fpath, "r", encoding="utf-8") as f:
-                    data = _json.load(f)
+                    data = json.load(f)
                     for link in data.get("links", []):
                         url = link.get("url", "")
                         if "github.com/" in url:
@@ -251,9 +264,9 @@ def update_projects_file(
     modified = False
 
     for raw_category, entries in categorized_entries.items():
-        category = CATEGORY_MAP.get(raw_category, "Bioinformatics")
+        category = raw_category
         if category not in VALID_CATEGORIES:
-            category = "Bioinformatics"
+            category = "Other"
 
         for entry in entries:
             repo_name = entry["repo"]
@@ -266,10 +279,10 @@ def update_projects_file(
 
             slug = _slug(f"{repo_short}")
             # Avoid collisions by appending org prefix if slug exists
-            fpath = _os.path.join(content_dir, f"{slug}.json")
-            if _os.path.exists(fpath):
+            fpath = os.path.join(content_dir, f"{slug}.json")
+            if os.path.exists(fpath):
                 slug = _slug(repo_name.replace("/", "-"))
-                fpath = _os.path.join(content_dir, f"{slug}.json")
+                fpath = os.path.join(content_dir, f"{slug}.json")
 
             pr_url = entry["pr_url"]
             description = entry["description"]
@@ -288,7 +301,7 @@ def update_projects_file(
             }
 
             with open(fpath, "w", encoding="utf-8") as f:
-                _json.dump(project_data, f, indent=2, ensure_ascii=False)
+                json.dump(project_data, f, indent=2, ensure_ascii=False)
                 f.write("\n")
 
             existing_repos.add(repo_name)
@@ -306,7 +319,7 @@ def main():
     token = os.environ.get("GITHUB_TOKEN")
 
     if not token:
-        print("Error: GITHUB_TOKEN environment variable not set")
+        print("Error: GITHUB_TOKEN is not set")
         return
 
     print(f"Fetching contributions for {username}...")
