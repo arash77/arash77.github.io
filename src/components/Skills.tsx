@@ -9,7 +9,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 interface SkillCategory {
   title: string;
-  color: 'default' | 'secondary' | 'muted';
+  color: 'default' | 'secondary' | 'outline';
   skills: string[];
 }
 
@@ -26,12 +26,12 @@ const skillCategories: SkillCategory[] = [
   },
   {
     title: 'Databases',
-    color: 'muted',
+    color: 'outline',
     skills: ['PostgreSQL', 'MongoDB', 'SQLite', 'Redis'],
   },
   {
     title: 'Other Skills',
-    color: 'muted',
+    color: 'outline',
     skills: ['IoT & Embedded Systems', 'REST API Design', 'Image Processing', 'Ansible', 'CI/CD Pipelines', 'Bioinformatics Tooling'],
   },
 ];
