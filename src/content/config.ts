@@ -13,6 +13,7 @@ const projectsCollection = defineCollection({
       'UseGalaxy.eu',
       'Python Libraries',
       'Crypto',
+      'Other',
     ]),
     links: z.array(
       z.object({
