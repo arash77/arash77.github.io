@@ -1,98 +1,42 @@
-# Arash Kadkhodaei
+# kadkhodaei.de
 
-Welcome to my personal website! I am a **Software Engineer** with expertise in Python, backend development, and a strong background in Mechatronics and embedded systems.
+Personal portfolio website for [Arash Kadkhodaei](https://kadkhodaei.de).
 
-📄 **[Download My Resume (PDF)](assets/resume.pdf)**
+Built with **Astro 5**, **Tailwind CSS**, **shadcn/ui**, and **GSAP** animations. Hosted on **GitHub Pages**.
 
----
+## Stack
 
-## About Me
+| Layer | Tech |
+|-------|------|
+| Framework | Astro 5 (static output) |
+| Styling | Tailwind CSS v3 + shadcn/ui |
+| Animations | GSAP + ScrollTrigger |
+| React Islands | `@astrojs/react` (Navbar, Hero, sections) |
+| Content | Astro Content Collections (JSON) |
+| Hosting | GitHub Pages via Actions |
 
-- **Location**: Freiburg, Germany  
-- **Current Role**: Software Engineer at Freiburg University  
-- **Education**: Master's in Mechatronics, Deggendorf Institute of Technology  
-- **Interests**: Software development, IoT, German language learning, and movies!
+## Development
 
----
+```bash
+npm install
+npm run dev       # http://localhost:4321
+npm run build     # Static output to dist/
+npm run preview   # Preview dist/ locally
+```
 
-## Skills
+## Adding a Project
 
-### Programming Languages
-- Python
-- C/C++
-- JavaScript
+Create a JSON file in `src/content/projects/`:
 
-### Frameworks and Tools
-- FastAPI, Flask, Django
-- Docker, Kubernetes
-- GitHub Actions (CI/CD)
-- ROS (Robot Operating System)
-- Pydantic, MyPy
+```json
+{
+  "title": "My Project",
+  "description": "What it does.",
+  "category": "Python Projects",
+  "links": [{ "label": "Repository", "url": "https://github.com/..." }],
+  "tags": ["Python"],
+  "featured": false
+}
+```
 
-### Databases
-- PostgreSQL
-- MongoDB
-- SQLite
-
-### Other Skills
-- IoT and Embedded Systems
-- Image Processing
-- REST API Development
-
----
-
-## Experience
-
-### Software Engineer | Freiburg University (Apr 2024 – Present)
-- Working on the **Galaxy Project**, improving backend systems and APIs.  
-- Special focus on FastAPI, Pydantic, and data validation.
-
-### Master Thesis | Deggendorf Institute of Technology (Feb 2023 – Jan 2024)
-- Developed an **automatic fast CT scan system** using ROS and Python for Fraunhofer Application Center CT in Metrology.
-
-### Working Student | Daneshjookit & DigiSpark (Oct 2017 – Jan 2021)
-- Designed IoT and embedded systems projects, and authored technical content on IoT topics.  
-
-### Arduino Freelancer Developer (Jan 2014 – Sep 2017)
-- Created innovative projects like a heart rate monitor, GPS tracker, smart home systems, and more.
-
----
-
-## Education
-
-### Deggendorf Institute of Technology
-- **Master of Engineering in Mechatronics** (2021-2024)
-
-### University of Kashan
-- **Bachelor of Science in Mechanical Engineering** (2017-2021)
-
----
-
-## Projects
-
-📂 **[View My Complete Project Portfolio & Contributions →](content/projects/)**
-
-Explore my repositories and open-source contributions across:
-- **Galaxy Project** (scientific workflows, bioinformatics)
-- **Python Backend & Automation** (FastAPI, bots, APIs)
-- **DevOps & Infrastructure** (Ansible, Docker, CI/CD, Monitoring)
-
----
-
-## Languages
-
-- **Persian**: Native  
-- **English**: Advanced  
-- **German**: Intermediate
-
----
-
-## Contact Me
-
-- **Email**: arash77.kad@gmail.com 
-- **GitHub**: [arash77](https://github.com/arash77)  
-- **LinkedIn**: [Arash Kadkhodaei](https://linkedin.com/in/kadarash)
-
----
-
-Thanks for visiting my website!
+Valid categories: `Bioinformatics`, `Python Projects`, `Galaxy Core`, `Galaxy Training`, `UseGalaxy.eu`, `Python Libraries`, `Crypto`.

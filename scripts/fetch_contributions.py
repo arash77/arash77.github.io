@@ -94,9 +94,9 @@ class ContributionsFetcher:
                         "body": issue.body,
                         "repository_url": issue.repository.url,
                         "labels": [{"name": label.name} for label in issue.labels],
-                        "merged_at": issue.closed_at.isoformat()
-                        if issue.closed_at
-                        else None,
+                        "merged_at": (
+                            issue.closed_at.isoformat() if issue.closed_at else None
+                        ),
                     }
                 )
             return prs
@@ -186,106 +186,119 @@ class ContributionsFetcher:
         return dict(categorized)
 
 
+CATEGORY_MAP = {
+    "Galaxy Project Core": "Galaxy Core",
+    "Galaxy Training & Community": "Galaxy Training",
+    "UseGalaxy.eu Infrastructure": "UseGalaxy.eu",
+    "Research Software Ecosystem": "Bioinformatics",
+    "Other Open-Source Projects": "Bioinformatics",
+}
+
+VALID_CATEGORIES = [
+    "Bioinformatics",
+    "Python Projects",
+    "Galaxy Core",
+    "Galaxy Training",
+    "UseGalaxy.eu",
+    "Python Libraries",
+    "Crypto",
+]
+
+
+def _slug(text: str) -> str:
+    """Convert text to a filename-safe slug."""
+    import re
+
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
 def update_projects_file(
     categorized_entries: Dict[str, List[Dict]],
-    file_path: str = "content/projects/index.md",
+    content_dir: str = "src/content/projects",
 ):
-    """Update the projects markdown file by integrating into existing categories."""
+    """Update Astro content collection JSON files with new contributions.
+
+    Each project becomes/updates a JSON file under src/content/projects/.
+    This replaces the legacy Markdown update approach.
+    """
+    import json as _json
+    import os as _os
+
     if not categorized_entries:
         print("No new contributions to add")
         return
 
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+    _os.makedirs(content_dir, exist_ok=True)
 
-        # Remove the old "Recent Contributions" section if it exists
-        if "## 🆕 Recent Contributions" in content:
-            start = content.find("## 🆕 Recent Contributions")
-            end = content.find("\n---\n\n*Last updated:", start)
-            if end != -1:
-                # Find the end of the line after "Last updated"
-                end = content.find("\n", end + 20)
-                if end != -1:
-                    content = content[:start].rstrip() + content[end:]
-                else:
-                    content = content[:start].rstrip()
+    # Load existing files to check for duplicates
+    existing_repos: set = set()
+    for fname in _os.listdir(content_dir):
+        if fname.endswith(".json"):
+            fpath = _os.path.join(content_dir, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    data = _json.load(f)
+                    for link in data.get("links", []):
+                        url = link.get("url", "")
+                        if "github.com/" in url:
+                            # Extract repo path e.g. "org/repo"
+                            parts = url.replace("https://github.com/", "").split("/")
+                            if len(parts) >= 2:
+                                existing_repos.add(f"{parts[0]}/{parts[1]}")
+            except Exception:
+                pass
 
-        modified = False
+    modified = False
 
-        for category, entries in categorized_entries.items():
-            # Find the category section
-            section_pattern = f"### {category}"
+    for raw_category, entries in categorized_entries.items():
+        category = CATEGORY_MAP.get(raw_category, "Bioinformatics")
+        if category not in VALID_CATEGORIES:
+            category = "Bioinformatics"
 
-            if section_pattern not in content:
-                # Category doesn't exist - add it under "Notable Open-Source Contributions"
-                notable_section = "## Notable Open-Source Contributions"
-                if notable_section in content:
-                    insert_pos = content.find(notable_section) + len(notable_section)
-                    # Find the end of the line
-                    insert_pos = content.find("\n", insert_pos) + 1
+        for entry in entries:
+            repo_name = entry["repo"]
+            repo_short = repo_name.split("/")[-1]
 
-                    new_section = f"\n### {category}\n"
-                    for entry in entries:
-                        new_section += f"- **[{entry['repo']}](https://github.com/{entry['repo']})** - {entry['description']} ([PRs]({entry['pr_url']}))\n"
+            # Skip if already documented
+            if repo_name in existing_repos:
+                print(f"⏭️  Skipping {repo_name} - already in content collection")
+                continue
 
-                    content = content[:insert_pos] + new_section + content[insert_pos:]
-                    modified = True
-                    print(f"✅ Added new category: {category}")
-            else:
-                # Category exists - check each entry
-                for entry in entries:
-                    repo_name = entry["repo"]
+            slug = _slug(f"{repo_short}")
+            # Avoid collisions by appending org prefix if slug exists
+            fpath = _os.path.join(content_dir, f"{slug}.json")
+            if _os.path.exists(fpath):
+                slug = _slug(repo_name.replace("/", "-"))
+                fpath = _os.path.join(content_dir, f"{slug}.json")
 
-                    # Check if repo is already mentioned in this category
-                    section_start = content.find(section_pattern)
-                    # Find the next ### or ## section
-                    next_section = content.find("\n##", section_start + 1)
-                    if next_section == -1:
-                        section_content = content[section_start:]
-                    else:
-                        section_content = content[section_start:next_section]
+            pr_url = entry["pr_url"]
+            description = entry["description"]
+            pr_count = entry.get("pr_count", 1)
 
-                    # Check if repo already exists anywhere in the document
-                    repo_short_name = repo_name.split("/")[-1].lower()
+            project_data = {
+                "title": repo_short.replace("-", " ").replace("_", " ").title(),
+                "description": description,
+                "category": category,
+                "links": [
+                    {"label": "Repository", "url": f"https://github.com/{repo_name}"},
+                    {"label": f"PRs ({pr_count})", "url": pr_url},
+                ],
+                "tags": [],
+                "featured": False,
+            }
 
-                    # Check for exact URL match
-                    if f"github.com/{repo_name}" in content:
-                        print(f"⏭️  Skipping {repo_name} - already documented")
-                        continue
+            with open(fpath, "w", encoding="utf-8") as f:
+                _json.dump(project_data, f, indent=2, ensure_ascii=False)
+                f.write("\n")
 
-                    # Check for short name match (but avoid common names like "galaxy", "content", "utils")
-                    if repo_short_name not in ["galaxy", "content", "utils", "tools"]:
-                        # Look for the short name in links or text
-                        import re
+            existing_repos.add(repo_name)
+            modified = True
+            print(f"✅ Created {fpath} for {repo_name} ({category})")
 
-                        pattern = (
-                            rf"\*\*\[?[^]]*{re.escape(repo_short_name)}[^]]*\]?\*\*"
-                        )
-                        if re.search(pattern, content, re.IGNORECASE):
-                            print(f"⏭️  Skipping {repo_name} - already documented")
-                            continue
-
-                    # Add the new entry at the end of this section
-                    # Find where to insert (before next ### or ##)
-                    insert_pos = section_start + len(section_content)
-                    if next_section != -1:
-                        insert_pos = next_section
-
-                    new_entry = f"- **[{repo_name}](https://github.com/{repo_name})** - {entry['description']} ([PRs]({entry['pr_url']}))\n"
-                    content = content[:insert_pos] + new_entry + content[insert_pos:]
-                    modified = True
-                    print(f"✅ Added {repo_name} to {category}")
-
-        if modified:
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
-            print(f"\n✅ Updated {file_path}")
-        else:
-            print("\n⏭️  No changes needed - all contributions already documented")
-
-    except Exception as e:
-        print(f"Error updating file: {e}")
+    if modified:
+        print(f"\n✅ Content collection updated in {content_dir}/")
+    else:
+        print("\n⏭️  No changes needed - all contributions already documented")
 
 
 def main():
@@ -312,7 +325,7 @@ def main():
         # Generate project entries with AI descriptions
         project_entries = fetcher.generate_project_entries(prs_by_repo)
 
-        # Update the file
+        # Update the Astro content collection
         update_projects_file(project_entries)
 
         print("✅ Contribution update complete!")
