@@ -35,6 +35,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           command: pages deploy dist/ --project-name=kadkhodaei-preview --branch=pr-${{ github.event.pull_request.number }}
 
       - name: Comment preview URL on PR
@@ -46,6 +47,6 @@ jobs:
 
             | Status | URL |
             |--------|-----|
-            | ✅ Deployed | ${{ steps.deploy.outputs.deployment-url }} |
+            | ✅ Deployed | ${{ steps.deploy.outputs.pages-deployment-alias-url }} |
 
             _Updated on push to `${{ github.head_ref }}`_
