@@ -18,10 +18,10 @@ Built with **Astro 5**, **Tailwind CSS**, **shadcn/ui**, and **GSAP** animations
 ## Development
 
 ```bash
-npm install
-npm run dev       # http://localhost:4321
-npm run build     # Static output to dist/
-npm run preview   # Preview dist/ locally
+pnpm install
+pnpm dev          # http://localhost:4321
+pnpm build        # Static output to dist/
+pnpm preview      # Preview dist/ locally
 ```
 
 ## Adding a Project
