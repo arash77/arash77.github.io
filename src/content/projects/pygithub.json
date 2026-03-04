@@ -1,0 +1,11 @@
+{
+  "title": "PyGithub – IssueComment Minimize",
+  "description": "Added minimize and unminimize functions for the IssueComment class in PyGithub, extending the library's GitHub API coverage.",
+  "category": "Python Libraries",
+  "links": [
+    { "label": "PyGithub PRs", "url": "https://github.com/PyGithub/PyGithub/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Python", "Open Source", "GitHub API"],
+  "featured": false,
+  "order": 8
+}

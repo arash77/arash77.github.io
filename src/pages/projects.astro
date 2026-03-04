@@ -1,0 +1,53 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ProjectsGrid from '../components/ProjectsGrid';
+import { getCollection } from 'astro:content';
+
+const projectEntries = await getCollection('projects');
+const projects = projectEntries
+  .map((entry) => ({
+    id: entry.id,
+    ...entry.data,
+  }))
+  .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+---
+
+<Layout
+  title="Projects – Arash Kadkhodaei"
+  description="Open-source contributions, bioinformatics tooling, Python projects, and Galaxy ecosystem work by Arash Kadkhodaei."
+>
+  <div class="pt-24 pb-16">
+    <div class="container mx-auto px-4 max-w-6xl">
+      <!-- Header -->
+      <div class="text-center mb-16" style="animation: fade-up 0.7s ease both 0.05s;">
+        <p class="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
+          What I've built &amp; contributed to
+        </p>
+        <h1 class="text-5xl font-bold mb-4">Projects &amp; Contributions</h1>
+        <div class="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
+        <p class="text-muted-foreground text-lg max-w-2xl mx-auto">
+          A collection of my open-source contributions, personal projects, and work across the
+          Galaxy bioinformatics ecosystem and beyond.
+        </p>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-16">
+        {[
+          { label: 'Projects', value: projects.length, delay: '0.3s' },
+          { label: 'Featured', value: projects.filter((p) => p.featured).length, delay: '0.45s' },
+          { label: 'Categories', value: new Set(projects.map((p) => p.category)).size, delay: '0.6s' },
+          { label: 'GitHub', value: '100+ PRs', delay: '0.75s' },
+        ].map(({ label, value, delay }) => (
+          <div class="text-center p-5 rounded-xl bg-card border border-border" style={`animation: fade-up 0.5s ease both ${delay};`}>
+            <p class="text-3xl font-bold text-primary">{value}</p>
+            <p class="text-sm text-muted-foreground font-mono mt-1">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <!-- Interactive grid (React island) -->
+      <ProjectsGrid projects={projects} client:load />
+    </div>
+  </div>
+</Layout>

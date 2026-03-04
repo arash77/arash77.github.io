@@ -1,0 +1,12 @@
+{
+  "title": "Galaxy Training Materials",
+  "description": "Enhanced XML feeds, external links, and GitHub Actions updates for the Galaxy Training Materials and Galaxy Ecology Tools CI/CD workflows.",
+  "category": "Galaxy Training",
+  "links": [
+    { "label": "Training PRs", "url": "https://github.com/galaxyproject/training-material/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" },
+    { "label": "Ecology PRs", "url": "https://github.com/galaxyecology/tools-ecology/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["CI/CD", "GitHub Actions", "XML", "Galaxy"],
+  "featured": false,
+  "order": 6
+}
