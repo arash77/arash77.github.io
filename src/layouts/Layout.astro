@@ -1,0 +1,115 @@
+---
+import '../styles/global.css';
+import Navbar from '../components/Navbar';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  canonicalURL?: string;
+}
+
+const {
+  title = 'Arash Kadkhodaei – Software Engineer',
+  description = 'Software Engineer at Freiburg University, specializing in Python, backend development, and Galaxy Project bioinformatics tooling.',
+  image = '/assets/img/og-image.png',
+  canonicalURL = new URL(Astro.url.pathname, Astro.site),
+} = Astro.props;
+
+const siteURL = 'https://kadkhodaei.de';
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Primary meta -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL(image, siteURL)} />
+    <meta property="og:site_name" content="Arash Kadkhodaei" />
+
+    <!-- Twitter card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={new URL(image, siteURL)} />
+
+    <!-- Favicons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/a-logo.png" />
+    <link rel="icon" type="image/png" href="/a-logo.png" />
+
+    <!-- Fonts: Inter + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- JSON-LD Person schema -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: 'Arash Kadkhodaei',
+      url: siteURL,
+      email: 'arash77.kad@gmail.com',
+      sameAs: [
+        'https://github.com/arash77',
+        'https://linkedin.com/in/kadarash',
+      ],
+      jobTitle: 'Software Engineer',
+      worksFor: {
+        '@type': 'Organization',
+        name: 'Freiburg University',
+      },
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Freiburg',
+        addressCountry: 'DE',
+      },
+    })} />
+
+    <!-- Dark mode init (prevent flash) -->
+    <script is:inline>
+      (function () {
+        try {
+          const stored = localStorage.getItem('theme');
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (stored === 'dark' || (!stored && prefersDark)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (_) {}
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen bg-background text-foreground antialiased">
+    <Navbar currentPath={Astro.url.pathname} client:load />
+    <main>
+      <slot />
+    </main>
+    <footer class="border-t border-border py-10 mt-16">
+      <div class="container mx-auto px-4 max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+        <p class="font-mono">
+          © {new Date().getFullYear()} Arash Kadkhodaei · Built with
+          <a href="https://astro.build" class="text-primary hover:underline ml-1">Astro</a>
+        </p>
+        <div class="flex items-center gap-4">
+          <a href="https://github.com/arash77" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition-colors">GitHub</a>
+          <a href="https://linkedin.com/in/kadarash" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition-colors">LinkedIn</a>
+          <a href="mailto:arash77.kad@gmail.com" class="hover:text-foreground transition-colors">Email</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
