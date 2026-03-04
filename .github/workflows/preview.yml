@@ -28,7 +28,7 @@ jobs:
       - name: Build Astro site
         run: npm run build
         env:
-          SITE: https://kadkhodaei-preview.pages.dev
+          SITE: https://pr-${{ github.event.pull_request.number }}.kadkhodaei-preview.pages.dev
 
       - name: Deploy to Cloudflare Pages
         id: deploy
