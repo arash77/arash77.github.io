@@ -6,7 +6,7 @@ import mdx from '@astrojs/mdx';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://kadkhodaei.de',
+  site: process.env.SITE ?? 'https://kadkhodaei.de',
   output: 'static',
   integrations: [
     react(),
