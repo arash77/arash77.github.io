@@ -1,0 +1,13 @@
+{
+  "title": "Research Software Ecosystem",
+  "description": "Metadata commons and tooling for research software discovery and documentation. Contributions include complete GitHub Actions and backend updates, Galaxy tools bulk import system, and JSON formatting improvements.",
+  "category": "Bioinformatics",
+  "links": [
+    { "label": "RSEc-Atlas", "url": "https://github.com/research-software-ecosystem/RSEc-Atlas" },
+    { "label": "Content", "url": "https://github.com/research-software-ecosystem/content" },
+    { "label": "Utils", "url": "https://github.com/research-software-ecosystem/utils" }
+  ],
+  "tags": ["Python", "CI", "Metadata Management"],
+  "featured": true,
+  "order": 2
+}
