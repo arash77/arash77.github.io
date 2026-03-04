@@ -79,6 +79,23 @@ export default {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },
         },
+        'blob-drift-1': {
+          '0%, 100%': { transform: 'translate(-50%, -50%)' },
+          '25%':       { transform: 'translate(-20%, -80%)' },
+          '50%':       { transform: 'translate(-80%, -20%)' },
+          '75%':       { transform: 'translate(-30%, -70%)' },
+        },
+        'blob-drift-2': {
+          '0%, 100%': { transform: 'translate(50%, 50%)' },
+          '25%':      { transform: 'translate(20%, 80%)' },
+          '50%':      { transform: 'translate(80%, 20%)' },
+          '75%':      { transform: 'translate(70%, 70%)' },
+        },
+        'blob-drift-3': {
+          '0%, 100%': { transform: 'translate(-50%, 0%)' },
+          '33%':      { transform: 'translate(-20%, -40%)' },
+          '66%':      { transform: 'translate(-80%, 40%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -86,6 +103,9 @@ export default {
         'fade-up': 'fade-up 0.6s ease-out',
         'fade-in': 'fade-in 0.4s ease-out',
         'gradient-shift': 'gradient-shift 8s ease infinite',
+        'blob-drift-1': 'blob-drift-1 12s ease-in-out infinite',
+        'blob-drift-2': 'blob-drift-2 15s ease-in-out infinite',
+        'blob-drift-3': 'blob-drift-3 10s ease-in-out infinite',
       },
       backgroundSize: {
         '300%': '300%',
