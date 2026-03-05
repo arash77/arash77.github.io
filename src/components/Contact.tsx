@@ -114,15 +114,6 @@ export default function Contact() {
             </a>
           ))}
         </div>
-
-        <div className="contact-item text-center" style={{ opacity: 0 }}>
-          <Button asChild size="lg" className="gap-2">
-            <a href={`mailto:${SITE.email}`}>
-              <Mail className="h-4 w-4" />
-              Send me an email
-            </a>
-          </Button>
-        </div>
       </div>
     </section>
   );
