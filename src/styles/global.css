@@ -14,6 +14,10 @@
     --primary-foreground: 186 40% 98%;
     --secondary: 155 70% 28%;          /* brand green */
     --secondary-foreground: 186 40% 98%;
+    --amber: 35 80% 35%;
+    --amber-foreground: 40 40% 98%;
+    --indigo: 230 55% 42%;
+    --indigo-foreground: 230 40% 98%;
     --muted: 186 25% 88%;
     --muted-foreground: 186 22% 34%;
     --accent: 186 25% 88%;
@@ -37,6 +41,10 @@
     --primary-foreground: 186 65% 8%;
     --secondary: 155 62% 48%;          /* brand green */
     --secondary-foreground: 186 65% 8%;
+    --amber: 35 75% 55%;
+    --amber-foreground: 35 65% 8%;
+    --indigo: 230 55% 65%;
+    --indigo-foreground: 230 65% 8%;
     --muted: 186 38% 14%;
     --muted-foreground: 186 16% 62%;
     --accent: 186 38% 14%;
