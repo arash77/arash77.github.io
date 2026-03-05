@@ -1,0 +1,14 @@
+{
+  "title": "Python Automation & Bots",
+  "description": "A collection of Python automation projects including a Telegram bot for sale notifications, a web crawler for LunarCrush data, face detection with OpenCV, and stock market data analysis tools.",
+  "category": "Python Projects",
+  "links": [
+    { "label": "sale-telegram-bot", "url": "https://github.com/arash77/sale-telegram-bot" },
+    { "label": "lc crawler", "url": "https://github.com/arash77/lc" },
+    { "label": "face-detect-opencv", "url": "https://github.com/arash77/face-detect-opencv" },
+    { "label": "bourse", "url": "https://github.com/arash77/bourse" }
+  ],
+  "tags": ["Python", "Telegram Bot", "OpenCV", "Data Analysis"],
+  "featured": false,
+  "order": 10
+}

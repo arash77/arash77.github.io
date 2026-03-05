@@ -1,0 +1,12 @@
+{
+  "title": "EAR Bot System",
+  "description": "Automated bot system for managing and reviewing ERGA Assembly Reports with complete workflow automation including PDF-to-YAML conversion, reviewer assignment, duplicate detection, and Slack notifications.",
+  "category": "Bioinformatics",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/ERGA-consortium/EARs" },
+    { "label": "PRs", "url": "https://github.com/ERGA-consortium/EARs/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Python", "GitHub Actions", "CI/CD", "PDF Processing", "Automation"],
+  "featured": true,
+  "order": 1
+}

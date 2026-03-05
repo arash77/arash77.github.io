@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 Fetch recent GitHub contributions and update the projects page.
-Uses GitHub Models AI to create comprehensive project descriptions based on PR activity.
+Uses Gemini AI to create comprehensive project descriptions based on PR activity.
 Integrates new contributions into existing categories.
 """
 
 import json
 import os
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -15,12 +16,20 @@ from github import Auth, Github
 from openai import OpenAI
 
 
-class GitHubModelsClient:
-    """Client for GitHub Models AI API."""
+GEMINI_MODELS = [
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+]
+
+
+class GeminiClient:
+    """Client for Gemini AI API with model cascade fallback."""
 
     def __init__(self, token: str):
         self.client = OpenAI(
-            base_url="https://models.github.ai/inference",
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             api_key=token,
         )
 
@@ -29,7 +38,6 @@ class GitHubModelsClient:
     ) -> Optional[str]:
         """Generate a comprehensive project description based on PRs."""
 
-        # Prepare PR details for AI
         pr_details = []
         for pr in prs[:15]:  # Limit to most recent 15
             pr_details.append(
@@ -51,32 +59,38 @@ Pull Requests:
 
 Write ONLY the description text, no additional formatting or labels. Make it sound professional and technical."""
 
-        try:
-            response = self.client.chat.completions.create(
-                model="gpt-5",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a technical writer creating concise project descriptions based on GitHub contributions. Write in third person, focusing on technical impact.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.7,
-                max_tokens=200,
-            )
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a technical writer creating concise project descriptions based on GitHub contributions. Write in third person, focusing on technical impact.",
+            },
+            {"role": "user", "content": prompt},
+        ]
 
-            return response.choices[0].message.content.strip()
+        for model in GEMINI_MODELS:
+            try:
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=1000,
+                )
+                content = response.choices[0].message.content
+                if content:
+                    print(f"  Used {model}")
+                    return content.strip()
+            except Exception as e:
+                print(f"  {model} failed: {e}")
 
-        except Exception as e:
-            print(f"Warning: AI description generation failed for {repo_name}: {e}")
-            return None
+        return None
 
 
 class ContributionsFetcher:
     def __init__(self, username: str, token: str):
         self.username = username
         self.github = Github(auth=Auth.Token(token))
-        self.ai_client = GitHubModelsClient(token)
+        gemini_token = os.environ.get("GEMINI_TOKEN", "")
+        self.ai_client = GeminiClient(gemini_token) if gemini_token else None
 
     def fetch_recent_prs(self, days: int = 30) -> List[Dict]:
         """Fetch recently merged PRs from the past N days."""
@@ -89,14 +103,13 @@ class ContributionsFetcher:
             for issue in issues[:100]:
                 prs.append(
                     {
-                        "html_url": issue.html_url,
                         "title": issue.title,
                         "body": issue.body,
                         "repository_url": issue.repository.url,
                         "labels": [{"name": label.name} for label in issue.labels],
-                        "merged_at": issue.closed_at.isoformat()
-                        if issue.closed_at
-                        else None,
+                        "merged_at": (
+                            issue.closed_at.isoformat() if issue.closed_at else None
+                        ),
                     }
                 )
             return prs
@@ -114,6 +127,14 @@ class ContributionsFetcher:
 
             # Skip PRs to user's own repositories
             if repo_full_name.startswith(f"{self.username}/"):
+                continue
+
+            # Skip private repositories
+            try:
+                if self.github.get_repo(repo_full_name).private:
+                    print(f"  Skipping private repo: {repo_full_name}")
+                    continue
+            except Exception:
                 continue
 
             grouped[repo_full_name].append(pr)
@@ -136,15 +157,15 @@ class ContributionsFetcher:
                 "bgruening/docker-galaxy",
             ]
         ):
-            return "Galaxy Project Core"
+            return "Galaxy Core"
         elif any(x in repo_lower for x in ["training-material", "galaxyecology"]):
-            return "Galaxy Training & Community"
+            return "Galaxy Training"
         elif any(x in repo_lower for x in ["usegalaxy-eu/", "vgcn"]):
-            return "UseGalaxy.eu Infrastructure"
+            return "UseGalaxy.eu"
         elif "research-software-ecosystem" in repo_lower:
-            return "Research Software Ecosystem"
+            return "Bioinformatics"
         else:
-            return "Other Open-Source Projects"
+            return "Other"
 
     def generate_project_entries(
         self, prs_by_repo: Dict[str, List[Dict]]
@@ -161,7 +182,11 @@ class ContributionsFetcher:
             print(f"Generating description for {repo}...")
 
             # Generate AI description
-            description = self.ai_client.generate_project_description(repo, prs)
+            description = (
+                self.ai_client.generate_project_description(repo, prs)
+                if self.ai_client
+                else None
+            )
 
             # Fallback description if AI fails
             if not description:
@@ -186,106 +211,107 @@ class ContributionsFetcher:
         return dict(categorized)
 
 
+VALID_CATEGORIES = [
+    "Bioinformatics",
+    "Python Projects",
+    "Galaxy Core",
+    "Galaxy Training",
+    "UseGalaxy.eu",
+    "Python Libraries",
+    "Crypto",
+    "Other",
+]
+
+
+def _slug(text: str) -> str:
+    """Convert text to a filename-safe slug."""
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
 def update_projects_file(
     categorized_entries: Dict[str, List[Dict]],
-    file_path: str = "content/projects/index.md",
+    content_dir: str = "src/content/projects",
 ):
-    """Update the projects markdown file by integrating into existing categories."""
+    """Update Astro content collection JSON files with new contributions.
+
+    Each project becomes/updates a JSON file under src/content/projects/.
+    This replaces the legacy Markdown update approach.
+    """
     if not categorized_entries:
         print("No new contributions to add")
         return
 
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+    os.makedirs(content_dir, exist_ok=True)
 
-        # Remove the old "Recent Contributions" section if it exists
-        if "## 🆕 Recent Contributions" in content:
-            start = content.find("## 🆕 Recent Contributions")
-            end = content.find("\n---\n\n*Last updated:", start)
-            if end != -1:
-                # Find the end of the line after "Last updated"
-                end = content.find("\n", end + 20)
-                if end != -1:
-                    content = content[:start].rstrip() + content[end:]
-                else:
-                    content = content[:start].rstrip()
+    # Load existing files to check for duplicates
+    existing_repos: set = set()
+    for fname in os.listdir(content_dir):
+        if fname.endswith(".json"):
+            fpath = os.path.join(content_dir, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    for link in data.get("links", []):
+                        url = link.get("url", "")
+                        if "github.com/" in url:
+                            # Extract repo path e.g. "org/repo"
+                            parts = url.replace("https://github.com/", "").split("/")
+                            if len(parts) >= 2:
+                                existing_repos.add(f"{parts[0]}/{parts[1]}")
+            except Exception:
+                pass
 
-        modified = False
+    modified = False
 
-        for category, entries in categorized_entries.items():
-            # Find the category section
-            section_pattern = f"### {category}"
+    for raw_category, entries in categorized_entries.items():
+        category = raw_category
+        if category not in VALID_CATEGORIES:
+            category = "Other"
 
-            if section_pattern not in content:
-                # Category doesn't exist - add it under "Notable Open-Source Contributions"
-                notable_section = "## Notable Open-Source Contributions"
-                if notable_section in content:
-                    insert_pos = content.find(notable_section) + len(notable_section)
-                    # Find the end of the line
-                    insert_pos = content.find("\n", insert_pos) + 1
+        for entry in entries:
+            repo_name = entry["repo"]
+            repo_short = repo_name.split("/")[-1]
 
-                    new_section = f"\n### {category}\n"
-                    for entry in entries:
-                        new_section += f"- **[{entry['repo']}](https://github.com/{entry['repo']})** - {entry['description']} ([PRs]({entry['pr_url']}))\n"
+            # Skip if already documented
+            if repo_name in existing_repos:
+                print(f"⏭️  Skipping {repo_name} - already in content collection")
+                continue
 
-                    content = content[:insert_pos] + new_section + content[insert_pos:]
-                    modified = True
-                    print(f"✅ Added new category: {category}")
-            else:
-                # Category exists - check each entry
-                for entry in entries:
-                    repo_name = entry["repo"]
+            slug = _slug(f"{repo_short}")
+            # Avoid collisions by appending org prefix if slug exists
+            fpath = os.path.join(content_dir, f"{slug}.json")
+            if os.path.exists(fpath):
+                slug = _slug(repo_name.replace("/", "-"))
+                fpath = os.path.join(content_dir, f"{slug}.json")
 
-                    # Check if repo is already mentioned in this category
-                    section_start = content.find(section_pattern)
-                    # Find the next ### or ## section
-                    next_section = content.find("\n##", section_start + 1)
-                    if next_section == -1:
-                        section_content = content[section_start:]
-                    else:
-                        section_content = content[section_start:next_section]
+            pr_url = entry["pr_url"]
+            description = entry["description"]
+            pr_count = entry.get("pr_count", 1)
 
-                    # Check if repo already exists anywhere in the document
-                    repo_short_name = repo_name.split("/")[-1].lower()
+            project_data = {
+                "title": repo_short.replace("-", " ").replace("_", " ").title(),
+                "description": description,
+                "category": category,
+                "links": [
+                    {"label": "Repository", "url": f"https://github.com/{repo_name}"},
+                    {"label": f"PRs ({pr_count})", "url": pr_url},
+                ],
+                "tags": [],
+                "featured": False,
+            }
 
-                    # Check for exact URL match
-                    if f"github.com/{repo_name}" in content:
-                        print(f"⏭️  Skipping {repo_name} - already documented")
-                        continue
+            with open(fpath, "w", encoding="utf-8") as f:
+                json.dump(project_data, f, indent=2, ensure_ascii=False)
+                f.write("\n")
 
-                    # Check for short name match (but avoid common names like "galaxy", "content", "utils")
-                    if repo_short_name not in ["galaxy", "content", "utils", "tools"]:
-                        # Look for the short name in links or text
-                        import re
+            existing_repos.add(repo_name)
+            modified = True
+            print(f"✅ Created {fpath} for {repo_name} ({category})")
 
-                        pattern = (
-                            rf"\*\*\[?[^]]*{re.escape(repo_short_name)}[^]]*\]?\*\*"
-                        )
-                        if re.search(pattern, content, re.IGNORECASE):
-                            print(f"⏭️  Skipping {repo_name} - already documented")
-                            continue
-
-                    # Add the new entry at the end of this section
-                    # Find where to insert (before next ### or ##)
-                    insert_pos = section_start + len(section_content)
-                    if next_section != -1:
-                        insert_pos = next_section
-
-                    new_entry = f"- **[{repo_name}](https://github.com/{repo_name})** - {entry['description']} ([PRs]({entry['pr_url']}))\n"
-                    content = content[:insert_pos] + new_entry + content[insert_pos:]
-                    modified = True
-                    print(f"✅ Added {repo_name} to {category}")
-
-        if modified:
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
-            print(f"\n✅ Updated {file_path}")
-        else:
-            print("\n⏭️  No changes needed - all contributions already documented")
-
-    except Exception as e:
-        print(f"Error updating file: {e}")
+    if modified:
+        print(f"\n✅ Content collection updated in {content_dir}/")
+    else:
+        print("\n⏭️  No changes needed - all contributions already documented")
 
 
 def main():
@@ -293,7 +319,7 @@ def main():
     token = os.environ.get("GITHUB_TOKEN")
 
     if not token:
-        print("Error: GITHUB_TOKEN environment variable not set")
+        print("Error: GITHUB_TOKEN is not set")
         return
 
     print(f"Fetching contributions for {username}...")
@@ -312,7 +338,7 @@ def main():
         # Generate project entries with AI descriptions
         project_entries = fetcher.generate_project_entries(prs_by_repo)
 
-        # Update the file
+        # Update the Astro content collection
         update_projects_file(project_entries)
 
         print("✅ Contribution update complete!")

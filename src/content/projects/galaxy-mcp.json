@@ -1,0 +1,12 @@
+{
+  "title": "Galaxy MCP",
+  "description": "Added a server.json configuration file and updated project documentation to prepare the repository for integration with the MCP Registry, enabling streamlined publication and broader accessibility within the Model Context Protocol ecosystem.",
+  "category": "Galaxy Core",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/galaxyproject/galaxy-mcp" },
+    { "label": "PRs", "url": "https://github.com/galaxyproject/galaxy-mcp/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Python", "MCP", "Galaxy", "Documentation"],
+  "featured": false,
+  "order": 5
+}

@@ -1,0 +1,21 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero';
+import About from '../components/About';
+import Skills from '../components/Skills';
+import Experience from '../components/Experience';
+import Education from '../components/Education';
+import Contact from '../components/Contact';
+---
+
+<Layout
+  title="Arash Kadkhodaei – Software Engineer"
+  description="Software Engineer at Freiburg University, specializing in Python, backend development, and Galaxy Project bioinformatics tooling."
+>
+  <Hero client:load />
+  <About client:visible />
+  <Skills client:visible />
+  <Experience client:visible />
+  <Education client:visible />
+  <Contact client:visible />
+</Layout>
