@@ -1,0 +1,12 @@
+{
+  "title": "Galaxy Social Automation",
+  "description": "Community-driven social media automation for the Galaxy Project ecosystem. Automated post generation from PRs for Galaxy community engagement, including preview features, error handling, and JSON feed bot.",
+  "category": "Bioinformatics",
+  "links": [
+    { "label": "galaxy-social", "url": "https://github.com/usegalaxy-eu/galaxy-social" },
+    { "label": "galaxy-social-assistant", "url": "https://github.com/usegalaxy-eu/galaxy-social-assistant" }
+  ],
+  "tags": ["Python", "GitHub Actions", "Automation"],
+  "featured": true,
+  "order": 3
+}

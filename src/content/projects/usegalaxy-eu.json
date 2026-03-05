@@ -1,0 +1,13 @@
+{
+  "title": "UseGalaxy.eu Infrastructure",
+  "description": "AI/ML tool integrations including ChatGPT, WhisperX, FLUX, and LLM Hub with monitoring and TPV workflows. Tool installations, retry logic, lock file management, and GitHub Actions for resource conflict detection.",
+  "category": "UseGalaxy.eu",
+  "links": [
+    { "label": "Infrastructure PRs", "url": "https://github.com/usegalaxy-eu/infrastructure-playbook/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" },
+    { "label": "Tools PRs", "url": "https://github.com/usegalaxy-eu/usegalaxy-eu-tools/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" },
+    { "label": "VGCN PRs", "url": "https://github.com/usegalaxy-eu/vgcn-infrastructure/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Ansible", "Docker", "CI/CD", "AI/ML", "Infrastructure"],
+  "featured": true,
+  "order": 7
+}

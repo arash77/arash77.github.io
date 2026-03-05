@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 186 40% 98%;         /* near-white with teal hint */
+    --foreground: 186 65% 8%;          /* deep teal-black for text */
+    --card: 186 28% 93%;
+    --card-foreground: 186 65% 8%;
+    --popover: 186 40% 98%;
+    --popover-foreground: 186 65% 8%;
+    --primary: 186 72% 28%;            /* teal-primary */
+    --primary-foreground: 186 40% 98%;
+    --secondary: 155 70% 28%;          /* brand green */
+    --secondary-foreground: 186 40% 98%;
+    --amber: 35 80% 35%;
+    --amber-foreground: 40 40% 98%;
+    --indigo: 230 55% 42%;
+    --indigo-foreground: 230 40% 98%;
+    --muted: 186 25% 88%;
+    --muted-foreground: 186 22% 34%;
+    --accent: 186 25% 88%;
+    --accent-foreground: 186 65% 8%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 186 40% 98%;
+    --border: 186 22% 80%;
+    --input: 186 22% 80%;
+    --ring: 186 72% 28%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 186 71% 5.5%;        /* #041618 deep teal-black */
+    --foreground: 185 20% 95%;
+    --card: 186 55% 9%;
+    --card-foreground: 185 20% 95%;
+    --popover: 186 71% 5.5%;
+    --popover-foreground: 185 20% 95%;
+    --primary: 186 72% 55%;            /* teal-primary for dark */
+    --primary-foreground: 186 65% 8%;
+    --secondary: 155 62% 48%;          /* brand green */
+    --secondary-foreground: 186 65% 8%;
+    --amber: 35 75% 55%;
+    --amber-foreground: 35 65% 8%;
+    --indigo: 230 55% 65%;
+    --indigo-foreground: 230 65% 8%;
+    --muted: 186 38% 14%;
+    --muted-foreground: 186 16% 62%;
+    --accent: 186 38% 14%;
+    --accent-foreground: 185 20% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 185 20% 95%;
+    --border: 186 32% 17%;
+    --input: 186 32% 17%;
+    --ring: 186 72% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/50 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary;
+}
+
+/* Gradient mesh background */
+.gradient-mesh {
+  background: radial-gradient(at 40% 20%, hsla(186, 72%, 28%, 0.12) 0px, transparent 50%),
+              radial-gradient(at 80% 0%, hsla(155, 70%, 28%, 0.08) 0px, transparent 50%),
+              radial-gradient(at 0% 50%, hsla(186, 60%, 50%, 0.07) 0px, transparent 50%),
+              radial-gradient(at 80% 50%, hsla(155, 60%, 40%, 0.06) 0px, transparent 50%),
+              radial-gradient(at 0% 100%, hsla(186, 72%, 28%, 0.08) 0px, transparent 50%);
+}
+
+.dark .gradient-mesh {
+  background: radial-gradient(at 40% 20%, hsla(186, 72%, 40%, 0.1) 0px, transparent 50%),
+              radial-gradient(at 80% 0%, hsla(155, 62%, 45%, 0.08) 0px, transparent 50%),
+              radial-gradient(at 0% 50%, hsla(186, 72%, 55%, 0.06) 0px, transparent 50%),
+              radial-gradient(at 80% 50%, hsla(186, 55%, 30%, 0.05) 0px, transparent 50%),
+              radial-gradient(at 0% 100%, hsla(155, 62%, 40%, 0.06) 0px, transparent 50%);
+}
+
+/* Typography improvements */
+.prose a {
+  @apply text-primary hover:text-primary/80 underline underline-offset-4 transition-colors;
+}
+
+/* Timeline connector */
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  @apply bg-border;
+}
+.timeline-item:first-child::before {
+  top: 50%;
+}
+.timeline-item:last-child::before {
+  bottom: 50%;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
