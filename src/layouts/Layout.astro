@@ -49,6 +49,9 @@ const siteURL = 'https://kadkhodaei.de';
     <link rel="apple-touch-icon" sizes="180x180" href="/a-logo.png" />
     <link rel="icon" type="image/png" href="/a-logo.png" />
 
+    <!-- Browser theme color (updated dynamically by dark-mode script + Navbar) -->
+    <meta name="theme-color" content="#f7fcfc" />
+
     <!-- Fonts: Inter + JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -86,8 +89,13 @@ const siteURL = 'https://kadkhodaei.de';
         try {
           const stored = localStorage.getItem('theme');
           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (stored === 'dark' || (!stored && prefersDark)) {
+          const isDark = stored === 'dark' || (!stored && prefersDark);
+          if (isDark) {
             document.documentElement.classList.add('dark');
+          }
+          const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+          if (themeColorMeta) {
+            themeColorMeta.setAttribute('content', isDark ? '#041618' : '#f7fcfc');
           }
         } catch (_) {}
       })();
