@@ -89,16 +89,18 @@ export default function Hero() {
           <div ref={imageRef} className="relative flex-shrink-0" style={{ opacity: 0 }}>
             <div className="relative">
               <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-secondary opacity-80 blur-lg scale-110" />
-              <img
-                src={SITE.avatar}
-                alt={SITE.name}
-                width={220}
-                height={220}
-                className="relative rounded-full border-4 border-background shadow-2xl w-44 h-44 lg:w-56 lg:h-56 object-cover"
-                loading="eager"
-              />
+              <div className="relative rounded-full border-4 border-background shadow-2xl w-44 h-44 lg:w-56 lg:h-56 overflow-hidden">
+                <img
+                  src={SITE.avatar}
+                  alt={SITE.name}
+                  width={220}
+                  height={220}
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: '81% 26%', transform: 'scale(1.75)', transformOrigin: '81% 26%' }}
+                  loading="eager"
+                />
+              </div>
             </div>
-
           </div>
 
           {/* Text content */}
