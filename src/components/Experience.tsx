@@ -71,14 +71,15 @@ export default function Experience() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { opacity: 0, y: 24 });
+      gsap.set(headingRef.current, { y: 24 });
       gsap.to(headingRef.current, {
-        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+        opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
         scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
       });
-      gsap.set('.timeline-card', { opacity: 0, x: -40 });
+      gsap.set('.timeline-card', { x: -40 });
       gsap.to('.timeline-card', {
         opacity: 1,
+        visibility: 'inherit',
         x: 0,
         duration: 0.7,
         stagger: 0.2,
@@ -96,7 +97,7 @@ export default function Experience() {
   return (
     <section id="experience" ref={sectionRef} className="py-24 bg-muted/30">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div ref={headingRef} className="text-center mb-16" style={{ opacity: 0 }}>
+        <div ref={headingRef} className="gsap-reveal text-center mb-16">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             My journey
           </p>
@@ -112,9 +113,8 @@ export default function Experience() {
             {experiences.map((exp, idx) => (
               <div
                 key={idx}
-                style={{ opacity: 0 }}
-                className="timeline-card relative flex gap-6"
-                             >
+                className="gsap-reveal timeline-card relative flex gap-6"
+              >
                 {/* Icon dot */}
                 <div className="hidden sm:flex flex-col items-center flex-shrink-0">
                   <div
