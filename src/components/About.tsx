@@ -10,7 +10,7 @@ gsap.registerPlugin(ScrollTrigger);
 const facts = [
   { icon: MapPin, label: 'Location', value: 'Freiburg, Germany' },
   { icon: Briefcase, label: 'Current Role', value: 'Software Engineer @ Freiburg Uni' },
-  { icon: GraduationCap, label: 'Education', value: 'M.Eng Mechatronics, DIT' },
+  { icon: GraduationCap, label: 'Education', value: 'M.Eng Mechatronic & Cyber-Physical Systems, DIT' },
   { icon: Heart, label: 'Interests', value: 'IoT, Open Source, Movies' },
 ];
 
@@ -22,21 +22,18 @@ export default function About() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        '.about-content',
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-          stagger: 0.15,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 80%',
-          },
-        }
-      );
+      gsap.set('.about-content', { opacity: 0, y: 40 });
+      gsap.to('.about-content', {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.15,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 80%',
+        },
+      });
     }, sectionRef);
 
     return () => ctx.revert();

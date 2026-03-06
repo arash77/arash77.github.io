@@ -19,19 +19,19 @@ interface EducationItem {
 const education: EducationItem[] = [
   {
     degree: 'Master of Engineering',
-    field: 'Mechatronics',
+    field: 'Mechatronic and Cyber-Physical Systems',
     institution: 'Deggendorf Institute of Technology',
     location: 'Deggendorf, Germany',
     period: '2021 – 2024',
     description:
-      'Focused on robotics, embedded systems, and industrial automation. Thesis on automatic CT scan system using ROS2 and Python for Fraunhofer.',
+      'Focused on robotics, embedded systems, and industrial automation. Thesis on automatic CT scan system using ROS and Python for Fraunhofer.',
   },
   {
     degree: 'Bachelor of Science',
     field: 'Mechanical Engineering',
     institution: 'University of Kashan',
     location: 'Kashan, Iran',
-    period: '2017 – 2021',
+    period: '2016 – 2021',
     description:
       'Strong foundation in engineering principles, CAD/CAM, thermodynamics, and manufacturing processes.',
   },
@@ -46,29 +46,23 @@ export default function Education() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headingRef.current,
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-        }
-      );
-      gsap.fromTo(
-        '.edu-card',
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.7,
-          stagger: 0.2,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 75%',
-          },
-        }
-      );
+      gsap.set(headingRef.current, { opacity: 0, y: 24 });
+      gsap.to(headingRef.current, {
+        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+      });
+      gsap.set('.edu-card', { opacity: 0, y: 30 });
+      gsap.to('.edu-card', {
+        opacity: 1,
+        y: 0,
+        duration: 0.7,
+        stagger: 0.2,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 75%',
+        },
+      });
     }, sectionRef);
 
     return () => ctx.revert();
@@ -89,9 +83,9 @@ export default function Education() {
           {education.map((edu, idx) => (
             <div
               key={idx}
-              className="edu-card rounded-xl border border-border bg-card p-6 hover:border-primary/30 transition-all hover:shadow-md"
               style={{ opacity: 0 }}
-            >
+              className="edu-card rounded-xl border border-border bg-card p-6 hover:border-primary/30 transition-all hover:shadow-md"
+                         >
               <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-lg bg-primary/10 text-primary flex-shrink-0">
                   <GraduationCap className="h-6 w-6" />
