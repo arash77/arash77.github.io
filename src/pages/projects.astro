@@ -19,7 +19,7 @@ const projects = projectEntries
   <div class="pt-24 pb-16">
     <div class="container mx-auto px-4 max-w-6xl">
       <!-- Header -->
-      <div class="text-center mb-16" style="animation: fade-up 0.7s ease both 0.05s;">
+      <div class="text-center mb-8" style="animation: fade-up 0.7s ease both 0.05s;">
         <p class="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
           What I've built &amp; contributed to
         </p>
@@ -32,7 +32,7 @@ const projects = projectEntries
       </div>
 
       <!-- Stats bar -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-16">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
           { label: 'Projects', value: projects.length, delay: '0.3s' },
           { label: 'Featured', value: projects.filter((p) => p.featured).length, delay: '0.45s' },
