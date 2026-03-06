@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { SkillBar, LanguageRing } from '../components/ResumeAnimations';
-import { Download, MapPin, Mail, Briefcase, GraduationCap } from 'lucide-react';
+import { Download, MapPin, Mail, Briefcase, GraduationCap, BookOpen, FileText, ExternalLink } from 'lucide-react';
 import { IconGithub, IconLinkedin } from '../components/BrandIcons';
 ---
 
@@ -185,6 +185,106 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
                     <p class="text-sm text-primary">{edu.institution}</p>
                     <p class="text-xs font-mono text-muted-foreground mt-0.5">{edu.period}</p>
                     {edu.note && <p class="text-xs text-muted-foreground mt-1 italic">{edu.note}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <!-- Conference Contributions -->
+          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.5s;">
+            <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center justify-between gap-2">
+              <span class="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Conference Contributions
+              </span>
+              <a
+                href="https://orcid.org/0009-0006-2228-8123"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors font-sans normal-case tracking-normal"
+              >
+                <img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" alt="ORCID" class="h-3.5 w-3.5" />
+                ORCID
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </h2>
+            <div class="space-y-5">
+              {[
+                {
+                  title: 'Serving locally hosted LLMs with Galaxy',
+                  year: '2025',
+                  types: ['Presentation'],
+                  dois: [
+                    { label: '10.7490/F1000RESEARCH.1120343.1', href: 'https://doi.org/10.7490/f1000research.1120343.1' },
+                  ],
+                  contributors: ['Arash Kadkhodaei'],
+                },
+                {
+                  title: 'Simple and secure credential handling for tools in Galaxy',
+                  year: '2025',
+                  types: ['Presentation'],
+                  dois: [
+                    { label: '10.7490/F1000RESEARCH.1120347.1', href: 'https://doi.org/10.7490/f1000research.1120347.1' },
+                  ],
+                  contributors: ['Alireza Heidari', 'Arash Kadkhodaei', 'David Lopez', 'Bjoern Gruening'],
+                },
+                {
+                  title: 'Community-driven standards development for reference genome generation',
+                  year: '2024',
+                  types: ['Presentation', 'Poster'],
+                  dois: [
+                    { label: '10.7490/F1000RESEARCH.1119773.1', href: 'https://doi.org/10.7490/f1000research.1119773.1' },
+                    { label: '10.7490/F1000RESEARCH.1119761.1', href: 'https://doi.org/10.7490/f1000research.1119761.1' },
+                  ],
+                  contributors: ['Tom Brown', 'Diego De Panis', 'Romane Libouban', 'Saim Momin', 'Arash Kadkhodaei', 'Anthony Bretaudeau', 'Björn Grüning', 'Camila Mazzoni'],
+                },
+                {
+                  title: 'Galaxy social',
+                  year: '2024',
+                  types: ['Presentation', 'Poster'],
+                  dois: [
+                    { label: '10.7490/F1000RESEARCH.1119787.1', href: 'https://doi.org/10.7490/f1000research.1119787.1' },
+                    { label: '10.7490/F1000RESEARCH.1119786.1', href: 'https://doi.org/10.7490/f1000research.1119786.1' },
+                  ],
+                  contributors: ['Arash Kadkhodaei'],
+                },
+              ].map((pub) => (
+                <div class="flex gap-4">
+                  <div class="p-2.5 rounded-lg bg-primary/10 h-fit shrink-0">
+                    <FileText className="h-4 w-4 text-primary" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-start justify-between gap-2 mb-1.5">
+                      <p class="font-semibold text-sm leading-snug">{pub.title}</p>
+                      <span class="text-xs font-mono text-muted-foreground bg-muted rounded-full px-2.5 py-1 whitespace-nowrap shrink-0">{pub.year}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mb-2">
+                      {pub.types.map((t) => (
+                        <span class="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5">{t}</span>
+                      ))}
+                    </div>
+                    <p class="text-xs text-muted-foreground mb-2">
+                      {pub.contributors.map((c, i) => (
+                        <>
+                          {i > 0 && <span>; </span>}
+                          <span class={c === 'Arash Kadkhodaei' ? 'font-medium text-foreground' : ''}>{c}</span>
+                        </>
+                      ))}
+                    </p>
+                    <div class="flex flex-col gap-0.5">
+                      {pub.dois.map((doi) => (
+                        <a
+                          href={doi.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono break-all"
+                        >
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                          {doi.label}
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
