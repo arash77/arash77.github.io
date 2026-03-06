@@ -56,6 +56,14 @@ export default {
           DEFAULT: 'hsl(var(--indigo))',
           foreground: 'hsl(var(--indigo-foreground))',
         },
+        rose: {
+          DEFAULT: 'hsl(var(--rose))',
+          foreground: 'hsl(var(--rose-foreground))',
+        },
+        violet: {
+          DEFAULT: 'hsl(var(--violet))',
+          foreground: 'hsl(var(--violet-foreground))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
