@@ -2,13 +2,13 @@ import type { APIRoute } from 'astro';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 import { createElement as h } from 'react';
 import { SITE } from '@/lib/utils';
 
-const interRegular  = readFileSync(fileURLToPath(new URL('../assets/fonts/Inter-Regular.otf',  import.meta.url)));
-const interSemiBold = readFileSync(fileURLToPath(new URL('../assets/fonts/Inter-SemiBold.otf', import.meta.url)));
-const avatarData    = `data:image/jpeg;base64,${readFileSync(fileURLToPath(new URL('../../public/assets/img/avatar.jpg', import.meta.url))).toString('base64')}`;
+const interRegular  = readFileSync(resolve('src/assets/fonts/Inter-Regular.otf'));
+const interSemiBold = readFileSync(resolve('src/assets/fonts/Inter-SemiBold.otf'));
+const avatarData    = `data:image/jpeg;base64,${readFileSync(resolve('public/assets/img/avatar.jpg')).toString('base64')}`;
 
 // Distributed node-graph as a pre-built SVG data URI (satori can't render SVG children)
 const graphNodes: [number, number, number][] = [
