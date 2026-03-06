@@ -61,6 +61,7 @@ function getLinkIcon(label: string) {
 
 export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   const [activeCategory, setActiveCategory] = useState<ProjectCategory>('All');
+  const filterRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const filtered =
@@ -71,25 +72,40 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   const featuredFiltered = filtered.filter((p) => p.featured);
   const regularFiltered = filtered.filter((p) => !p.featured);
 
+  // Mount-only: animate the filter bar in once
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.set(filterRef.current, { y: 16 });
+    gsap.to(filterRef.current, {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.5, ease: 'power2.out', delay: 0.1,
+    });
+  }, { scope: filterRef });
+
+  // Category-change: re-animate cards
   useGSAP(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
+    gsap.set('.project-section-label', { y: 10 });
+    gsap.to('.project-section-label', {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.5, ease: 'power2.inOut',
+    });
     gsap.set('.project-card', { y: 20, scale: 0.97 });
     gsap.to('.project-card', {
       opacity: 1,
       visibility: 'inherit',
       y: 0,
       scale: 1,
-      duration: 0.4,
-      stagger: 0.06,
-      ease: 'power2.out',
+      duration: 0.5,
+      stagger: { each: 0.08, ease: 'power2.in' },
+      ease: 'power3.out',
+      delay: 0.1,
     });
   }, { scope: gridRef, dependencies: [activeCategory], revertOnUpdate: true });
 
   return (
     <div>
       {/* Category filter */}
-      <div className="overflow-x-auto pb-2 mb-10 -mx-4 px-4">
+      <div ref={filterRef} className="gsap-reveal overflow-x-auto pb-2 mb-10 flex justify-center">
         <div className="flex gap-1.5 w-max bg-muted rounded-xl p-1">
           {CATEGORIES.map((cat) => (
             <button
@@ -116,14 +132,14 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
         {/* Featured tier — full-width hero cards */}
         {featuredFiltered.length > 0 && (
           <div className="mb-10">
-            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-4">
+            <p className="gsap-reveal project-section-label text-xs font-mono text-muted-foreground uppercase tracking-widest mb-4">
               Featured Work
             </p>
             <div className="space-y-4">
               {featuredFiltered.map((project) => (
                 <article
                   key={project.id}
-                  className="gsap-reveal project-card rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover:shadow-md transition-all"
+                  className="gsap-reveal project-card rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                     <span
@@ -168,7 +184,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
         {regularFiltered.length > 0 && (
           <div>
             {featuredFiltered.length > 0 && (
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-4">
+              <p className="gsap-reveal project-section-label text-xs font-mono text-muted-foreground uppercase tracking-widest mb-4">
                 Other Contributions
               </p>
             )}
@@ -176,7 +192,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
               {regularFiltered.map((project) => (
                 <article
                   key={project.id}
-                  className="gsap-reveal project-card flex flex-col rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md transition-all"
+                  className="gsap-reveal project-card flex flex-col rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150"
                 >
                   <div className="mb-2">
                     <span
