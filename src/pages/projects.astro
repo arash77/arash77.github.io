@@ -37,7 +37,7 @@ const projects = projectEntries
           { label: 'Projects', value: projects.length, delay: '0.3s' },
           { label: 'Featured', value: projects.filter((p) => p.featured).length, delay: '0.45s' },
           { label: 'Categories', value: new Set(projects.map((p) => p.category)).size, delay: '0.6s' },
-          { label: 'GitHub', value: '100+ PRs', delay: '0.75s' },
+          { label: 'GitHub', value: '380+ PRs', delay: '0.75s' },
         ].map(({ label, value, delay }) => (
           <div class="text-center p-5 rounded-xl bg-card border border-border" style={`opacity: 0; animation: fade-up 0.5s ease forwards ${delay};`}>
             <p class="text-3xl font-bold text-primary">{value}</p>

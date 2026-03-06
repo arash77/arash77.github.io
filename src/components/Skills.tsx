@@ -32,7 +32,7 @@ const skillCategories: SkillCategory[] = [
   {
     title: 'Other Skills',
     color: 'indigo',
-    skills: ['IoT & Embedded Systems', 'REST API Design', 'Image Processing', 'Ansible', 'CI/CD Pipelines', 'Bioinformatics Tooling'],
+    skills: ['IoT & Embedded Systems', 'REST API Design', 'Image Processing', 'Ansible', 'CI/CD Pipelines', 'Bioinformatics Tooling', 'Linux Administration', 'OpenAI API', 'PyTest'],
   },
 ];
 

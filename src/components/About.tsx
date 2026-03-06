@@ -10,7 +10,7 @@ gsap.registerPlugin(ScrollTrigger);
 const facts = [
   { icon: MapPin, label: 'Location', value: 'Freiburg, Germany' },
   { icon: Briefcase, label: 'Current Role', value: 'Software Engineer @ Freiburg Uni' },
-  { icon: GraduationCap, label: 'Education', value: 'M.Eng Mechatronics, DIT' },
+  { icon: GraduationCap, label: 'Education', value: 'M.Eng Mechatronic & Cyber-Physical Systems, DIT' },
   { icon: Heart, label: 'Interests', value: 'IoT, Open Source, Movies' },
 ];
 
