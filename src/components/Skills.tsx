@@ -22,7 +22,7 @@ const skillCategories: SkillCategory[] = [
   {
     title: 'Frameworks & Tools',
     color: 'secondary',
-    skills: ['FastAPI', 'Flask', 'Django', 'Docker', 'Kubernetes', 'GitHub Actions', 'ROS', 'Pydantic', 'MyPy'],
+    skills: ['FastAPI', 'Docker', 'GitHub Actions', 'ROS', 'Pydantic', 'MyPy'],
   },
   {
     title: 'Databases',
