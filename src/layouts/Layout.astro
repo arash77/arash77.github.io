@@ -105,8 +105,14 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     </script>
   </head>
   <body class="min-h-screen bg-background text-foreground antialiased">
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:bg-background focus:border focus:border-primary focus:text-foreground focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium"
+    >
+      Skip to main content
+    </a>
     <Navbar currentPath={Astro.url.pathname} client:load />
-    <main>
+    <main id="main-content">
       <slot />
     </main>
     <footer class="border-t border-border py-10 mt-16">

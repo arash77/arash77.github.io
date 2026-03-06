@@ -47,7 +47,14 @@ export function SkillBar({ name, level }: SkillBarProps) {
         <span className="text-sm font-medium">{name}</span>
         <span className="text-xs font-mono text-muted-foreground">{level}%</span>
       </div>
-      <div className="h-2 bg-muted rounded-full overflow-hidden">
+      <div
+        className="h-2 bg-muted rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={level}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={name}
+      >
         <div
           ref={fillRef}
           className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
@@ -76,21 +83,19 @@ export function LanguageRing({ name, cefr, label }: LanguageRingProps) {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        pipRefs.current.filter((_, i) => i < filledCount),
-        { scaleX: 0, opacity: 0 },
-        {
-          scaleX: 1,
-          opacity: 1,
-          duration: 0.35,
-          ease: 'power2.out',
-          stagger: 0.07,
-          scrollTrigger: {
-            trigger: pipRefs.current[0],
-            start: 'top 92%',
-          },
-        }
-      );
+      const filledPips = pipRefs.current.filter((_, i) => i < filledCount);
+      gsap.set(filledPips, { scaleX: 0, opacity: 0 });
+      gsap.to(filledPips, {
+        scaleX: 1,
+        opacity: 1,
+        duration: 0.35,
+        ease: 'power2.out',
+        stagger: 0.07,
+        scrollTrigger: {
+          trigger: pipRefs.current[0],
+          start: 'top 92%',
+        },
+      });
     });
 
     return () => ctx.revert();
@@ -112,7 +117,7 @@ export function LanguageRing({ name, cefr, label }: LanguageRingProps) {
             key={lvl}
             ref={(el) => { pipRefs.current[i] = el; }}
             title={lvl}
-            style={i < filledCount ? { transformOrigin: 'left center', opacity: 0 } : undefined}
+            style={i < filledCount ? { transformOrigin: 'left center' } : undefined}
             className={`flex-1 h-1.5 rounded-full ${
               i < filledCount ? 'bg-primary' : 'bg-muted'
             }`}
