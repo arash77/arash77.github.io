@@ -2,13 +2,13 @@ import type { APIRoute } from 'astro';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { createElement as h } from 'react';
 import { SITE } from '@/lib/utils';
 
-const interRegular  = readFileSync(resolve('src/assets/fonts/Inter-Regular.otf'));
-const interSemiBold = readFileSync(resolve('src/assets/fonts/Inter-SemiBold.otf'));
-const avatarData    = `data:image/jpeg;base64,${readFileSync(resolve('public/assets/img/avatar.jpg')).toString('base64')}`;
+const interRegular  = readFileSync(fileURLToPath(new URL('../assets/fonts/Inter-Regular.otf',  import.meta.url)));
+const interSemiBold = readFileSync(fileURLToPath(new URL('../assets/fonts/Inter-SemiBold.otf', import.meta.url)));
+const avatarData    = `data:image/jpeg;base64,${readFileSync(fileURLToPath(new URL('../../public/assets/img/avatar.jpg', import.meta.url))).toString('base64')}`;
 
 // Distributed node-graph as a pre-built SVG data URI (satori can't render SVG children)
 const graphNodes: [number, number, number][] = [
@@ -93,8 +93,8 @@ export const GET: APIRoute = async () => {
     h('div', {
       style: { position: 'absolute', bottom: '44px', left: '80px', right: '80px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     },
-      h('div', { style: { fontSize: '22px', color: '#5eead4', fontWeight: 600 } }, 'kadkhodaei.de'),
-      h('div', { style: { fontSize: '20px', color: 'rgba(240,253,250,0.65)', fontWeight: 400 } }, 'Freiburg, Germany'),
+      h('div', { style: { fontSize: '22px', color: '#5eead4', fontWeight: 600 } }, new URL(SITE.url).hostname),
+      h('div', { style: { fontSize: '20px', color: 'rgba(240,253,250,0.65)', fontWeight: 400 } }, SITE.location),
     ),
   );
 
