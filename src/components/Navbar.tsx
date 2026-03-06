@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Menu, X, Moon, Sun, Code2 } from 'lucide-react';
+import { Menu, X, Moon, Sun } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   Sheet,
@@ -60,7 +60,7 @@ export default function Navbar({ currentPath: initialPath = '/' }: NavbarProps) 
           className="flex items-center gap-2 font-semibold text-lg hover:text-primary transition-colors"
           aria-label="Home"
         >
-          <Code2 className="h-6 w-6 text-primary" />
+          <img src="/a-logo.png" alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
           <span className="font-mono">{SITE.name}</span>
         </a>
 
