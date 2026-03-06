@@ -22,9 +22,10 @@ export default function About() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.set('.about-content', { opacity: 0, y: 40 });
+      gsap.set('.about-content', { y: 40 });
       gsap.to('.about-content', {
         opacity: 1,
+        visibility: 'inherit',
         y: 0,
         duration: 0.8,
         stagger: 0.15,
@@ -42,7 +43,7 @@ export default function About() {
   return (
     <section id="about" ref={sectionRef} className="py-24 bg-muted/30">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="about-content text-center mb-16" style={{ opacity: 0 }}>
+        <div className="gsap-reveal about-content text-center mb-16">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             Get to know me
           </p>
@@ -52,7 +53,7 @@ export default function About() {
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Bio */}
-          <div className="about-content space-y-6" style={{ opacity: 0 }}>
+          <div className="gsap-reveal about-content space-y-6">
             <p className="text-lg text-muted-foreground leading-relaxed">
               I'm a Software Engineer with expertise in Python, backend development, and a strong
               background in Mechatronics and embedded systems. Currently working at{' '}
@@ -72,7 +73,7 @@ export default function About() {
           </div>
 
           {/* Facts grid */}
-          <div className="about-content grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ opacity: 0 }}>
+          <div className="gsap-reveal about-content grid grid-cols-1 sm:grid-cols-2 gap-4">
             {facts.map(({ icon: Icon, label, value }) => (
               <div
                 key={label}

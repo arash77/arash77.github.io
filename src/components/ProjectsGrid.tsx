@@ -68,8 +68,8 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) return;
-    gsap.set(tabsRef.current, { opacity: 0, y: 16 });
-    gsap.to(tabsRef.current, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.1 });
+    gsap.set(tabsRef.current, { y: 16 });
+    gsap.to(tabsRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5, ease: 'power2.out', delay: 0.1 });
   }, []);
 
   // Animate cards on mount and category change
@@ -78,18 +78,16 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        '.project-card',
-        { opacity: 0, y: 20, scale: 0.97 },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.4,
-          stagger: 0.08,
-          ease: 'power2.out',
-        }
-      );
+      gsap.set('.project-card', { y: 20, scale: 0.97 });
+      gsap.to('.project-card', {
+        opacity: 1,
+        visibility: 'inherit',
+        y: 0,
+        scale: 1,
+        duration: 0.4,
+        stagger: 0.08,
+        ease: 'power2.out',
+      });
     }, gridRef);
 
     return () => ctx.revert();
@@ -104,7 +102,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   return (
     <div>
       {/* Category tabs */}
-      <div ref={tabsRef} style={{ opacity: 0 }} className="overflow-x-auto pb-2 mb-10 -mx-4 px-4">
+      <div ref={tabsRef} className="gsap-reveal overflow-x-auto pb-2 mb-10 -mx-4 px-4">
         <Tabs
           value={activeCategory}
           onValueChange={(v) => setActiveCategory(v as ProjectCategory)}
@@ -142,8 +140,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
         {filtered.map((project) => (
           <Card
             key={project.id}
-            style={{ opacity: 0 }}
-            className="project-card flex flex-col group hover:border-primary/30"
+            className="gsap-reveal project-card flex flex-col group hover:border-primary/30"
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-2 mb-2">

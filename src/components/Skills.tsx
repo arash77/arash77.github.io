@@ -91,14 +91,15 @@ export default function Skills() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { opacity: 0, y: 24 });
+      gsap.set(headingRef.current, { y: 24 });
       gsap.to(headingRef.current, {
-        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+        opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
         scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
       });
-      gsap.set('.skill-card', { opacity: 0, y: 30 });
+      gsap.set('.skill-card', { y: 30 });
       gsap.to('.skill-card', {
         opacity: 1,
+        visibility: 'inherit',
         y: 0,
         duration: 0.6,
         stagger: 0.12,
@@ -116,7 +117,7 @@ export default function Skills() {
   return (
     <section id="skills" ref={sectionRef} className="py-24">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div ref={headingRef} className="text-center mb-16" style={{ opacity: 0 }}>
+        <div ref={headingRef} className="gsap-reveal text-center mb-16">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             What I work with
           </p>
@@ -128,13 +129,12 @@ export default function Skills() {
           {skillCategories.map(({ title, color, skills }, index) => (
             <div
               key={title}
-              style={{ opacity: 0 }}
-              className={`skill-card p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-all hover:shadow-md${
+              className={`gsap-reveal skill-card p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-all hover:shadow-md${
                 index === skillCategories.length - 1 && skillCategories.length % 2 === 1
                   ? ' sm:col-span-2'
                   : ''
               }`}
-                         >
+            >
               <h3 className="text-sm font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-4">
                 {title}
               </h3>
