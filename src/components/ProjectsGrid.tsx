@@ -114,11 +114,11 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
               <TabsTrigger
                 key={cat}
                 value={cat}
-                className="text-sm rounded-lg data-[state=active]:shadow-sm"
+                className="text-sm rounded-lg data-[state=active]:shadow-sm gap-1.5"
               >
-                {cat}
+                <span className="leading-none">{cat}</span>
                 {cat !== 'All' && (
-                  <span className="ml-1.5 text-xs text-muted-foreground font-mono">
+                  <span className="text-xs text-muted-foreground tabular-nums leading-none">
                     ({projects.filter((p) => p.category === cat).length})
                   </span>
                 )}
