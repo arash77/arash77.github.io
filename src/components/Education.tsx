@@ -1,44 +1,35 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import { GraduationCap, Calendar } from 'lucide-react';
 import { education } from '../data/resume';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 export default function Education() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { y: 24 });
-      gsap.to(headingRef.current, {
-        opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-      });
-      gsap.set('.edu-card', { y: 30 });
-      gsap.to('.edu-card', {
-        opacity: 1,
-        visibility: 'inherit',
-        y: 0,
-        duration: 0.7,
-        stagger: 0.2,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 75%',
-        },
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
+    gsap.set(headingRef.current, { y: 24 });
+    gsap.to(headingRef.current, {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+    });
+    gsap.set('.edu-card', { y: 30 });
+    gsap.to('.edu-card', {
+      opacity: 1,
+      visibility: 'inherit',
+      y: 0,
+      duration: 0.7,
+      stagger: 0.2,
+      ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' },
+    });
+  }, { scope: sectionRef });
 
   return (
     <section id="education" ref={sectionRef} className="py-12">
@@ -51,7 +42,6 @@ export default function Education() {
           <div className="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
-        {/* No card borders — use whitespace and icon anchors to separate entries */}
         <div className="grid sm:grid-cols-2 gap-8">
           {education.map((edu, idx) => (
             <div key={idx} className="gsap-reveal edu-card flex items-start gap-4">

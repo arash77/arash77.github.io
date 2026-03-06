@@ -1,11 +1,12 @@
-'use client';
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { ExternalLink } from 'lucide-react';
 import { IconGithub } from './BrandIcons';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+
+gsap.registerPlugin(useGSAP);
 
 export type ProjectCategory =
   | 'All'
@@ -70,29 +71,24 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   const featuredFiltered = filtered.filter((p) => p.featured);
   const regularFiltered = filtered.filter((p) => !p.featured);
 
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set('.project-card', { y: 20, scale: 0.97 });
-      gsap.to('.project-card', {
-        opacity: 1,
-        visibility: 'inherit',
-        y: 0,
-        scale: 1,
-        duration: 0.4,
-        stagger: 0.06,
-        ease: 'power2.out',
-      });
-    }, gridRef);
-
-    return () => ctx.revert();
-  }, [activeCategory]);
+    gsap.set('.project-card', { y: 20, scale: 0.97 });
+    gsap.to('.project-card', {
+      opacity: 1,
+      visibility: 'inherit',
+      y: 0,
+      scale: 1,
+      duration: 0.4,
+      stagger: 0.06,
+      ease: 'power2.out',
+    });
+  }, { scope: gridRef, dependencies: [activeCategory], revertOnUpdate: true });
 
   return (
     <div>
-      {/* Category filter — plain button row, no Tabs abuse */}
+      {/* Category filter */}
       <div className="overflow-x-auto pb-2 mb-10 -mx-4 px-4">
         <div className="flex gap-1.5 w-max bg-muted rounded-xl p-1">
           {CATEGORIES.map((cat) => (

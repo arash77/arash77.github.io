@@ -1,11 +1,12 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { ArrowRight, Download } from 'lucide-react';
 import { IconGithub, IconLinkedin } from './BrandIcons';
 import { Button } from './ui/button';
 import { SITE } from '@/lib/utils';
+
+gsap.registerPlugin(useGSAP);
 
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -16,29 +17,23 @@ export default function Hero() {
   const helloRef = useRef<HTMLParagraphElement>(null);
   const tagsRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Respect reduced motion
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set(imageRef.current, { scale: 0.8 });
-      gsap.set([helloRef.current, tagsRef.current], { y: 15 });
-      gsap.set(nameRef.current, { y: 30 });
-      gsap.set([subtitleRef.current, ctaRef.current], { y: 20 });
+    gsap.set(imageRef.current, { scale: 0.8 });
+    gsap.set([helloRef.current, tagsRef.current], { y: 15 });
+    gsap.set(nameRef.current, { y: 30 });
+    gsap.set([subtitleRef.current, ctaRef.current], { y: 20 });
 
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-      tl.to(imageRef.current, { opacity: 1, visibility: 'inherit', scale: 1, duration: 0.8 })
-        .to(helloRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.4')
-        .to(nameRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.7 }, '-=0.4')
-        .to(subtitleRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.6 }, '-=0.3')
-        .to(tagsRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.2')
-        .to(ctaRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.6 }, '-=0.2');
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, []);
+    tl.to(imageRef.current, { opacity: 1, visibility: 'inherit', scale: 1, duration: 0.8 })
+      .to(helloRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.4')
+      .to(nameRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.7 }, '-=0.4')
+      .to(subtitleRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.6 }, '-=0.3')
+      .to(tagsRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.2')
+      .to(ctaRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.6 }, '-=0.2');
+  }, { scope: containerRef });
 
   return (
     <section

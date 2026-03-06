@@ -1,8 +1,7 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import { Badge } from './ui/badge';
 import type { IconType } from 'react-icons';
 import {
@@ -14,7 +13,7 @@ import {
 import { Cpu, Globe, ImageIcon, Dna, CheckCircle2, TestTube2 } from 'lucide-react';
 import { skillCategories } from '../data/resume';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const skillIcons: Record<string, IconType | React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   'Python': SiPython,
@@ -47,33 +46,25 @@ export default function Skills() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { y: 24 });
-      gsap.to(headingRef.current, {
-        opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-      });
-      gsap.set('.skill-card', { y: 30 });
-      gsap.to('.skill-card', {
-        opacity: 1,
-        visibility: 'inherit',
-        y: 0,
-        duration: 0.6,
-        stagger: 0.12,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 75%',
-        },
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
+    gsap.set(headingRef.current, { y: 24 });
+    gsap.to(headingRef.current, {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+    });
+    gsap.set('.skill-card', { y: 30 });
+    gsap.to('.skill-card', {
+      opacity: 1,
+      visibility: 'inherit',
+      y: 0,
+      duration: 0.6,
+      stagger: 0.12,
+      ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' },
+    });
+  }, { scope: sectionRef });
 
   return (
     <section id="skills" ref={sectionRef} className="py-12">

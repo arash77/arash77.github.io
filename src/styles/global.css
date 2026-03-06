@@ -122,23 +122,6 @@
   @apply text-primary hover:text-primary/80 underline underline-offset-4 transition-colors;
 }
 
-/* Timeline connector */
-.timeline-item::before {
-  content: '';
-  position: absolute;
-  left: -1px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  @apply bg-border;
-}
-.timeline-item:first-child::before {
-  top: 50%;
-}
-.timeline-item:last-child::before {
-  bottom: 50%;
-}
-
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,

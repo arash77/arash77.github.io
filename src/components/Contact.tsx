@@ -1,14 +1,13 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import { Mail, MapPin } from 'lucide-react';
 import { IconGithub, IconLinkedin } from './BrandIcons';
 import { Button } from './ui/button';
 import { SITE } from '@/lib/utils';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const contactLinks = [
   {
@@ -45,33 +44,25 @@ export default function Contact() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { y: 24 });
-      gsap.to(headingRef.current, {
-        opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-      });
-      gsap.set('.contact-item', { y: 20 });
-      gsap.to('.contact-item', {
-        opacity: 1,
-        visibility: 'inherit',
-        y: 0,
-        duration: 0.6,
-        stagger: 0.1,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 80%',
-        },
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
+    gsap.set(headingRef.current, { y: 24 });
+    gsap.to(headingRef.current, {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+    });
+    gsap.set('.contact-item', { y: 20 });
+    gsap.to('.contact-item', {
+      opacity: 1,
+      visibility: 'inherit',
+      y: 0,
+      duration: 0.6,
+      stagger: 0.1,
+      ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+    });
+  }, { scope: sectionRef });
 
   return (
     <section id="contact" ref={sectionRef} className="py-24">

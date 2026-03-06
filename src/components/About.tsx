@@ -1,11 +1,10 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import { MapPin, Briefcase, GraduationCap, Heart } from 'lucide-react';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const facts = [
   { icon: MapPin, label: 'Location', value: 'Freiburg, Germany' },
@@ -17,28 +16,20 @@ const facts = [
 export default function About() {
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set('.about-content', { y: 40 });
-      gsap.to('.about-content', {
-        opacity: 1,
-        visibility: 'inherit',
-        y: 0,
-        duration: 0.8,
-        stagger: 0.15,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 80%',
-        },
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
+    gsap.set('.about-content', { y: 40 });
+    gsap.to('.about-content', {
+      opacity: 1,
+      visibility: 'inherit',
+      y: 0,
+      duration: 0.8,
+      stagger: 0.15,
+      ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+    });
+  }, { scope: sectionRef });
 
   return (
     <section id="about" ref={sectionRef} className="py-12 bg-muted/30">
@@ -52,7 +43,6 @@ export default function About() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Bio */}
           <div className="gsap-reveal about-content space-y-6">
             <p className="text-lg text-muted-foreground leading-relaxed">
               I'm a Software Engineer with expertise in Python, backend development, and a strong
@@ -72,7 +62,6 @@ export default function About() {
             </p>
           </div>
 
-          {/* Facts — no card borders, use icon + label typography */}
           <div className="gsap-reveal about-content grid grid-cols-1 sm:grid-cols-2 gap-5">
             {facts.map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-start gap-3">
