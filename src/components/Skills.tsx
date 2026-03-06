@@ -16,7 +16,6 @@ import { skillCategories } from '../data/resume';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Map skill names to icons. Skills without a matching brand icon use a generic Lucide icon.
 const skillIcons: Record<string, IconType | React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   'Python': SiPython,
   'C/C++': SiCplusplus,
@@ -77,9 +76,9 @@ export default function Skills() {
   }, []);
 
   return (
-    <section id="skills" ref={sectionRef} className="py-24">
+    <section id="skills" ref={sectionRef} className="py-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div ref={headingRef} className="gsap-reveal text-center mb-16">
+        <div ref={headingRef} className="gsap-reveal text-center mb-8">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             What I work with
           </p>

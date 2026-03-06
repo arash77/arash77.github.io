@@ -41,9 +41,9 @@ export default function Experience() {
   }, []);
 
   return (
-    <section id="experience" ref={sectionRef} className="py-24 bg-muted/30">
+    <section id="experience" ref={sectionRef} className="py-12 bg-muted/30">
       <div className="container mx-auto px-4 max-w-4xl">
-        <div ref={headingRef} className="gsap-reveal text-center mb-16">
+        <div ref={headingRef} className="gsap-reveal text-center mb-8">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             My journey
           </p>
@@ -74,32 +74,30 @@ export default function Experience() {
                   </div>
                 </div>
 
-                {/* Card */}
-                <div className="flex-1 pb-2">
-                  <div className="rounded-xl border border-border bg-card p-6 hover:border-primary/30 transition-colors hover:shadow-md">
-                    <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                      <div>
-                        <h3 className="text-lg font-semibold">{exp.role}</h3>
-                        <p className="text-primary font-medium">{exp.company}</p>
-                        <p className="text-sm text-muted-foreground">{exp.location}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground bg-muted rounded-full px-3 py-1 whitespace-nowrap">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <time dateTime={exp.dateStart}>{exp.period}</time>
-                        {exp.current && (
-                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1" />
-                        )}
-                      </div>
+                {/* Entry — no card border, typography-first */}
+                <div className="flex-1 pb-2 pt-1">
+                  <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
+                    <div>
+                      <h3 className="text-lg font-semibold">{exp.role}</h3>
+                      <p className="text-primary font-medium">{exp.company}</p>
+                      <p className="text-sm text-muted-foreground">{exp.location}</p>
                     </div>
-                    <ul className="space-y-1.5">
-                      {exp.description.map((point, i) => (
-                        <li key={i} className="text-sm text-muted-foreground flex gap-2">
-                          <span className="text-primary mt-1.5 flex-shrink-0">•</span>
-                          {point}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground bg-muted rounded-full px-3 py-1 whitespace-nowrap">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <time dateTime={exp.dateStart}>{exp.period}</time>
+                      {exp.current && (
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1" />
+                      )}
+                    </div>
                   </div>
+                  <ul className="space-y-1.5">
+                    {exp.description.map((point, i) => (
+                      <li key={i} className="text-sm text-muted-foreground flex gap-2">
+                        <span className="text-primary mt-1.5 flex-shrink-0" aria-hidden="true">•</span>
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             ))}
