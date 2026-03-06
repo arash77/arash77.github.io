@@ -22,43 +22,19 @@ export default function Hero() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
+      gsap.set(imageRef.current, { opacity: 0, scale: 0.8 });
+      gsap.set([helloRef.current, tagsRef.current], { opacity: 0, y: 15 });
+      gsap.set(nameRef.current, { opacity: 0, y: 30 });
+      gsap.set([subtitleRef.current, ctaRef.current], { opacity: 0, y: 20 });
+
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-      tl.fromTo(
-        imageRef.current,
-        { opacity: 0, scale: 0.8 },
-        { opacity: 1, scale: 1, duration: 0.8 }
-      )
-        .fromTo(
-          helloRef.current,
-          { opacity: 0, y: 15 },
-          { opacity: 1, y: 0, duration: 0.5 },
-          '-=0.4'
-        )
-        .fromTo(
-          nameRef.current,
-          { opacity: 0, y: 30 },
-          { opacity: 1, y: 0, duration: 0.7 },
-          '-=0.4'
-        )
-        .fromTo(
-          subtitleRef.current,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.6 },
-          '-=0.3'
-        )
-        .fromTo(
-          tagsRef.current,
-          { opacity: 0, y: 15 },
-          { opacity: 1, y: 0, duration: 0.5 },
-          '-=0.2'
-        )
-        .fromTo(
-          ctaRef.current,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.6 },
-          '-=0.2'
-        );
+      tl.to(imageRef.current, { opacity: 1, scale: 1, duration: 0.8 })
+        .to(helloRef.current, { opacity: 1, y: 0, duration: 0.5 }, '-=0.4')
+        .to(nameRef.current, { opacity: 1, y: 0, duration: 0.7 }, '-=0.4')
+        .to(subtitleRef.current, { opacity: 1, y: 0, duration: 0.6 }, '-=0.3')
+        .to(tagsRef.current, { opacity: 1, y: 0, duration: 0.5 }, '-=0.2')
+        .to(ctaRef.current, { opacity: 1, y: 0, duration: 0.6 }, '-=0.2');
     }, containerRef);
 
     return () => ctx.revert();
@@ -86,10 +62,9 @@ export default function Hero() {
       <div className="container mx-auto px-4 max-w-6xl py-20">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           {/* Profile image */}
-          <div ref={imageRef} className="relative flex-shrink-0" style={{ opacity: 0 }}>
+          <div ref={imageRef} style={{ opacity: 0 }} className="relative flex-shrink-0">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-secondary opacity-80 blur-lg scale-110" />
-              <div className="relative rounded-full border-4 border-background shadow-2xl w-44 h-44 lg:w-56 lg:h-56 overflow-hidden">
+              <div className="relative rounded-full border-4 border-background shadow-xl ring-1 ring-border/50 w-44 h-44 lg:w-56 lg:h-56 overflow-hidden">
                 <img
                   src={SITE.avatar}
                   alt={SITE.name}
@@ -105,29 +80,26 @@ export default function Hero() {
 
           {/* Text content */}
           <div className="flex-1 text-center lg:text-left">
-            <p ref={helloRef} className="text-sm font-mono text-secondary mb-3 tracking-widest uppercase" style={{ opacity: 0 }}>
+            <p ref={helloRef} style={{ opacity: 0 }} className="text-sm font-mono text-secondary mb-3 tracking-widest uppercase">
               Hello, I'm
             </p>
             <h1
               ref={nameRef}
-              className="text-5xl lg:text-7xl font-bold tracking-tight mb-4"
               style={{ opacity: 0 }}
+              className="text-5xl lg:text-7xl font-bold tracking-tight mb-4"
             >
-              Arash{' '}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                Kadkhodaei
-              </span>
+              Arash <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Kadkhodaei</span>
             </h1>
             <p
               ref={subtitleRef}
-              className="text-xl lg:text-2xl text-muted-foreground mb-6 max-w-xl mx-auto lg:mx-0"
               style={{ opacity: 0 }}
+              className="text-xl lg:text-2xl text-muted-foreground mb-6 max-w-xl mx-auto lg:mx-0"
             >
               Software Engineer specialising in <span className="text-foreground font-medium">Backend & Distributed Systems</span>
             </p>
 
             {/* Tags */}
-            <div ref={tagsRef} className="flex flex-wrap gap-2 justify-center lg:justify-start mb-8" style={{ opacity: 0 }}>
+            <div ref={tagsRef} style={{ opacity: 0 }} className="flex flex-wrap gap-2 justify-center lg:justify-start mb-8">
               {['Python', 'FastAPI', 'Galaxy Project', 'Docker', 'CI/CD'].map((tag) => (
                 <span
                   key={tag}
@@ -140,8 +112,8 @@ export default function Hero() {
 
             <div
               ref={ctaRef}
-              className="flex flex-wrap gap-4 justify-center lg:justify-start"
               style={{ opacity: 0 }}
+              className="flex flex-wrap items-center gap-4 justify-center lg:justify-start"
             >
               <Button asChild size="lg" className="gap-2">
                 <a href="/projects">
@@ -153,7 +125,8 @@ export default function Hero() {
                   Download Resume <Download className="h-4 w-4" />
                 </a>
               </Button>
-              <div className="flex gap-2">
+              <div className="hidden sm:block w-px h-6 bg-border" aria-hidden="true" />
+              <div className="flex items-center gap-1">
                 <Button asChild variant="ghost" size="icon" aria-label="GitHub">
                   <a href={SITE.github} target="_blank" rel="noopener noreferrer">
                     <IconGithub className="h-5 w-5" />

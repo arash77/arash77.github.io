@@ -71,29 +71,23 @@ export default function Experience() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headingRef.current,
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-        }
-      );
-      gsap.fromTo(
-        '.timeline-card',
-        { opacity: 0, x: -40 },
-        {
-          opacity: 1,
-          x: 0,
-          duration: 0.7,
-          stagger: 0.2,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 75%',
-          },
-        }
-      );
+      gsap.set(headingRef.current, { opacity: 0, y: 24 });
+      gsap.to(headingRef.current, {
+        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+      });
+      gsap.set('.timeline-card', { opacity: 0, x: -40 });
+      gsap.to('.timeline-card', {
+        opacity: 1,
+        x: 0,
+        duration: 0.7,
+        stagger: 0.2,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 75%',
+        },
+      });
     }, sectionRef);
 
     return () => ctx.revert();
@@ -118,9 +112,9 @@ export default function Experience() {
             {experiences.map((exp, idx) => (
               <div
                 key={idx}
-                className="timeline-card relative flex gap-6"
                 style={{ opacity: 0 }}
-              >
+                className="timeline-card relative flex gap-6"
+                             >
                 {/* Icon dot */}
                 <div className="hidden sm:flex flex-col items-center flex-shrink-0">
                   <div
