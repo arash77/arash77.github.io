@@ -45,29 +45,23 @@ export default function Skills() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headingRef.current,
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-        }
-      );
-      gsap.fromTo(
-        '.skill-card',
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.6,
-          stagger: 0.12,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 75%',
-          },
-        }
-      );
+      gsap.set(headingRef.current, { opacity: 0, y: 24 });
+      gsap.to(headingRef.current, {
+        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+      });
+      gsap.set('.skill-card', { opacity: 0, y: 30 });
+      gsap.to('.skill-card', {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: 0.12,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 75%',
+        },
+      });
     }, sectionRef);
 
     return () => ctx.revert();
@@ -88,9 +82,9 @@ export default function Skills() {
           {skillCategories.map(({ title, color, skills }) => (
             <div
               key={title}
-              className="skill-card p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-all hover:shadow-md"
               style={{ opacity: 0 }}
-            >
+              className="skill-card p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-all hover:shadow-md"
+                         >
               <h3 className="text-sm font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-4">
                 {title}
               </h3>

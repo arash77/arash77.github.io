@@ -6,7 +6,7 @@ import { ExternalLink } from 'lucide-react';
 import { IconGithub } from './BrandIcons';
 import { Badge } from './ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui/card';
+import { Card, CardHeader, CardDescription, CardContent, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 
 export type ProjectCategory =
@@ -58,7 +58,6 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   const [activeCategory, setActiveCategory] = useState<ProjectCategory>('All');
   const gridRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
-  const hasMounted = useRef(false);
 
   const filtered =
     activeCategory === 'All'
@@ -69,19 +68,15 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) return;
-    gsap.fromTo(
-      tabsRef.current,
-      { opacity: 0, y: 16 },
-      { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.1 }
-    );
+    gsap.set(tabsRef.current, { opacity: 0, y: 16 });
+    gsap.to(tabsRef.current, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.1 });
   }, []);
 
-  // Animate cards on category change
+  // Animate cards on mount and category change
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) return;
 
-    // Skip stagger on very first render (cards start opacity:0 already)
     const ctx = gsap.context(() => {
       gsap.fromTo(
         '.project-card',
@@ -147,8 +142,8 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
         {filtered.map((project) => (
           <Card
             key={project.id}
-            className="project-card flex flex-col group hover:border-primary/30"
             style={{ opacity: 0 }}
+            className="project-card flex flex-col group hover:border-primary/30"
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-2 mb-2">
@@ -163,9 +158,9 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
                   <span className="text-xs font-mono text-secondary">★ Featured</span>
                 )}
               </div>
-              <CardTitle className="text-base leading-snug group-hover:text-primary transition-colors">
+              <h2 className="text-base font-semibold leading-snug tracking-tight group-hover:text-primary transition-colors">
                 {project.title}
-              </CardTitle>
+              </h2>
             </CardHeader>
             <CardContent className="flex-1 pb-4">
               <CardDescription className="text-sm leading-relaxed line-clamp-4">

@@ -23,13 +23,11 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
           <div>
             <h1 class="text-3xl font-bold">Arash Kadkhodaei</h1>
             <p class="text-muted-foreground font-medium">Software Engineer</p>
-            <div class="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
-              <span class="flex items-center gap-1"><MapPin class="h-3.5 w-3.5" />Freiburg, Germany</span>
-              <a href="mailto:arash77.kad@gmail.com" class="flex items-center gap-1 hover:text-primary"><Mail class="h-3.5 w-3.5" />arash77.kad@gmail.com</a>
-            </div>
-            <div class="flex gap-3 mt-2">
-              <a href="https://github.com/arash77" target="_blank" class="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"><IconGithub class="h-3.5 w-3.5"/>arash77</a>
-              <a href="https://linkedin.com/in/kadarash" target="_blank" class="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"><IconLinkedin class="h-3.5 w-3.5"/>kadarash</a>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+              <span class="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Freiburg, Germany</span>
+              <a href="mailto:arash77.kad@gmail.com" class="flex items-center gap-1 hover:text-primary"><Mail className="h-3.5 w-3.5" />arash77.kad@gmail.com</a>
+              <a href="https://github.com/arash77" target="_blank" class="flex items-center gap-1 hover:text-primary"><IconGithub className="h-3.5 w-3.5" />arash77</a>
+              <a href="https://linkedin.com/in/kadarash" target="_blank" class="flex items-center gap-1 hover:text-primary"><IconLinkedin className="h-3.5 w-3.5" />kadarash</a>
             </div>
           </div>
         </div>
@@ -38,7 +36,7 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
           download
           class="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0"
         >
-          <Download class="h-4 w-4" />
+          <Download className="h-4 w-4" />
           Download PDF
         </a>
       </div>
@@ -49,7 +47,7 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
         <div class="space-y-8 lg:col-span-1">
 
           <!-- Summary -->
-          <section class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.15s;">
+          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.15s;">
             <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-4">Summary</h2>
             <p class="text-sm text-muted-foreground leading-relaxed">
               Software Engineer with expertise in Python, FastAPI, and backend systems. Contributing to the
@@ -59,7 +57,7 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
           </section>
 
           <!-- Languages -->
-          <section class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.3s;">
+          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.3s;">
             <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6">Languages</h2>
             <div class="flex flex-col gap-1">
               <LanguageRing name="Persian" cefr="C2" label="Native" client:visible />
@@ -69,7 +67,7 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
           </section>
 
           <!-- Technical Skills -->
-          <section class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.45s;">
+          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.45s;">
             <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-5">Technical Skills</h2>
             <SkillBar name="Python" level={95} client:visible />
             <SkillBar name="FastAPI / Flask" level={88} client:visible />
@@ -85,9 +83,9 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
         <div class="space-y-8 lg:col-span-2">
 
           <!-- Experience -->
-          <section class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.2s;">
+          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.2s;">
             <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-              <Briefcase class="h-4 w-4" />
+              <Briefcase className="h-4 w-4" />
               Experience
             </h2>
             <div class="space-y-6">
@@ -158,9 +156,9 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
           </section>
 
           <!-- Education -->
-          <section class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.35s;">
+          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.35s;">
             <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-              <GraduationCap class="h-4 w-4" />
+              <GraduationCap className="h-4 w-4" />
               Education
             </h2>
             <div class="space-y-5">
@@ -180,7 +178,7 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
               ].map((edu) => (
                 <div class="flex gap-4">
                   <div class="p-2.5 rounded-lg bg-primary/10 h-fit">
-                    <GraduationCap class="h-4 w-4 text-primary" />
+                    <GraduationCap className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <p class="font-semibold">{edu.degree}</p>
