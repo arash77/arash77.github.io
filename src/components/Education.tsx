@@ -19,19 +19,19 @@ interface EducationItem {
 const education: EducationItem[] = [
   {
     degree: 'Master of Engineering',
-    field: 'Mechatronics',
+    field: 'Mechatronic and Cyber-Physical Systems',
     institution: 'Deggendorf Institute of Technology',
     location: 'Deggendorf, Germany',
     period: '2021 – 2024',
     description:
-      'Focused on robotics, embedded systems, and industrial automation. Thesis on automatic CT scan system using ROS2 and Python for Fraunhofer.',
+      'Focused on robotics, embedded systems, and industrial automation. Thesis on automatic CT scan system using ROS and Python for Fraunhofer.',
   },
   {
     degree: 'Bachelor of Science',
     field: 'Mechanical Engineering',
     institution: 'University of Kashan',
     location: 'Kashan, Iran',
-    period: '2017 – 2021',
+    period: '2016 – 2021',
     description:
       'Strong foundation in engineering principles, CAD/CAM, thermodynamics, and manufacturing processes.',
   },

@@ -30,13 +30,13 @@ const experiences: ExperienceItem[] = [
     ],
   },
   {
-    role: 'Master Thesis Researcher',
-    company: 'Deggendorf Institute of Technology / Fraunhofer',
+    role: 'Software Engineer',
+    company: 'Fraunhofer IIS',
     location: 'Deggendorf, Germany',
-    period: 'Feb 2023 – Jan 2024',
+    period: 'Feb 2023 – Feb 2024',
     description: [
-      'Developed an automatic fast CT scan system using ROS and Python.',
-      'Built for Fraunhofer Application Center CT in Metrology.',
+      'Developed automatic fast CT scan system using Python and ROS for industrial metrology.',
+      'Engineered automated control systems for metrology hardware.',
       'Integrated Python image processing pipelines with robotic control.',
     ],
   },
