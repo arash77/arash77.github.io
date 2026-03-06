@@ -4,63 +4,9 @@ import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Briefcase, Calendar } from 'lucide-react';
+import { experiences } from '../data/resume';
 
 gsap.registerPlugin(ScrollTrigger);
-
-interface ExperienceItem {
-  role: string;
-  company: string;
-  location: string;
-  period: string;
-  description: string[];
-  current?: boolean;
-}
-
-const experiences: ExperienceItem[] = [
-  {
-    role: 'Software Engineer',
-    company: 'Freiburg University',
-    location: 'Freiburg, Germany',
-    period: 'Apr 2024 – Present',
-    current: true,
-    description: [
-      'Working on the Galaxy Project, improving backend systems and APIs.',
-      'Special focus on FastAPI, Pydantic, and data validation.',
-      'Open-source contributions across Galaxy ecosystem repositories.',
-    ],
-  },
-  {
-    role: 'Software Engineer',
-    company: 'Fraunhofer IIS',
-    location: 'Deggendorf, Germany',
-    period: 'Feb 2023 – Feb 2024',
-    description: [
-      'Developed automatic fast CT scan system using Python and ROS for industrial metrology.',
-      'Engineered automated control systems for metrology hardware.',
-      'Integrated Python image processing pipelines with robotic control.',
-    ],
-  },
-  {
-    role: 'Working Student – IoT & Embedded Systems',
-    company: 'Daneshjookit & DigiSpark',
-    location: 'Remote',
-    period: 'Oct 2017 – Jan 2021',
-    description: [
-      'Designed IoT and embedded systems projects.',
-      'Authored technical content on IoT and embedded systems topics.',
-    ],
-  },
-  {
-    role: 'Arduino Freelancer Developer',
-    company: 'Freelance',
-    location: 'Remote',
-    period: 'Jan 2014 – Sep 2017',
-    description: [
-      'Created innovative projects: heart rate monitor, GPS tracker, smart home systems.',
-      'Built end-to-end hardware/software solutions for clients.',
-    ],
-  },
-];
 
 export default function Experience() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -139,7 +85,7 @@ export default function Experience() {
                       </div>
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground bg-muted rounded-full px-3 py-1 whitespace-nowrap">
                         <Calendar className="h-3.5 w-3.5" />
-                        {exp.period}
+                        <time dateTime={exp.dateStart}>{exp.period}</time>
                         {exp.current && (
                           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1" />
                         )}

@@ -12,6 +12,7 @@ import {
   SiLinux, SiPytest, SiGit, SiSelenium,
 } from 'react-icons/si';
 import { Cpu, Globe, ImageIcon, Dna, CheckCircle2, TestTube2 } from 'lucide-react';
+import { skillCategories } from '../data/resume';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -42,45 +43,6 @@ const skillIcons: Record<string, IconType | React.ComponentType<React.SVGProps<S
   'Bioinformatics': Dna,
   'Image Processing': ImageIcon,
 };
-
-interface SkillCategory {
-  title: string;
-  color: 'default' | 'secondary' | 'amber' | 'rose' | 'indigo' | 'violet';
-  skills: string[];
-}
-
-const skillCategories: SkillCategory[] = [
-  {
-    title: 'Programming Languages',
-    color: 'default',
-    skills: ['Python', 'C/C++', 'JavaScript', 'TypeScript', 'Bash'],
-  },
-  {
-    title: 'Backend Frameworks',
-    color: 'secondary',
-    skills: ['FastAPI', 'Pydantic', 'REST API Design', 'ROS'],
-  },
-  {
-    title: 'Databases & Caching',
-    color: 'amber',
-    skills: ['PostgreSQL', 'MongoDB', 'SQLite', 'Redis'],
-  },
-  {
-    title: 'Infrastructure & DevOps',
-    color: 'rose',
-    skills: ['Docker', 'GitHub Actions', 'Linux'],
-  },
-  {
-    title: 'Testing & Tooling',
-    color: 'indigo',
-    skills: ['PyTest', 'Playwright', 'Selenium', 'MyPy', 'Git'],
-  },
-  {
-    title: 'Core Domains',
-    color: 'violet',
-    skills: ['IoT & Embedded Systems', 'Bioinformatics', 'Image Processing'],
-  },
-];
 
 export default function Skills() {
   const sectionRef = useRef<HTMLDivElement>(null);
