@@ -1,44 +1,35 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import { Briefcase, Calendar } from 'lucide-react';
 import { experiences } from '../data/resume';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 export default function Experience() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { y: 24 });
-      gsap.to(headingRef.current, {
-        opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-      });
-      gsap.set('.timeline-card', { x: -40 });
-      gsap.to('.timeline-card', {
-        opacity: 1,
-        visibility: 'inherit',
-        x: 0,
-        duration: 0.7,
-        stagger: 0.2,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 75%',
-        },
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
+    gsap.set(headingRef.current, { y: 24 });
+    gsap.to(headingRef.current, {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+    });
+    gsap.set('.timeline-card', { x: -40 });
+    gsap.to('.timeline-card', {
+      opacity: 1,
+      visibility: 'inherit',
+      x: 0,
+      duration: 0.7,
+      stagger: 0.2,
+      ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' },
+    });
+  }, { scope: sectionRef });
 
   return (
     <section id="experience" ref={sectionRef} className="py-12 bg-muted/30">
@@ -52,16 +43,11 @@ export default function Experience() {
         </div>
 
         <div className="relative">
-          {/* Vertical line */}
           <div className="absolute left-6 top-0 bottom-0 w-px bg-border hidden sm:block" aria-hidden="true" />
 
           <div className="space-y-8">
             {experiences.map((exp, idx) => (
-              <div
-                key={idx}
-                className="gsap-reveal timeline-card relative flex gap-6"
-              >
-                {/* Icon dot */}
+              <div key={idx} className="gsap-reveal timeline-card relative flex gap-6">
                 <div className="hidden sm:flex flex-col items-center flex-shrink-0">
                   <div
                     className={`w-12 h-12 rounded-full border-2 flex items-center justify-center z-10 ${
@@ -74,7 +60,6 @@ export default function Experience() {
                   </div>
                 </div>
 
-                {/* Entry — no card border, typography-first */}
                 <div className="flex-1 pb-2 pt-1">
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
                     <div>
