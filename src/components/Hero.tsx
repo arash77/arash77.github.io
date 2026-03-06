@@ -113,14 +113,14 @@ export default function Hero() {
             <div
               ref={ctaRef}
               style={{ opacity: 0 }}
-              className="flex flex-wrap items-center gap-4 justify-center lg:justify-start"
+              className="flex flex-col sm:flex-row flex-wrap items-center gap-4 justify-center lg:justify-start"
             >
-              <Button asChild size="lg" className="gap-2">
+              <Button asChild size="lg" className="gap-2 w-full sm:w-auto">
                 <a href="/projects">
                   View Projects <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>
-              <Button asChild variant="outline" size="lg" className="gap-2">
+              <Button asChild variant="outline" size="lg" className="gap-2 w-full sm:w-auto">
                 <a href="/assets/resume.pdf" download>
                   Download Resume <Download className="h-4 w-4" />
                 </a>
