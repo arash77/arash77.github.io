@@ -4,38 +4,9 @@ import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { GraduationCap, Calendar } from 'lucide-react';
+import { education } from '../data/resume';
 
 gsap.registerPlugin(ScrollTrigger);
-
-interface EducationItem {
-  degree: string;
-  field: string;
-  institution: string;
-  location: string;
-  period: string;
-  description?: string;
-}
-
-const education: EducationItem[] = [
-  {
-    degree: 'Master of Engineering',
-    field: 'Mechatronic and Cyber-Physical Systems',
-    institution: 'Deggendorf Institute of Technology',
-    location: 'Deggendorf, Germany',
-    period: '2021 – 2024',
-    description:
-      'Focused on robotics, embedded systems, and industrial automation. Thesis on automatic CT scan system using ROS and Python for Fraunhofer.',
-  },
-  {
-    degree: 'Bachelor of Science',
-    field: 'Mechanical Engineering',
-    institution: 'University of Kashan',
-    location: 'Kashan, Iran',
-    period: '2016 – 2021',
-    description:
-      'Strong foundation in engineering principles, CAD/CAM, thermodynamics, and manufacturing processes.',
-  },
-];
 
 export default function Education() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -99,7 +70,7 @@ export default function Education() {
               <p className="text-sm text-muted-foreground mb-3">{edu.location}</p>
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
                 <Calendar className="h-3.5 w-3.5" />
-                {edu.period}
+                <time dateTime={edu.dateStart}>{edu.period}</time>
               </div>
               {edu.description && (
                 <p className="text-sm text-muted-foreground leading-relaxed">{edu.description}</p>
