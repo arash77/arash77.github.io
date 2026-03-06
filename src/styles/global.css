@@ -18,6 +18,10 @@
     --amber-foreground: 40 40% 98%;
     --indigo: 230 55% 42%;
     --indigo-foreground: 230 40% 98%;
+    --rose: 350 65% 40%;
+    --rose-foreground: 350 40% 98%;
+    --violet: 265 50% 45%;
+    --violet-foreground: 265 40% 98%;
     --muted: 186 25% 88%;
     --muted-foreground: 186 22% 28%;
     --accent: 186 25% 88%;
@@ -45,6 +49,10 @@
     --amber-foreground: 35 65% 8%;
     --indigo: 230 55% 65%;
     --indigo-foreground: 230 65% 8%;
+    --rose: 350 60% 62%;
+    --rose-foreground: 350 65% 8%;
+    --violet: 265 55% 68%;
+    --violet-foreground: 265 65% 8%;
     --muted: 186 38% 14%;
     --muted-foreground: 186 16% 72%;
     --accent: 186 38% 14%;
