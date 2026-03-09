@@ -3,6 +3,13 @@ name: Preview on Cloudflare Pages
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'astro.config.*'
+      - 'tailwind.config.*'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
 
 permissions:
   contents: read
