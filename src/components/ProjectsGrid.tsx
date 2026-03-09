@@ -105,7 +105,10 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   return (
     <div>
       {/* Category filter */}
-      <div ref={filterRef} className="gsap-reveal overflow-x-auto pb-2 mb-10 flex justify-center">
+      <div ref={filterRef} className="gsap-reveal relative overflow-hidden pb-2 mb-10">
+        {/* Right-edge fade affordance on mobile */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent z-10 sm:hidden" aria-hidden="true" />
+        <div className="overflow-x-auto flex justify-center">
         <div className="flex gap-1.5 w-max bg-muted rounded-xl p-1">
           {CATEGORIES.map((cat) => (
             <button
@@ -127,6 +130,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
               )}
             </button>
           ))}
+        </div>
         </div>
       </div>
 
