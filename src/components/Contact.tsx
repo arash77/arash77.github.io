@@ -66,7 +66,7 @@ export default function Contact() {
 
   return (
     <section id="contact" ref={sectionRef} className="py-24">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-5xl">
         <div ref={headingRef} className="gsap-reveal text-center mb-16">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             Let's connect
@@ -85,7 +85,7 @@ export default function Contact() {
               href={href}
               target={href.startsWith('http') ? '_blank' : undefined}
               rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
-              className="gsap-reveal contact-item group flex items-center gap-4 p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150"
+              className="gsap-reveal contact-item group flex items-center gap-4 p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150 cursor-pointer"
             >
               <div className={`p-3 rounded-lg bg-muted transition-colors ${color}`}>
                 <Icon className="h-5 w-5" aria-hidden="true" />
