@@ -66,7 +66,7 @@ export default function Contact() {
 
   return (
     <section id="contact" ref={sectionRef} className="py-24">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-5xl">
         <div ref={headingRef} className="gsap-reveal text-center mb-16">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             Let's connect
