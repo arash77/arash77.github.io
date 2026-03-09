@@ -1,8 +1,7 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import { Badge } from './ui/badge';
 import type { IconType } from 'react-icons';
 import {
@@ -12,10 +11,10 @@ import {
   SiLinux, SiPytest, SiGit, SiSelenium,
 } from 'react-icons/si';
 import { Cpu, Globe, ImageIcon, Dna, CheckCircle2, TestTube2 } from 'lucide-react';
+import { skillCategories } from '../data/resume';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-// Map skill names to icons. Skills without a matching brand icon use a generic Lucide icon.
 const skillIcons: Record<string, IconType | React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   'Python': SiPython,
   'C/C++': SiCplusplus,
@@ -43,80 +42,34 @@ const skillIcons: Record<string, IconType | React.ComponentType<React.SVGProps<S
   'Image Processing': ImageIcon,
 };
 
-interface SkillCategory {
-  title: string;
-  color: 'default' | 'secondary' | 'amber' | 'rose' | 'indigo' | 'violet';
-  skills: string[];
-}
-
-const skillCategories: SkillCategory[] = [
-  {
-    title: 'Programming Languages',
-    color: 'default',
-    skills: ['Python', 'C/C++', 'JavaScript', 'TypeScript', 'Bash'],
-  },
-  {
-    title: 'Backend Frameworks',
-    color: 'secondary',
-    skills: ['FastAPI', 'Pydantic', 'REST API Design', 'ROS'],
-  },
-  {
-    title: 'Databases & Caching',
-    color: 'amber',
-    skills: ['PostgreSQL', 'MongoDB', 'SQLite', 'Redis'],
-  },
-  {
-    title: 'Infrastructure & DevOps',
-    color: 'rose',
-    skills: ['Docker', 'GitHub Actions', 'Linux'],
-  },
-  {
-    title: 'Testing & Tooling',
-    color: 'indigo',
-    skills: ['PyTest', 'Playwright', 'Selenium', 'MyPy', 'Git'],
-  },
-  {
-    title: 'Core Domains',
-    color: 'violet',
-    skills: ['IoT & Embedded Systems', 'Bioinformatics', 'Image Processing'],
-  },
-];
-
 export default function Skills() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set(headingRef.current, { opacity: 0, y: 24 });
-      gsap.to(headingRef.current, {
-        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-      });
-      gsap.set('.skill-card', { opacity: 0, y: 30 });
-      gsap.to('.skill-card', {
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        stagger: 0.12,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 75%',
-        },
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
+    gsap.set(headingRef.current, { y: 24 });
+    gsap.to(headingRef.current, {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
+    });
+    gsap.set('.skill-card', { y: 30 });
+    gsap.to('.skill-card', {
+      opacity: 1,
+      visibility: 'inherit',
+      y: 0,
+      duration: 0.6,
+      stagger: 0.12,
+      ease: 'power3.out',
+      scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' },
+    });
+  }, { scope: sectionRef });
 
   return (
-    <section id="skills" ref={sectionRef} className="py-24">
+    <section id="skills" ref={sectionRef} className="py-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div ref={headingRef} className="text-center mb-16" style={{ opacity: 0 }}>
+        <div ref={headingRef} className="gsap-reveal text-center mb-8">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             What I work with
           </p>
@@ -128,13 +81,12 @@ export default function Skills() {
           {skillCategories.map(({ title, color, skills }, index) => (
             <div
               key={title}
-              style={{ opacity: 0 }}
-              className={`skill-card p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-all hover:shadow-md${
+              className={`gsap-reveal skill-card p-6 rounded-xl border border-border bg-card hover:border-primary/30 transition-[border-color,box-shadow] duration-150 hover:shadow-md${
                 index === skillCategories.length - 1 && skillCategories.length % 2 === 1
                   ? ' sm:col-span-2'
                   : ''
               }`}
-                         >
+            >
               <h3 className="text-sm font-mono font-semibold text-muted-foreground uppercase tracking-wider mb-4">
                 {title}
               </h3>
