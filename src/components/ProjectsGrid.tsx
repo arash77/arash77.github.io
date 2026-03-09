@@ -110,6 +110,8 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
+              type="button"
+              aria-pressed={activeCategory === cat}
               onClick={() => setActiveCategory(cat)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                 activeCategory === cat
