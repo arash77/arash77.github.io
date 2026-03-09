@@ -88,7 +88,7 @@ export default function Contact() {
               className="gsap-reveal contact-item group flex items-center gap-4 p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150"
             >
               <div className={`p-3 rounded-lg bg-muted transition-colors ${color}`}>
-                <Icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
                 <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-0.5">

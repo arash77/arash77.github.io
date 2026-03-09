@@ -43,10 +43,10 @@ export default function Education() {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-8">
-          {education.map((edu, idx) => (
-            <div key={idx} className="gsap-reveal edu-card flex items-start gap-4">
+          {education.map((edu) => (
+            <div key={`${edu.institution}-${edu.degree}-${edu.dateStart}`} className="gsap-reveal edu-card flex items-start gap-4">
               <div className="p-3 rounded-lg bg-primary/10 text-primary flex-shrink-0">
-                <GraduationCap className="h-6 w-6" />
+                <GraduationCap className="h-6 w-6" aria-hidden="true" />
               </div>
               <div>
                 <h3 className="font-bold text-lg leading-tight">{edu.degree}</h3>
@@ -54,7 +54,7 @@ export default function Education() {
                 <p className="font-medium mt-2 mb-0.5">{edu.institution}</p>
                 <p className="text-sm text-muted-foreground">{edu.location}</p>
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2">
-                  <Calendar className="h-3.5 w-3.5" />
+                  <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
                   <time dateTime={edu.dateStart}>{edu.period}</time>
                 </div>
                 {edu.description && (

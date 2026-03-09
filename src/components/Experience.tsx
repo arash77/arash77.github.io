@@ -46,8 +46,8 @@ export default function Experience() {
           <div className="absolute left-6 top-0 bottom-0 w-px bg-border hidden sm:block" aria-hidden="true" />
 
           <div className="space-y-8">
-            {experiences.map((exp, idx) => (
-              <div key={idx} className="gsap-reveal timeline-card relative flex gap-6">
+            {experiences.map((exp) => (
+              <div key={`${exp.company}-${exp.role}-${exp.dateStart}`} className="gsap-reveal timeline-card relative flex gap-6">
                 <div className="hidden sm:flex flex-col items-center flex-shrink-0">
                   <div
                     className={`w-12 h-12 rounded-full border-2 flex items-center justify-center z-10 ${
@@ -56,7 +56,7 @@ export default function Experience() {
                         : 'bg-card border-border text-muted-foreground'
                     }`}
                   >
-                    <Briefcase className="h-5 w-5" />
+                    <Briefcase className="h-5 w-5" aria-hidden="true" />
                   </div>
                 </div>
 
@@ -68,7 +68,7 @@ export default function Experience() {
                       <p className="text-sm text-muted-foreground">{exp.location}</p>
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground bg-muted rounded-full px-3 py-1 whitespace-nowrap">
-                      <Calendar className="h-3.5 w-3.5" />
+                      <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
                       <time dateTime={exp.dateStart}>{exp.period}</time>
                       {exp.current && (
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1" />

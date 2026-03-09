@@ -25,8 +25,8 @@ function DarkModeToggle({ onClick, className }: { onClick: () => void; className
       className={className}
       suppressHydrationWarning
     >
-      <Sun className="h-4 w-4 hidden dark:block" />
-      <Moon className="h-4 w-4 dark:hidden" />
+      <Sun className="h-4 w-4 hidden dark:block" aria-hidden="true" />
+      <Moon className="h-4 w-4 dark:hidden" aria-hidden="true" />
     </Button>
   );
 }
