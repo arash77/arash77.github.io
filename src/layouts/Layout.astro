@@ -1,6 +1,8 @@
 ---
 import '../styles/global.css';
 import Navbar from '../components/Navbar';
+import { IconGithub, IconLinkedin } from '../components/BrandIcons';
+import { Mail } from 'lucide-react';
 
 interface Props {
   title?: string;
@@ -132,9 +134,15 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
           <a href="https://astro.build" class="text-primary hover:underline ml-1">Astro</a>
         </p>
         <div class="flex items-center gap-4">
-          <a href="https://github.com/arash77" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition-colors">GitHub</a>
-          <a href="https://linkedin.com/in/kadarash" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition-colors">LinkedIn</a>
-          <a href="mailto:arash77.kad@gmail.com" class="hover:text-foreground transition-colors">Email</a>
+          <a href="https://github.com/arash77" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 hover:text-foreground transition-colors">
+            <IconGithub className="h-3.5 w-3.5" aria-hidden="true" />GitHub
+          </a>
+          <a href="https://linkedin.com/in/kadarash" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1.5 hover:text-foreground transition-colors">
+            <IconLinkedin className="h-3.5 w-3.5" aria-hidden="true" />LinkedIn
+          </a>
+          <a href="mailto:arash77.kad@gmail.com" class="flex items-center gap-1.5 hover:text-foreground transition-colors">
+            <Mail className="h-3.5 w-3.5" aria-hidden="true" />Email
+          </a>
         </div>
       </div>
     </footer>
