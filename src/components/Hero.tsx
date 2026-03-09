@@ -135,11 +135,8 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Scroll hint — 3 bounces then stops */}
-      <div
-        className="absolute bottom-8 inset-x-0 hidden sm:flex flex-col items-center gap-2 text-muted-foreground animate-bounce"
-        style={{ animationIterationCount: 3 }}
-      >
+      {/* Scroll hint */}
+      <div className="absolute bottom-8 inset-x-0 hidden sm:flex flex-col items-center gap-2 text-muted-foreground animate-bounce">
         <span className="text-xs font-mono">scroll</span>
         <div className="w-px h-8 bg-gradient-to-b from-muted-foreground to-transparent" />
       </div>
