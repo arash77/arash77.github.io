@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { ExternalLink } from 'lucide-react';
@@ -61,8 +61,26 @@ function getLinkIcon(label: string) {
 
 export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   const [activeCategory, setActiveCategory] = useState<ProjectCategory>('All');
+  const [fades, setFades] = useState({ left: false, right: true });
   const filterRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => setFades({
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    });
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, []);
 
   const filtered =
     activeCategory === 'All'
@@ -106,10 +124,18 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
     <div>
       {/* Category filter */}
       <div ref={filterRef} className="gsap-reveal relative overflow-hidden pb-2 mb-10">
-        {/* Right-edge fade affordance on mobile */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent z-10 sm:hidden" aria-hidden="true" />
-        <div className="overflow-x-auto flex justify-center">
-        <div className="flex gap-1.5 w-max bg-muted rounded-xl p-1">
+        {/* Left-edge fade — appears after scrolling right */}
+        <div
+          className={`pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-background to-transparent z-10 sm:hidden transition-opacity duration-300 ease-in-out ${fades.left ? 'opacity-100' : 'opacity-0'}`}
+          aria-hidden="true"
+        />
+        {/* Right-edge fade — disappears when scrolled to end */}
+        <div
+          className={`pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent z-10 sm:hidden transition-opacity duration-300 ease-in-out ${fades.right ? 'opacity-100' : 'opacity-0'}`}
+          aria-hidden="true"
+        />
+        <div ref={scrollRef} className="overflow-x-auto">
+        <div className="flex gap-1.5 w-max bg-muted rounded-xl p-1 mx-auto">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
