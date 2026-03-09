@@ -57,13 +57,21 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <!-- Browser theme color (updated dynamically by dark-mode script + Navbar) -->
     <meta name="theme-color" content="#f7fcfc" />
 
-    <!-- Fonts: Inter + JetBrains Mono -->
+    <!-- Fonts: Inter + JetBrains Mono (non-blocking) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
 
     <!-- JSON-LD Person schema -->
     <script type="application/ld+json" set:html={JSON.stringify({
