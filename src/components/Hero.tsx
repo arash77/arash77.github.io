@@ -40,17 +40,20 @@ export default function Hero() {
       ref={containerRef}
       className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-mesh pt-16"
     >
-      {/* Decorative blobs */}
+      {/* Decorative blobs — 2 cycles then stop */}
       <div
         className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/25 dark:bg-primary/10 rounded-full blur-3xl pointer-events-none animate-blob-drift-1"
+        style={{ animationIterationCount: 2 }}
         aria-hidden="true"
       />
       <div
         className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/20 dark:bg-secondary/10 rounded-full blur-3xl pointer-events-none animate-blob-drift-2"
+        style={{ animationIterationCount: 2 }}
         aria-hidden="true"
       />
       <div
         className="absolute top-1/2 left-1/2 w-80 h-80 bg-primary/15 dark:bg-primary/5 rounded-full blur-3xl pointer-events-none animate-blob-drift-3"
+        style={{ animationIterationCount: 2 }}
         aria-hidden="true"
       />
 
@@ -135,8 +138,11 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Scroll hint */}
-      <div className="absolute bottom-8 inset-x-0 hidden sm:flex flex-col items-center gap-2 text-muted-foreground animate-bounce">
+      {/* Scroll hint — 3 bounces then stops */}
+      <div
+        className="absolute bottom-8 inset-x-0 hidden sm:flex flex-col items-center gap-2 text-muted-foreground animate-bounce"
+        style={{ animationIterationCount: 3 }}
+      >
         <span className="text-xs font-mono">scroll</span>
         <div className="w-px h-8 bg-gradient-to-b from-muted-foreground to-transparent" />
       </div>
