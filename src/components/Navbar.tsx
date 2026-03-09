@@ -1,7 +1,5 @@
-'use client';
-
 import { useState, useEffect } from 'react';
-import { Menu, X, Moon, Sun } from 'lucide-react';
+import { Menu, Moon, Sun } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   Sheet,
@@ -17,6 +15,22 @@ interface NavbarProps {
   currentPath?: string;
 }
 
+function DarkModeToggle({ onClick, className }: { onClick: () => void; className?: string }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={onClick}
+      aria-label="Toggle dark mode"
+      className={className}
+      suppressHydrationWarning
+    >
+      <Sun className="h-4 w-4 hidden dark:block" aria-hidden="true" />
+      <Moon className="h-4 w-4 dark:hidden" aria-hidden="true" />
+    </Button>
+  );
+}
+
 export default function Navbar({ currentPath: initialPath = '/' }: NavbarProps) {
   const [isDark, setIsDark] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -26,7 +40,7 @@ export default function Navbar({ currentPath: initialPath = '/' }: NavbarProps) 
     setIsDark(document.documentElement.classList.contains('dark'));
 
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    handleScroll(); // sync on mount (handles refresh-while-scrolled)
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -71,33 +85,18 @@ export default function Navbar({ currentPath: initialPath = '/' }: NavbarProps) 
               key={href}
               href={href}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors hover:text-primary hover:bg-accent ${
-                isActive(href)
-                  ? 'text-primary bg-accent'
-                  : 'text-muted-foreground'
+                isActive(href) ? 'text-primary bg-accent' : 'text-muted-foreground'
               }`}
             >
               {label}
             </a>
           ))}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleDark}
-            aria-label="Toggle dark mode"
-            className="ml-2"
-            suppressHydrationWarning
-          >
-            <Sun className="h-4 w-4 hidden dark:block" />
-            <Moon className="h-4 w-4 dark:hidden" />
-          </Button>
+          <DarkModeToggle onClick={toggleDark} className="ml-2" />
         </div>
 
         {/* Mobile nav */}
         <div className="flex items-center gap-2 md:hidden">
-          <Button variant="ghost" size="icon" onClick={toggleDark} aria-label="Toggle dark mode" suppressHydrationWarning>
-            <Sun className="h-4 w-4 hidden dark:block" />
-            <Moon className="h-4 w-4 dark:hidden" />
-          </Button>
+          <DarkModeToggle onClick={toggleDark} />
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -114,9 +113,7 @@ export default function Navbar({ currentPath: initialPath = '/' }: NavbarProps) 
                     <a
                       href={href}
                       className={`px-4 py-3 rounded-md text-sm font-medium transition-colors hover:text-primary hover:bg-accent ${
-                        isActive(href)
-                          ? 'text-primary bg-accent'
-                          : 'text-foreground'
+                        isActive(href) ? 'text-primary bg-accent' : 'text-foreground'
                       }`}
                     >
                       {label}

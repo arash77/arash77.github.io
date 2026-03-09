@@ -10,6 +10,35 @@ const projects = projectEntries
     ...entry.data,
   }))
   .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+
+// C10: fetch merged PR count at build time. Falls back to '380+' on any failure.
+const FALLBACK_PR_COUNT = '380+';
+let mergedPrCount: string = FALLBACK_PR_COUNT;
+
+if (import.meta.env.PROD) {
+  try {
+    const token = import.meta.env.GITHUB_TOKEN;
+    const headers: HeadersInit = {
+      'User-Agent': 'kadkhodaei.de-build',
+      Accept: 'application/vnd.github+json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    const res = await fetch(
+      'https://api.github.com/search/issues?q=author%3Aarash77+type%3Apr+is%3Amerged&per_page=1',
+      { headers }
+    );
+
+    if (res.ok) {
+      const data: { total_count: number } = await res.json();
+      mergedPrCount = String(data.total_count);
+    }
+  } catch {
+    // network or parse failure — use fallback
+  }
+} else {
+  console.warn('[projects.astro] Skipping GitHub PR fetch in non-prod environment.');
+}
 ---
 
 <Layout
@@ -19,7 +48,7 @@ const projects = projectEntries
   <div class="pt-24 pb-16">
     <div class="container mx-auto px-4 max-w-6xl">
       <!-- Header -->
-      <div class="text-center mb-16" style="opacity: 0; animation: fade-up 0.7s ease forwards 0.05s;">
+      <div class="text-center mb-8" style="animation: fade-up 0.7s ease both 0.05s;">
         <p class="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
           What I've built &amp; contributed to
         </p>
@@ -32,14 +61,14 @@ const projects = projectEntries
       </div>
 
       <!-- Stats bar -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-16">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
           { label: 'Projects', value: projects.length, delay: '0.3s' },
           { label: 'Featured', value: projects.filter((p) => p.featured).length, delay: '0.45s' },
           { label: 'Categories', value: new Set(projects.map((p) => p.category)).size, delay: '0.6s' },
-          { label: 'GitHub', value: '380+ PRs', delay: '0.75s' },
+          { label: 'GitHub PRs', value: mergedPrCount, delay: '0.75s' },
         ].map(({ label, value, delay }) => (
-          <div class="text-center p-5 rounded-xl bg-card border border-border" style={`opacity: 0; animation: fade-up 0.5s ease forwards ${delay};`}>
+          <div class="text-center p-5 rounded-xl bg-card border border-border" style={`animation: fade-up 0.5s ease both ${delay};`}>
             <p class="text-3xl font-bold text-primary">{value}</p>
             <p class="text-sm text-muted-foreground font-mono mt-1">{label}</p>
           </div>

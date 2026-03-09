@@ -1,11 +1,12 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { ArrowRight, Download } from 'lucide-react';
 import { IconGithub, IconLinkedin } from './BrandIcons';
 import { Button } from './ui/button';
 import { SITE } from '@/lib/utils';
+
+gsap.registerPlugin(useGSAP);
 
 export default function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -16,29 +17,23 @@ export default function Hero() {
   const helloRef = useRef<HTMLParagraphElement>(null);
   const tagsRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Respect reduced motion
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set(imageRef.current, { opacity: 0, scale: 0.8 });
-      gsap.set([helloRef.current, tagsRef.current], { opacity: 0, y: 15 });
-      gsap.set(nameRef.current, { opacity: 0, y: 30 });
-      gsap.set([subtitleRef.current, ctaRef.current], { opacity: 0, y: 20 });
+    gsap.set(imageRef.current, { scale: 0.8 });
+    gsap.set([helloRef.current, tagsRef.current], { y: 15 });
+    gsap.set(nameRef.current, { y: 30 });
+    gsap.set([subtitleRef.current, ctaRef.current], { y: 20 });
 
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-      tl.to(imageRef.current, { opacity: 1, scale: 1, duration: 0.8 })
-        .to(helloRef.current, { opacity: 1, y: 0, duration: 0.5 }, '-=0.4')
-        .to(nameRef.current, { opacity: 1, y: 0, duration: 0.7 }, '-=0.4')
-        .to(subtitleRef.current, { opacity: 1, y: 0, duration: 0.6 }, '-=0.3')
-        .to(tagsRef.current, { opacity: 1, y: 0, duration: 0.5 }, '-=0.2')
-        .to(ctaRef.current, { opacity: 1, y: 0, duration: 0.6 }, '-=0.2');
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, []);
+    tl.to(imageRef.current, { opacity: 1, visibility: 'inherit', scale: 1, duration: 0.8 })
+      .to(helloRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.4')
+      .to(nameRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.7 }, '-=0.4')
+      .to(subtitleRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.6 }, '-=0.3')
+      .to(tagsRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.2')
+      .to(ctaRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.6 }, '-=0.2');
+  }, { scope: containerRef });
 
   return (
     <section
@@ -62,7 +57,7 @@ export default function Hero() {
       <div className="container mx-auto px-4 max-w-6xl py-20">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           {/* Profile image */}
-          <div ref={imageRef} style={{ opacity: 0 }} className="relative flex-shrink-0">
+          <div ref={imageRef} className="gsap-reveal relative flex-shrink-0">
             <div className="relative">
               <div className="relative rounded-full border-4 border-background shadow-xl ring-1 ring-border/50 w-44 h-44 lg:w-56 lg:h-56 overflow-hidden">
                 <img
@@ -80,26 +75,24 @@ export default function Hero() {
 
           {/* Text content */}
           <div className="flex-1 text-center lg:text-left">
-            <p ref={helloRef} style={{ opacity: 0 }} className="text-sm font-mono text-secondary mb-3 tracking-widest uppercase">
+            <p ref={helloRef} className="gsap-reveal text-sm font-mono text-secondary mb-3 tracking-widest uppercase">
               Hello, I'm
             </p>
             <h1
               ref={nameRef}
-              style={{ opacity: 0 }}
-              className="text-5xl lg:text-7xl font-bold tracking-tight mb-4"
+              className="gsap-reveal text-5xl lg:text-7xl font-bold tracking-tight mb-4"
             >
               Arash <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Kadkhodaei</span>
             </h1>
             <p
               ref={subtitleRef}
-              style={{ opacity: 0 }}
-              className="text-xl lg:text-2xl text-muted-foreground mb-6 max-w-xl mx-auto lg:mx-0"
+              className="gsap-reveal text-xl lg:text-2xl text-muted-foreground mb-6 max-w-xl mx-auto lg:mx-0"
             >
               Software Engineer specialising in <span className="text-foreground font-medium">Backend & Distributed Systems</span>
             </p>
 
             {/* Tags */}
-            <div ref={tagsRef} style={{ opacity: 0 }} className="flex flex-wrap gap-2 justify-center lg:justify-start mb-8">
+            <div ref={tagsRef} className="gsap-reveal flex flex-wrap gap-2 justify-center lg:justify-start mb-8">
               {['Python', 'FastAPI', 'Galaxy Project', 'Docker', 'CI/CD'].map((tag) => (
                 <span
                   key={tag}
@@ -112,8 +105,7 @@ export default function Hero() {
 
             <div
               ref={ctaRef}
-              style={{ opacity: 0 }}
-              className="flex flex-col sm:flex-row flex-wrap items-center gap-4 justify-center lg:justify-start"
+              className="gsap-reveal flex flex-col sm:flex-row flex-wrap items-center gap-4 justify-center lg:justify-start"
             >
               <Button asChild size="lg" className="gap-2 w-full sm:w-auto">
                 <a href="/projects">

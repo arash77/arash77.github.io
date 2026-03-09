@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { SkillBar, LanguageRing } from '../components/ResumeAnimations';
+import { experiences, education, languages, resumeSkillTiers, conferences } from '../data/resume';
 import { Download, MapPin, Mail, Briefcase, GraduationCap, BookOpen, FileText, ExternalLink } from 'lucide-react';
 import { IconGithub, IconLinkedin } from '../components/BrandIcons';
 ---
@@ -24,10 +24,10 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
             <h1 class="text-3xl font-bold">Arash Kadkhodaei</h1>
             <p class="text-muted-foreground font-medium">Software Engineer</p>
             <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
-              <span class="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Freiburg, Germany</span>
-              <a href="mailto:arash77.kad@gmail.com" class="flex items-center gap-1 hover:text-primary"><Mail className="h-3.5 w-3.5" />arash77.kad@gmail.com</a>
-              <a href="https://github.com/arash77" target="_blank" class="flex items-center gap-1 hover:text-primary"><IconGithub className="h-3.5 w-3.5" />arash77</a>
-              <a href="https://linkedin.com/in/kadarash" target="_blank" class="flex items-center gap-1 hover:text-primary"><IconLinkedin className="h-3.5 w-3.5" />kadarash</a>
+              <span class="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" aria-hidden="true" />Freiburg, Germany</span>
+              <a href="mailto:arash77.kad@gmail.com" class="flex items-center gap-1 hover:text-primary"><Mail className="h-3.5 w-3.5" aria-hidden="true" />arash77.kad@gmail.com</a>
+              <a href="https://github.com/arash77" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 hover:text-primary"><IconGithub className="h-3.5 w-3.5" aria-hidden="true" />arash77</a>
+              <a href="https://linkedin.com/in/kadarash" target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 hover:text-primary"><IconLinkedin className="h-3.5 w-3.5" aria-hidden="true" />kadarash</a>
             </div>
           </div>
         </div>
@@ -36,7 +36,7 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
           download
           class="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0"
         >
-          <Download className="h-4 w-4" />
+          <Download className="h-4 w-4" aria-hidden="true" />
           Download PDF
         </a>
       </div>
@@ -47,8 +47,8 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
         <div class="space-y-8 lg:col-span-1">
 
           <!-- Summary -->
-          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.15s;">
-            <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-4">Summary</h2>
+          <section aria-labelledby="heading-summary" class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.15s;">
+            <h2 id="heading-summary" class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-4">Summary</h2>
             <p class="text-sm text-muted-foreground leading-relaxed">
               Software Engineer with expertise in Python, FastAPI, and backend systems. Contributing to the
               Galaxy Project at Freiburg University. Background in Mechatronics from Deggendorf Institute of Technology.
@@ -56,146 +56,105 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
             </p>
           </section>
 
-          <!-- Languages -->
-          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.3s;">
-            <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6">Languages</h2>
-            <div class="flex flex-col gap-1">
-              <LanguageRing name="Persian" cefr="C2" label="Native" client:visible />
-              <LanguageRing name="English" cefr="C1" label="Professional" client:visible />
-              <LanguageRing name="German" cefr="B1" label="Intermediate" client:visible />
-            </div>
+          <!-- Languages — static dl, zero JS (replaces LanguageRing islands) -->
+          <section aria-labelledby="heading-languages" class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.3s;">
+            <h2 id="heading-languages" class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-4">Languages</h2>
+            <dl class="space-y-3">
+              {languages.map(({ name, cefr, label }) => (
+                <div class="flex items-baseline justify-between">
+                  <dt class="font-semibold text-sm">{name}</dt>
+                  <dd class="text-xs font-mono text-muted-foreground">
+                    <span class="font-bold text-primary">{cefr}</span>
+                    {' · '}{label}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </section>
 
-          <!-- Technical Skills -->
-          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.45s;">
-            <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-5">Technical Skills</h2>
-            <SkillBar name="Python" level={95} client:visible />
-            <SkillBar name="FastAPI" level={88} client:visible />
-            <SkillBar name="Docker" level={78} client:visible />
-            <SkillBar name="GitHub Actions" level={85} client:visible />
-            <SkillBar name="C / C++" level={70} client:visible />
-            <SkillBar name="JavaScript / TS" level={65} client:visible />
-            <SkillBar name="PostgreSQL" level={75} client:visible />
+          <!-- Technical Skills — static tag cloud, zero JS (replaces SkillBar islands) -->
+          <section aria-labelledby="heading-skills" class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.45s;">
+            <h2 id="heading-skills" class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-4">Technical Skills</h2>
+            <dl class="space-y-4">
+              {resumeSkillTiers.map(({ tier, skills }) => (
+                <>
+                  <dt class="text-xs font-mono text-muted-foreground uppercase tracking-wider">{tier}</dt>
+                  <dd class="flex flex-wrap gap-1.5 mt-1.5">
+                    {skills.map((skill) => (
+                      <span class="text-xs bg-muted text-foreground rounded px-2 py-0.5 font-medium">{skill}</span>
+                    ))}
+                  </dd>
+                </>
+              ))}
+            </dl>
           </section>
         </div>
 
-        <!-- Right column: Experience + Education -->
+        <!-- Right column: Experience + Education + Conferences -->
         <div class="space-y-8 lg:col-span-2">
 
           <!-- Experience -->
-          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.2s;">
-            <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
+          <section aria-labelledby="heading-experience" style="animation: fade-up 0.6s ease both 0.2s;">
+            <h2 id="heading-experience" class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+              <Briefcase className="h-4 w-4" aria-hidden="true" />
               Experience
             </h2>
             <div class="space-y-6">
-              {[
-                {
-                  role: 'Software Engineer',
-                  company: 'Freiburg University',
-                  period: 'Apr 2024 – Present',
-                  current: true,
-                  points: [
-                    'Galaxy Project backend: FastAPI, Pydantic, data validation',
-                    'Open-source contributions across 10+ Galaxy repositories',
-                    'CI/CD pipeline improvements and AI/ML tool integrations',
-                  ],
-                },
-                {
-                  role: 'Software Engineer',
-                  company: 'Fraunhofer IIS',
-                  period: 'Feb 2023 – Feb 2024',
-                  current: false,
-                  points: [
-                    'Automatic CT scan system with Python and ROS for industrial metrology',
-                    'Engineered automated control systems for metrology hardware',
-                  ],
-                },
-                {
-                  role: 'Working Student – IoT',
-                  company: 'Daneshjookit & DigiSpark',
-                  period: 'Oct 2017 – Jan 2021',
-                  current: false,
-                  points: [
-                    'IoT and embedded systems project design',
-                    'Technical content authoring on IoT topics',
-                  ],
-                },
-                {
-                  role: 'Arduino Freelancer',
-                  company: 'Freelance',
-                  period: 'Jan 2014 – Sep 2017',
-                  current: false,
-                  points: [
-                    'Heart rate monitor, GPS tracker, smart home systems',
-                  ],
-                },
-              ].map((exp) => (
-                <div class="relative pl-6 border-l-2 border-border last:border-transparent">
-                  <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-primary bg-background" />
+              {experiences.map((exp) => (
+                <article class="relative pl-6 border-l-2 border-border last:border-transparent">
+                  <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-primary bg-background" aria-hidden="true" />
                   <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
                     <div>
                       <h3 class="font-semibold">{exp.role}</h3>
                       <p class="text-primary text-sm">{exp.company}</p>
                     </div>
                     <div class="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted rounded-full px-2.5 py-1 whitespace-nowrap font-mono">
-                      {exp.period}
-                      {exp.current && <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
+                      <time datetime={exp.dateStart}>{exp.period}</time>
+                      {exp.current && <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" aria-hidden="true" />}
                     </div>
                   </div>
                   <ul class="space-y-1">
-                    {exp.points.map((p) => (
+                    {exp.description.map((p) => (
                       <li class="text-sm text-muted-foreground flex gap-2">
-                        <span class="text-primary/60 flex-shrink-0 mt-1">•</span>{p}
+                        <span class="text-primary/60 flex-shrink-0 mt-1" aria-hidden="true">•</span>{p}
                       </li>
                     ))}
                   </ul>
-                </div>
+                </article>
               ))}
             </div>
           </section>
 
           <!-- Education -->
-          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.35s;">
-            <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" />
+          <section aria-labelledby="heading-education" style="animation: fade-up 0.6s ease both 0.35s;">
+            <h2 id="heading-education" class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+              <GraduationCap className="h-4 w-4" aria-hidden="true" />
               Education
             </h2>
             <div class="space-y-5">
-              {[
-                {
-                  degree: 'M.Eng Mechatronic and Cyber-Physical Systems',
-                  institution: 'Deggendorf Institute of Technology',
-                  period: '2021 – 2024',
-                  note: 'Thesis: Automatic CT Scan System with ROS & Python',
-                },
-                {
-                  degree: 'B.Sc Mechanical Engineering',
-                  institution: 'University of Kashan',
-                  period: '2016 – 2021',
-                  note: null,
-                },
-              ].map((edu) => (
-                <div class="flex gap-4">
-                  <div class="p-2.5 rounded-lg bg-primary/10 h-fit">
+              {education.map((edu) => (
+                <article class="flex gap-4">
+                  <div class="p-2.5 rounded-lg bg-primary/10 h-fit" aria-hidden="true">
                     <GraduationCap className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p class="font-semibold">{edu.degree}</p>
+                    <p class="font-semibold">{edu.degree} — {edu.field}</p>
                     <p class="text-sm text-primary">{edu.institution}</p>
-                    <p class="text-xs font-mono text-muted-foreground mt-0.5">{edu.period}</p>
+                    <p class="text-xs font-mono text-muted-foreground mt-0.5">
+                      <time datetime={edu.dateStart}>{edu.period}</time>
+                    </p>
                     {edu.note && <p class="text-xs text-muted-foreground mt-1 italic">{edu.note}</p>}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </section>
 
           <!-- Conference Contributions -->
-          <section class="rounded-xl border border-border bg-card p-6" style="opacity: 0; animation: fade-up 0.6s ease forwards 0.5s;">
-            <h2 class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center justify-between gap-2">
+          <section aria-labelledby="heading-conferences" style="animation: fade-up 0.6s ease both 0.5s;">
+            <h2 id="heading-conferences" class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center justify-between gap-2">
               <span class="flex items-center gap-2">
-                <BookOpen className="h-4 w-4" />
+                <BookOpen className="h-4 w-4" aria-hidden="true" />
                 Conference Contributions
               </span>
               <a
@@ -206,58 +165,19 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
               >
                 <img src="https://orcid.org/assets/vectors/orcid.logo.icon.svg" alt="ORCID" class="h-3.5 w-3.5" />
                 ORCID
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
               </a>
             </h2>
             <div class="space-y-5">
-              {[
-                {
-                  title: 'Serving locally hosted LLMs with Galaxy',
-                  year: '2025',
-                  types: ['Presentation'],
-                  dois: [
-                    { label: '10.7490/F1000RESEARCH.1120343.1', href: 'https://doi.org/10.7490/f1000research.1120343.1' },
-                  ],
-                  contributors: ['Arash Kadkhodaei'],
-                },
-                {
-                  title: 'Simple and secure credential handling for tools in Galaxy',
-                  year: '2025',
-                  types: ['Presentation'],
-                  dois: [
-                    { label: '10.7490/F1000RESEARCH.1120347.1', href: 'https://doi.org/10.7490/f1000research.1120347.1' },
-                  ],
-                  contributors: ['Alireza Heidari', 'Arash Kadkhodaei', 'David Lopez', 'Bjoern Gruening'],
-                },
-                {
-                  title: 'Community-driven standards development for reference genome generation',
-                  year: '2024',
-                  types: ['Presentation', 'Poster'],
-                  dois: [
-                    { label: '10.7490/F1000RESEARCH.1119773.1', href: 'https://doi.org/10.7490/f1000research.1119773.1' },
-                    { label: '10.7490/F1000RESEARCH.1119761.1', href: 'https://doi.org/10.7490/f1000research.1119761.1' },
-                  ],
-                  contributors: ['Tom Brown', 'Diego De Panis', 'Romane Libouban', 'Saim Momin', 'Arash Kadkhodaei', 'Anthony Bretaudeau', 'Björn Grüning', 'Camila Mazzoni'],
-                },
-                {
-                  title: 'Galaxy social',
-                  year: '2024',
-                  types: ['Presentation', 'Poster'],
-                  dois: [
-                    { label: '10.7490/F1000RESEARCH.1119787.1', href: 'https://doi.org/10.7490/f1000research.1119787.1' },
-                    { label: '10.7490/F1000RESEARCH.1119786.1', href: 'https://doi.org/10.7490/f1000research.1119786.1' },
-                  ],
-                  contributors: ['Arash Kadkhodaei'],
-                },
-              ].map((pub) => (
-                <div class="flex gap-4">
-                  <div class="p-2.5 rounded-lg bg-primary/10 h-fit shrink-0">
+              {conferences.map((pub) => (
+                <article class="flex gap-4">
+                  <div class="p-2.5 rounded-lg bg-primary/10 h-fit shrink-0" aria-hidden="true">
                     <FileText className="h-4 w-4 text-primary" />
                   </div>
-                  <div class="min-w-0">
-                    <div class="flex flex-wrap items-start justify-between gap-2 mb-1.5">
-                      <p class="font-semibold text-sm leading-snug">{pub.title}</p>
-                      <span class="text-xs font-mono text-muted-foreground bg-muted rounded-full px-2.5 py-1 whitespace-nowrap shrink-0">{pub.year}</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-3 mb-1.5">
+                      <p class="flex-1 min-w-0 font-semibold text-sm leading-snug">{pub.title}</p>
+                      <time datetime={pub.year} class="inline-flex items-center text-xs font-mono text-muted-foreground bg-muted rounded-full px-2.5 py-1 whitespace-nowrap shrink-0">{pub.year}</time>
                     </div>
                     <div class="flex flex-wrap gap-1 mb-2">
                       {pub.types.map((t) => (
@@ -280,13 +200,13 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
                           rel="noopener noreferrer"
                           class="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono break-all"
                         >
-                          <ExternalLink className="h-3 w-3 shrink-0" />
+                          <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
                           {doi.label}
                         </a>
                       ))}
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </section>

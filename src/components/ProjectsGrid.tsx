@@ -1,13 +1,12 @@
-'use client';
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { ExternalLink } from 'lucide-react';
 import { IconGithub } from './BrandIcons';
 import { Badge } from './ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
-import { Card, CardHeader, CardDescription, CardContent, CardFooter } from './ui/card';
 import { Button } from './ui/button';
+
+gsap.registerPlugin(useGSAP);
 
 export type ProjectCategory =
   | 'All'
@@ -54,155 +53,197 @@ const CATEGORY_COLORS: Record<string, string> = {
   Crypto: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',
 };
 
+function getLinkIcon(label: string) {
+  if (label.toLowerCase().includes('pr') || label.toLowerCase().includes('repo'))
+    return IconGithub;
+  return ExternalLink;
+}
+
 export default function ProjectsGrid({ projects }: ProjectsGridProps) {
   const [activeCategory, setActiveCategory] = useState<ProjectCategory>('All');
+  const filterRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const tabsRef = useRef<HTMLDivElement>(null);
 
   const filtered =
     activeCategory === 'All'
       ? projects
       : projects.filter((p) => p.category === activeCategory);
 
-  // Animate tabs on first mount
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
-    gsap.set(tabsRef.current, { opacity: 0, y: 16 });
-    gsap.to(tabsRef.current, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.1 });
-  }, []);
+  const featuredFiltered = filtered.filter((p) => p.featured);
+  const regularFiltered = filtered.filter((p) => !p.featured);
 
-  // Animate cards on mount and category change
-  useEffect(() => {
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
+  // Mount-only: animate the filter bar in once
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.set(filterRef.current, { y: 16 });
+    gsap.to(filterRef.current, {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.5, ease: 'power2.out', delay: 0.1,
+    });
+  }, { scope: filterRef });
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        '.project-card',
-        { opacity: 0, y: 20, scale: 0.97 },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.4,
-          stagger: 0.08,
-          ease: 'power2.out',
-        }
-      );
-    }, gridRef);
+  // Category-change: re-animate cards
+  useGSAP(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    return () => ctx.revert();
-  }, [activeCategory]);
-
-  const getLinkIcon = (label: string) => {
-    if (label.toLowerCase().includes('pr') || label.toLowerCase().includes('repo'))
-      return IconGithub;
-    return ExternalLink;
-  };
+    gsap.set('.project-section-label', { y: 10 });
+    gsap.to('.project-section-label', {
+      opacity: 1, visibility: 'inherit', y: 0, duration: 0.5, ease: 'power2.inOut',
+    });
+    gsap.set('.project-card', { y: 20, scale: 0.97 });
+    gsap.to('.project-card', {
+      opacity: 1,
+      visibility: 'inherit',
+      y: 0,
+      scale: 1,
+      duration: 0.5,
+      stagger: { each: 0.08, ease: 'power2.in' },
+      ease: 'power3.out',
+      delay: 0.1,
+    });
+  }, { scope: gridRef, dependencies: [activeCategory], revertOnUpdate: true });
 
   return (
     <div>
-      {/* Category tabs */}
-      <div ref={tabsRef} style={{ opacity: 0 }} className="overflow-x-auto pb-2 mb-10 -mx-4 px-4">
-        <Tabs
-          value={activeCategory}
-          onValueChange={(v) => setActiveCategory(v as ProjectCategory)}
-        >
-          <TabsList className="flex-nowrap whitespace-nowrap w-max h-auto p-1 gap-1 bg-muted rounded-xl">
-            {CATEGORIES.map((cat) => (
-              <TabsTrigger
-                key={cat}
-                value={cat}
-                className="text-sm rounded-lg data-[state=active]:shadow-sm gap-1.5"
-              >
-                <span className="leading-none">{cat}</span>
-                {cat !== 'All' && (
-                  <span className="text-xs text-muted-foreground tabular-nums leading-none">
-                    ({projects.filter((p) => p.category === cat).length})
-                  </span>
-                )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
+      {/* Category filter */}
+      <div ref={filterRef} className="gsap-reveal overflow-x-auto pb-2 mb-10 flex justify-center">
+        <div className="flex gap-1.5 w-max bg-muted rounded-xl p-1">
           {CATEGORIES.map((cat) => (
-            <TabsContent key={cat} value={cat}>
-              {/* intentionally empty — grid renders below */}
-            </TabsContent>
-          ))}
-        </Tabs>
-      </div>
-
-      {/* Projects grid */}
-      <div
-        ref={gridRef}
-        className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        {filtered.map((project) => (
-          <Card
-            key={project.id}
-            style={{ opacity: 0 }}
-            className="project-card flex flex-col group hover:border-primary/30"
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <span
-                  className={`inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full border ${
-                    CATEGORY_COLORS[project.category] || 'bg-muted text-muted-foreground border-muted'
-                  }`}
-                >
-                  {project.category}
+            <button
+              key={cat}
+              type="button"
+              aria-pressed={activeCategory === cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                activeCategory === cat
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {cat}
+              {cat !== 'All' && (
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  ({projects.filter((p) => p.category === cat).length})
                 </span>
-                {project.featured && (
-                  <span className="text-xs font-mono text-secondary">★ Featured</span>
-                )}
-              </div>
-              <h2 className="text-base font-semibold leading-snug tracking-tight group-hover:text-primary transition-colors">
-                {project.title}
-              </h2>
-            </CardHeader>
-            <CardContent className="flex-1 pb-4">
-              <CardDescription className="text-sm leading-relaxed line-clamp-4">
-                {project.description}
-              </CardDescription>
-            </CardContent>
-            <CardContent className="pt-0 pb-3">
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {project.tags.slice(0, 4).map((tag) => (
-                  <Badge key={tag} variant="muted" className="text-xs font-mono">
-                    {tag}
-                  </Badge>
-                ))}
-                {project.tags.length > 4 && (
-                  <Badge variant="muted" className="text-xs font-mono">
-                    +{project.tags.length - 4}
-                  </Badge>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="pt-0 flex flex-wrap gap-2">
-              {project.links.slice(0, 2).map((link) => {
-                const Icon = getLinkIcon(link.label);
-                return (
-                  <Button key={link.label} asChild variant="outline" size="sm" className="text-xs gap-1.5">
-                    <a href={link.url} target="_blank" rel="noopener noreferrer">
-                      <Icon className="h-3.5 w-3.5" />
-                      {link.label}
-                    </a>
-                  </Button>
-                );
-              })}
-            </CardFooter>
-          </Card>
-        ))}
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {filtered.length === 0 && (
-        <div className="text-center py-20 text-muted-foreground">
-          <p className="text-lg font-mono">No projects in this category yet.</p>
-        </div>
-      )}
+      <div ref={gridRef}>
+        {/* Featured tier — full-width hero cards */}
+        {featuredFiltered.length > 0 && (
+          <div className="mb-10">
+            <p className="gsap-reveal project-section-label text-xs font-mono text-muted-foreground uppercase tracking-widest mb-4">
+              Featured Work
+            </p>
+            <div className="space-y-4">
+              {featuredFiltered.map((project) => (
+                <article
+                  key={project.id}
+                  className="gsap-reveal project-card rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                    <span
+                      className={`inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full border ${
+                        CATEGORY_COLORS[project.category] || 'bg-muted text-muted-foreground border-muted'
+                      }`}
+                    >
+                      {project.category}
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {project.tags.map((tag) => (
+                        <Badge key={tag} variant="muted" className="text-xs font-mono">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <h2 className="text-lg font-bold mb-2">{project.title}</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                    {project.description}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {project.links.map((link) => {
+                      const Icon = getLinkIcon(link.label);
+                      return (
+                        <Button key={link.label} asChild variant="outline" size="sm" className="text-xs gap-1.5">
+                          <a href={link.url} target="_blank" rel="noopener noreferrer">
+                            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                            {link.label}
+                          </a>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Regular tier — compact 3-column grid */}
+        {regularFiltered.length > 0 && (
+          <div>
+            {featuredFiltered.length > 0 && (
+              <p className="gsap-reveal project-section-label text-xs font-mono text-muted-foreground uppercase tracking-widest mb-4">
+                Other Contributions
+              </p>
+            )}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {regularFiltered.map((project) => (
+                <article
+                  key={project.id}
+                  className="gsap-reveal project-card flex flex-col rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150"
+                >
+                  <div className="mb-2">
+                    <span
+                      className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border ${
+                        CATEGORY_COLORS[project.category] || 'bg-muted text-muted-foreground border-muted'
+                      }`}
+                    >
+                      {project.category}
+                    </span>
+                  </div>
+                  <h2 className="text-sm font-semibold leading-snug mb-2">{project.title}</h2>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 flex-1 mb-3">
+                    {project.description}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {project.tags.slice(0, 3).map((tag) => (
+                      <Badge key={tag} variant="muted" className="text-xs font-mono">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {project.tags.length > 3 && (
+                      <Badge variant="muted" className="text-xs font-mono">+{project.tags.length - 3}</Badge>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {project.links.slice(0, 2).map((link) => {
+                      const Icon = getLinkIcon(link.label);
+                      return (
+                        <Button key={link.label} asChild variant="outline" size="sm" className="text-xs gap-1 h-7 px-2">
+                          <a href={link.url} target="_blank" rel="noopener noreferrer">
+                            <Icon className="h-3 w-3" aria-hidden="true" />
+                            {link.label}
+                          </a>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {filtered.length === 0 && (
+          <div className="text-center py-20 text-muted-foreground">
+            <p className="text-lg font-mono">No projects in this category yet.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
