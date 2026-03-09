@@ -97,7 +97,7 @@ export default function Skills() {
                     <Badge
                       key={skill}
                       variant={color}
-                      className="cursor-default hover:scale-105 transition-transform text-xs gap-1.5"
+                      className="cursor-default hover:brightness-110 transition-[filter] text-xs gap-1.5"
                     >
                       {Icon && <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />}
                       {skill}
