@@ -39,13 +39,13 @@ export default function Education() {
             Academic background
           </p>
           <h2 className="text-4xl font-bold mb-4">Education</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full" />
+          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid sm:grid-cols-2 gap-8">
           {education.map((edu) => (
             <div key={`${edu.institution}-${edu.degree}-${edu.dateStart}`} className="gsap-reveal edu-card flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+              <div className="p-3 rounded-lg bg-primary/10 text-primary shrink-0">
                 <GraduationCap className="h-6 w-6" aria-hidden="true" />
               </div>
               <div>

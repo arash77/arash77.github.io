@@ -74,7 +74,7 @@ export default function Skills() {
             What I work with
           </p>
           <h2 className="text-4xl font-bold mb-4">Skills</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full" />
+          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid sm:grid-cols-2 gap-6">

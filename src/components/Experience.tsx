@@ -39,7 +39,7 @@ export default function Experience() {
             My journey
           </p>
           <h2 className="text-4xl font-bold mb-4">Experience</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full" />
+          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
         <div className="relative">
@@ -48,7 +48,7 @@ export default function Experience() {
           <div className="space-y-8">
             {experiences.map((exp) => (
               <div key={`${exp.company}-${exp.role}-${exp.dateStart}`} className="gsap-reveal timeline-card relative flex gap-6">
-                <div className="hidden sm:flex flex-col items-center flex-shrink-0">
+                <div className="hidden sm:flex flex-col items-center shrink-0">
                   <div
                     className={`w-12 h-12 rounded-full border-2 flex items-center justify-center z-10 ${
                       exp.current
@@ -78,7 +78,7 @@ export default function Experience() {
                   <ul className="space-y-1.5">
                     {exp.description.map((point, i) => (
                       <li key={i} className="text-sm text-muted-foreground flex gap-2">
-                        <span className="text-primary mt-1.5 flex-shrink-0" aria-hidden="true">•</span>
+                        <span className="text-primary mt-1.5 shrink-0" aria-hidden="true">•</span>
                         {point}
                       </li>
                     ))}

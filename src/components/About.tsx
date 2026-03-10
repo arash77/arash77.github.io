@@ -39,7 +39,7 @@ export default function About() {
             Get to know me
           </p>
           <h2 className="text-4xl font-bold mb-4">About Me</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full" />
+          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -65,7 +65,7 @@ export default function About() {
           <div className="gsap-reveal about-content grid grid-cols-1 sm:grid-cols-2 gap-5">
             {facts.map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
