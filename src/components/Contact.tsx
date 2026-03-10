@@ -72,7 +72,7 @@ export default function Contact() {
             Let's connect
           </p>
           <h2 className="text-4xl font-bold mb-4">Contact</h2>
-          <div className="w-16 h-1 bg-gradient-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
+          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             I'm always open to interesting conversations, collaboration opportunities, or just saying hi!
           </p>

@@ -57,7 +57,7 @@ export default function Hero() {
       <div className="container mx-auto px-4 max-w-6xl py-20">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           {/* Profile image */}
-          <div ref={imageRef} className="gsap-reveal relative flex-shrink-0">
+          <div ref={imageRef} className="gsap-reveal relative shrink-0">
             <div className="relative">
               <div className="relative rounded-full border-4 border-background shadow-xl ring-1 ring-border/50 w-44 h-44 lg:w-56 lg:h-56 overflow-hidden">
                 <img
@@ -82,7 +82,7 @@ export default function Hero() {
               ref={nameRef}
               className="gsap-reveal text-5xl lg:text-7xl font-bold tracking-tight mb-4"
             >
-              Arash <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Kadkhodaei</span>
+              Arash <span className="bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">Kadkhodaei</span>
             </h1>
             <p
               ref={subtitleRef}
@@ -138,7 +138,7 @@ export default function Hero() {
       {/* Scroll hint */}
       <div className="absolute bottom-8 inset-x-0 hidden sm:flex flex-col items-center gap-2 text-muted-foreground animate-bounce">
         <span className="text-xs font-mono">scroll</span>
-        <div className="w-px h-8 bg-gradient-to-b from-muted-foreground to-transparent" />
+        <div className="w-px h-8 bg-linear-to-b from-muted-foreground to-transparent" />
       </div>
     </section>
   );
