@@ -126,12 +126,12 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
       <div ref={filterRef} className="gsap-reveal relative overflow-hidden pb-2 mb-10">
         {/* Left-edge fade — appears after scrolling right */}
         <div
-          className={`pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-background to-transparent z-10 sm:hidden transition-opacity duration-300 ease-in-out ${fades.left ? 'opacity-100' : 'opacity-0'}`}
+          className={`pointer-events-none absolute inset-y-0 left-0 w-10 bg-linear-to-r from-background to-transparent z-10 sm:hidden transition-opacity duration-300 ease-in-out ${fades.left ? 'opacity-100' : 'opacity-0'}`}
           aria-hidden="true"
         />
         {/* Right-edge fade — disappears when scrolled to end */}
         <div
-          className={`pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent z-10 sm:hidden transition-opacity duration-300 ease-in-out ${fades.right ? 'opacity-100' : 'opacity-0'}`}
+          className={`pointer-events-none absolute inset-y-0 right-0 w-10 bg-linear-to-l from-background to-transparent z-10 sm:hidden transition-opacity duration-300 ease-in-out ${fades.right ? 'opacity-100' : 'opacity-0'}`}
           aria-hidden="true"
         />
         <div ref={scrollRef} className="overflow-x-auto">
@@ -144,7 +144,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
               onClick={() => setActiveCategory(cat)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
                 activeCategory === cat
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
