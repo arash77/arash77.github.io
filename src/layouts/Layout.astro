@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { Font } from 'astro:assets';
 import Navbar from '../components/Navbar';
 import { IconGithub, IconLinkedin } from '../components/BrandIcons';
 import { Mail } from 'lucide-react';
@@ -59,21 +60,9 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <!-- Browser theme color (updated dynamically by dark-mode script + Navbar) -->
     <meta name="theme-color" content="#f7fcfc" />
 
-    <!-- Fonts: Inter + JetBrains Mono (non-blocking) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
-      media="print"
-      onload="this.media='all'"
-    />
-    <noscript>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
-        rel="stylesheet"
-      />
-    </noscript>
+    <!-- Fonts: Inter + JetBrains Mono (self-hosted via Astro Fonts API) -->
+    <Font cssVariable="--font-inter" preload />
+    <Font cssVariable="--font-jetbrains-mono" preload />
 
     <!-- JSON-LD Person schema -->
     <script type="application/ld+json" set:html={JSON.stringify({
