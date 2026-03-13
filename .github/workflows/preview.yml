@@ -50,7 +50,7 @@ jobs:
           command: pages deploy dist/ --project-name=kadkhodaei-preview --branch=pr-${{ github.event.pull_request.number }}
 
       - name: Comment preview URL on PR
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: cloudflare-preview
           message: |
