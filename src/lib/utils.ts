@@ -19,7 +19,7 @@ export const SITE = {
     'Software Engineer at Freiburg University, specializing in Python, backend development, and Galaxy Project bioinformatics tooling.',
   url: 'https://kadkhodaei.de',
   author: 'Arash Kadkhodaei',
-  email: 'arash77.kad@gmail.com',
+  email: 'arash@kadkhodaei.de',
   github: 'https://github.com/arash77',
   linkedin: 'https://linkedin.com/in/kadarash',
   location: 'Freiburg, Germany',
