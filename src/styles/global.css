@@ -188,7 +188,7 @@
     --card-foreground: 186 65% 8%;
     --popover: 186 40% 98%;
     --popover-foreground: 186 65% 8%;
-    --primary: 186 72% 28%;            /* teal-primary */
+    --primary: 186 72% 27%;            /* teal-primary – 27% keeps WCAG AA 4.5:1 on --accent */
     --primary-foreground: 186 40% 98%;
     --secondary: 155 70% 28%;          /* brand green */
     --secondary-foreground: 186 40% 98%;
