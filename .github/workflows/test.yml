@@ -16,6 +16,8 @@ jobs:
   unit:
     name: Unit & Component Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -38,6 +40,8 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
