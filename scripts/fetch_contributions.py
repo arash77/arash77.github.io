@@ -11,6 +11,7 @@ import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
+from urllib.parse import urlparse
 
 from github import Auth, Github
 from openai import OpenAI
@@ -251,13 +252,14 @@ def update_projects_file(
             try:
                 with open(fpath, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    for link in data.get("links", []):
+                    for link in data.get("url", ""):
                         url = link.get("url", "")
-                        if "github.com/" in url:
+                        parsed = urlparse(url)
+                        if parsed.hostname == "github.com":
                             # Extract repo path e.g. "org/repo"
-                            parts = url.replace("https://github.com/", "").split("/")
-                            if len(parts) >= 2:
-                                existing_repos.add(f"{parts[0]}/{parts[1]}")
+                            path_parts = parsed.path.lstrip("/").split("/")
+                            if len(path_parts) >= 2:
+                                existing_repos.add(f"{path_parts[0]}/{path_parts[1]}")
             except Exception:
                 pass
 
