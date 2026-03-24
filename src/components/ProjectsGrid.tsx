@@ -48,9 +48,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Galaxy Core': 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20',
   'Galaxy Training': 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
   'UseGalaxy.eu': 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20',
-  'Python Projects': 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20',
-  'Python Libraries': 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/20',
-  Crypto: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',
+  'Python Projects': 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-300 border-yellow-500/20',
+  'Python Libraries': 'bg-green-500/10 text-green-800 dark:text-green-300 border-green-500/20',
+  Crypto: 'bg-orange-500/10 text-orange-800 dark:text-orange-300 border-orange-500/20',
 };
 
 function getLinkIcon(label: string) {
