@@ -3,10 +3,9 @@
   "extends": [
     "config:recommended",
     "group:allNonMajor",
-    ":semanticCommits",
-    ":dependencyDashboard"
+    ":semanticCommits"
   ],
-  "schedule": ["before 4am on Monday"],
+  "schedule": ["* 12-17 * * 5"],
   "timezone": "UTC",
   "prCreation": "not-pending",
   "prHourlyLimit": 0,
@@ -14,7 +13,6 @@
   "labels": ["dependencies"],
   "assignees": ["arash77"],
   "platformAutomerge": false,
-  "commitMessagePrefix": "chore(deps):",
   "packageRules": [
     {
       "matchUpdateTypes": ["major"],
