@@ -34,12 +34,11 @@ export default function Experience() {
   return (
     <section id="experience" ref={sectionRef} className="py-12 bg-muted/30">
       <div className="container mx-auto px-4 max-w-5xl">
-        <div ref={headingRef} className="gsap-reveal text-center mb-8">
+        <div ref={headingRef} className="gsap-reveal mb-10">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             My journey
           </p>
-          <h2 className="text-4xl font-bold mb-4">Experience</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
+          <h2 className="text-4xl font-bold">Experience</h2>
         </div>
 
         <div className="relative">

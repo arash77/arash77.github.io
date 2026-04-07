@@ -10,8 +10,8 @@ export default defineConfig({
   output: 'static',
   fonts: [
     {
-      name: 'Inter',
-      cssVariable: '--font-inter',
+      name: 'Plus Jakarta Sans',
+      cssVariable: '--font-plus-jakarta-sans',
       provider: fontProviders.fontsource(),
       weights: [400, 500, 600, 700, 800],
     },
@@ -41,7 +41,6 @@ export default defineConfig({
     },
   },
   experimental: {
-    rustCompiler: true,
     queuedRendering: {
       enabled: true,
     },

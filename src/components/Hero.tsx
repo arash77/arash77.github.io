@@ -38,21 +38,12 @@ export default function Hero() {
   return (
     <section
       ref={containerRef}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-mesh pt-16"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16"
     >
-      {/* Decorative blobs */}
-      <div
-        className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/25 dark:bg-primary/10 rounded-full blur-3xl pointer-events-none animate-blob-drift-1"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/20 dark:bg-secondary/10 rounded-full blur-3xl pointer-events-none animate-blob-drift-2"
-        aria-hidden="true"
-      />
-      <div
-        className="absolute top-1/2 left-1/2 w-80 h-80 bg-primary/15 dark:bg-primary/5 rounded-full blur-3xl pointer-events-none animate-blob-drift-3"
-        aria-hidden="true"
-      />
+      {/* Single ambient glow — not 3 competing blobs */}
+      <div className="hero-ambient" aria-hidden="true" />
+      {/* Film grain overlay — CSS only, no inline SVG */}
+      <div className="hero-grain" aria-hidden="true" />
 
       <div className="container mx-auto px-4 max-w-6xl py-20">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
@@ -82,7 +73,7 @@ export default function Hero() {
               ref={nameRef}
               className="gsap-reveal text-5xl lg:text-7xl font-bold tracking-tight mb-4"
             >
-              Arash <span className="bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">Kadkhodaei</span>
+              Arash <span className="name-gradient">Kadkhodaei</span>
             </h1>
             <p
               ref={subtitleRef}

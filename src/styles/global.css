@@ -61,19 +61,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  --font-sans: var(--font-inter, system-ui), system-ui, sans-serif;
+  --font-sans: var(--font-plus-jakarta-sans, system-ui), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono, Fira Code), Fira Code, monospace;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-fade-up: fade-up 0.6s ease-out;
   --animate-fade-in: fade-in 0.4s ease-out;
-  --animate-gradient-shift: gradient-shift 8s ease infinite;
-  --animate-blob-drift-1: blob-drift-1 12s ease-in-out infinite;
-  --animate-blob-drift-2: blob-drift-2 15s ease-in-out infinite;
-  --animate-blob-drift-3: blob-drift-3 10s ease-in-out infinite;
-
-  --background-size-300\%: 300%;
 
   @keyframes accordion-down {
     from {
@@ -109,57 +103,81 @@
       opacity: 1;
     }
   }
-  @keyframes gradient-shift {
-    0%,
-    100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-  @keyframes blob-drift-1 {
-    0%,
-    100% {
-      transform: translate(-50%, -50%);
-    }
-    25% {
-      transform: translate(-20%, -80%);
-    }
-    50% {
-      transform: translate(-80%, -20%);
-    }
-    75% {
-      transform: translate(-30%, -70%);
-    }
-  }
-  @keyframes blob-drift-2 {
-    0%,
-    100% {
-      transform: translate(50%, 50%);
-    }
-    25% {
-      transform: translate(20%, 80%);
-    }
-    50% {
-      transform: translate(80%, 20%);
-    }
-    75% {
-      transform: translate(70%, 70%);
-    }
-  }
-  @keyframes blob-drift-3 {
-    0%,
-    100% {
-      transform: translate(-50%, 0%);
-    }
-    33% {
-      transform: translate(-20%, -40%);
-    }
-    66% {
-      transform: translate(-80%, 40%);
-    }
-  }
+}
+
+/* ── Hero name gradient shimmer ────────────────────────────────────────── */
+/* Uses background-position animation — universally supported, no @property needed */
+.name-gradient {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary)),
+    hsl(var(--secondary)) 40%,
+    hsl(var(--primary))
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: name-shimmer 8s ease-in-out infinite;
+}
+
+@keyframes name-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ── Hero ambient glow (single source, not 3 blobs) ──────────────────── */
+.hero-ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hero-ambient::before {
+  content: '';
+  position: absolute;
+  width: clamp(280px, 45vw, 560px);
+  aspect-ratio: 1;
+  top: -8%;
+  right: -6%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    hsl(var(--primary) / 0.06) 0%,
+    hsl(var(--primary) / 0.015) 50%,
+    transparent 70%
+  );
+  filter: blur(40px);
+  animation: ambient-drift 25s ease-in-out infinite;
+  will-change: transform;
+}
+
+.dark .hero-ambient::before {
+  background: radial-gradient(
+    circle,
+    hsl(var(--primary) / 0.1) 0%,
+    hsl(var(--primary) / 0.03) 50%,
+    transparent 70%
+  );
+}
+
+/* Film grain — CSS pseudo-element, no inline SVG in JSX */
+.hero-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 160px 160px;
+}
+
+@keyframes ambient-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-4%, 6%) scale(1.04); }
+  66% { transform: translate(3%, -3%) scale(0.97); }
 }
 
 /*
@@ -276,23 +294,6 @@
 .js-enabled .gsap-reveal {
   opacity: 0;
   visibility: hidden;
-}
-
-/* Gradient mesh background */
-.gradient-mesh {
-  background: radial-gradient(at 40% 20%, hsla(186, 72%, 28%, 0.12) 0px, transparent 50%),
-              radial-gradient(at 80% 0%, hsla(155, 70%, 28%, 0.08) 0px, transparent 50%),
-              radial-gradient(at 0% 50%, hsla(186, 60%, 50%, 0.07) 0px, transparent 50%),
-              radial-gradient(at 80% 50%, hsla(155, 60%, 40%, 0.06) 0px, transparent 50%),
-              radial-gradient(at 0% 100%, hsla(186, 72%, 28%, 0.08) 0px, transparent 50%);
-}
-
-.dark .gradient-mesh {
-  background: radial-gradient(at 40% 20%, hsla(186, 72%, 40%, 0.1) 0px, transparent 50%),
-              radial-gradient(at 80% 0%, hsla(155, 62%, 45%, 0.08) 0px, transparent 50%),
-              radial-gradient(at 0% 50%, hsla(186, 72%, 55%, 0.06) 0px, transparent 50%),
-              radial-gradient(at 80% 50%, hsla(186, 55%, 30%, 0.05) 0px, transparent 50%),
-              radial-gradient(at 0% 100%, hsla(155, 62%, 40%, 0.06) 0px, transparent 50%);
 }
 
 /* Typography improvements */

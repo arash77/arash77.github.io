@@ -34,12 +34,11 @@ export default function About() {
   return (
     <section id="about" ref={sectionRef} className="py-12 bg-muted/30">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="gsap-reveal about-content text-center mb-8">
+        <div className="gsap-reveal about-content mb-10">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             Get to know me
           </p>
-          <h2 className="text-4xl font-bold mb-4">About Me</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
+          <h2 className="text-4xl font-bold">About Me</h2>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">

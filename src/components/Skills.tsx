@@ -69,12 +69,11 @@ export default function Skills() {
   return (
     <section id="skills" ref={sectionRef} className="py-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div ref={headingRef} className="gsap-reveal text-center mb-8">
+        <div ref={headingRef} className="gsap-reveal mb-10">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             What I work with
           </p>
-          <h2 className="text-4xl font-bold mb-4">Skills</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
+          <h2 className="text-4xl font-bold">Skills</h2>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-6">
