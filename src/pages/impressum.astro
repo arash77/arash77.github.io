@@ -8,7 +8,7 @@ import LegalToggle from '../components/LegalToggle';
   description="Impressum und rechtliche Angaben für kadkhodaei.de — Legal notice for kadkhodaei.de"
 >
   <style is:global>
-    [data-lang="en"] { display: none; }
+    #legal-content [data-lang="en"] { display: none; }
     #legal-content[data-legal-lang="en"] [data-lang="de"] { display: none; }
     #legal-content[data-legal-lang="en"] [data-lang="en"] { display: revert; }
   </style>
@@ -26,7 +26,7 @@ import LegalToggle from '../components/LegalToggle';
       <div id="legal-content">
 
         <!-- ── GERMAN ── -->
-        <div data-lang="de" class="space-y-10 text-sm leading-relaxed text-foreground">
+        <div lang="de" data-lang="de" class="space-y-10 text-sm leading-relaxed text-foreground">
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">Angaben gemäß §5 TMG</h2>
@@ -110,7 +110,7 @@ import LegalToggle from '../components/LegalToggle';
         </div>
 
         <!-- ── ENGLISH ── -->
-        <div data-lang="en" class="space-y-10 text-sm leading-relaxed text-foreground">
+        <div lang="en" data-lang="en" class="space-y-10 text-sm leading-relaxed text-foreground">
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">Information pursuant to §5 TMG</h2>

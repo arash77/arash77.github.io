@@ -38,4 +38,6 @@ test('footer links have correct hrefs', async ({ page }) => {
   await expect(footer.locator('a[href*="github.com"]')).toBeVisible();
   await expect(footer.locator('a[href*="linkedin.com"]')).toBeVisible();
   await expect(footer.locator('a[href^="mailto:"]')).toBeVisible();
+  await expect(footer.locator('a[href="/impressum"]')).toBeVisible();
+  await expect(footer.locator('a[href="/datenschutz"]')).toBeVisible();
 });
