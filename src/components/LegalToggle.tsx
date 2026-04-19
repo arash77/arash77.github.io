@@ -5,8 +5,8 @@ export default function LegalToggle() {
   const [lang, setLang] = useState<'de' | 'en'>('de');
 
   useEffect(() => {
-    const stored = localStorage.getItem('legal-lang') as 'de' | 'en' | null;
-    const initial = stored ?? 'de';
+    const stored = localStorage.getItem('legal-lang');
+    const initial: 'de' | 'en' = stored === 'de' || stored === 'en' ? stored : 'de';
     setLang(initial);
     document.getElementById('legal-content')?.setAttribute('data-legal-lang', initial);
   }, []);
@@ -21,6 +21,7 @@ export default function LegalToggle() {
     <div className="flex items-center gap-1 mb-10" role="group" aria-label="Language / Sprache">
       {(['de', 'en'] as const).map((l) => (
         <button
+          type="button"
           key={l}
           onClick={() => toggle(l)}
           aria-pressed={lang === l}

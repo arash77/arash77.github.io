@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const PAGES = ['/', '/projects', '/resume'] as const;
+const PAGES = ['/', '/projects', '/resume', '/impressum', '/datenschutz'] as const;
 
 for (const path of PAGES) {
   test(`${path} has <title> and meta[name="description"]`, async ({ page }) => {
