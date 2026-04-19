@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const PAGES = ['/', '/projects', '/resume'] as const;
+const PAGES = ['/', '/projects', '/resume', '/impressum', '/datenschutz'] as const;
 
 for (const path of PAGES) {
   test(`${path} loads with status 200`, async ({ page }) => {
@@ -38,4 +38,6 @@ test('footer links have correct hrefs', async ({ page }) => {
   await expect(footer.locator('a[href*="github.com"]')).toBeVisible();
   await expect(footer.locator('a[href*="linkedin.com"]')).toBeVisible();
   await expect(footer.locator('a[href^="mailto:"]')).toBeVisible();
+  await expect(footer.locator('a[href="/impressum"]')).toBeVisible();
+  await expect(footer.locator('a[href="/datenschutz"]')).toBeVisible();
 });
