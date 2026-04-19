@@ -16,15 +16,18 @@ import { SITE } from '../lib/utils';
       <!-- Header -->
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-12 animate-fade-up">
         <div class="flex items-center gap-5">
-          <img
-            src={SITE.avatar}
-            alt="Arash Kadkhodaei"
-            width="80"
-            height="80"
-            loading="lazy"
-            decoding="async"
-            class="w-20 h-20 rounded-full border-2 border-primary/30 shadow-md object-cover"
-          />
+          <div class="w-20 h-20 rounded-full border-2 border-primary/30 shadow-md overflow-hidden shrink-0">
+            <img
+              src={SITE.avatar}
+              alt="Arash Kadkhodaei"
+              width="80"
+              height="80"
+              loading="lazy"
+              decoding="async"
+              class="w-full h-full object-cover"
+              style="object-position: 81% 26%; transform: scale(1.75); transform-origin: 81% 26%;"
+            />
+          </div>
           <div>
             <h1 class="text-3xl font-bold">Arash Kadkhodaei</h1>
             <p class="text-muted-foreground font-medium">Software Engineer</p>
