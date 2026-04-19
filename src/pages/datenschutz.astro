@@ -1,0 +1,309 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LegalToggle from '../components/LegalToggle';
+---
+
+<Layout
+  title="Datenschutzerklärung · Arash Kadkhodaei"
+  description="Datenschutzerklärung für kadkhodaei.de — Privacy policy for kadkhodaei.de"
+>
+  <style is:global>
+    [data-lang="en"] { display: none; }
+    #legal-content[data-legal-lang="en"] [data-lang="de"] { display: none; }
+    #legal-content[data-legal-lang="en"] [data-lang="en"] { display: revert; }
+  </style>
+
+  <section class="py-24">
+    <div class="container mx-auto px-4 max-w-3xl">
+      <div class="text-center mb-12">
+        <p class="text-sm font-mono text-secondary tracking-widest uppercase mb-2">Legal</p>
+        <h1 class="text-4xl font-bold mb-4">Datenschutzerklärung</h1>
+        <div class="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
+      </div>
+
+      <LegalToggle client:load />
+
+      <div id="legal-content" class="prose-legal">
+
+        <!-- ── GERMAN ── -->
+        <div data-lang="de" class="space-y-10 text-sm leading-relaxed text-foreground">
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">1. Verantwortlicher</h2>
+            <p class="text-muted-foreground">
+              Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:<br /><br />
+              Arash Kadkhodaei<br />
+              Kapellenweg 14<br />
+              79822 Titisee-Neustadt<br />
+              Deutschland<br />
+              E-Mail: <a href="mailto:arash@kadkhodaei.de" class="text-primary hover:underline">arash@kadkhodaei.de</a>
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">2. Hosting (GitHub Pages)</h2>
+            <p class="text-muted-foreground">
+              Diese Website wird über GitHub Pages gehostet. Anbieter ist die GitHub, Inc., 88 Colin P Kelly Jr St,
+              San Francisco, CA 94107, USA.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              Beim Aufruf dieser Website erhebt GitHub automatisch Informationen in sogenannten Server-Logdateien, die Ihr Browser
+              übermittelt. Dazu gehören insbesondere: IP-Adresse, Browsertyp und -version, verwendetes Betriebssystem, Referrer-URL,
+              Datum und Uhrzeit der Serveranfrage.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              Diese Daten werden von GitHub als technischem Dienstleister im Auftrag des Verantwortlichen verarbeitet.
+              Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse am Betrieb einer funktionsfähigen Website).
+              Eine Zusammenführung dieser Daten mit anderen Datenquellen findet nicht statt.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              Die Datenübertragung in die USA erfolgt auf Grundlage des EU-US Data Privacy Framework.
+              Weitere Informationen finden Sie in der Datenschutzerklärung von GitHub:
+              <a
+                href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary hover:underline"
+              >
+                docs.github.com/site-policy/privacy-policies/github-general-privacy-statement
+              </a>
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">3. Einbindung eines GitHub-Profilbilds</h2>
+            <p class="text-muted-foreground">
+              Auf der Lebenslauf-Seite dieser Website wird ein Profilbild direkt von den Servern von GitHub, Inc. geladen
+              (<code class="font-mono text-xs bg-muted px-1 rounded">github.com/arash77.png</code>).
+              Dabei wird Ihre IP-Adresse an GitHub übermittelt. Dies ist technisch notwendig und erfolgt auf Grundlage
+              von Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Darstellung aktueller Profilinhalte).
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">4. Kontaktaufnahme per E-Mail</h2>
+            <p class="text-muted-foreground">
+              Wenn Sie uns per E-Mail kontaktieren, werden Ihre Angaben inklusive der von Ihnen angegebenen Kontaktdaten
+              zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert.
+              Diese Daten geben wir nicht ohne Ihre Einwilligung weiter.
+              Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Beantwortung von Anfragen).
+              Die Daten werden gelöscht, sobald die Anfrage abschließend beantwortet ist und keine gesetzliche
+              Aufbewahrungspflicht besteht.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">5. Lokaler Speicher (localStorage)</h2>
+            <p class="text-muted-foreground">
+              Diese Website speichert zwei Einträge im lokalen Speicher Ihres Browsers:
+            </p>
+            <ul class="list-disc list-inside text-muted-foreground mt-2 space-y-1">
+              <li>
+                <code class="font-mono text-xs bg-muted px-1 rounded">theme</code> – Ihre Farbschema-Präferenz (hell/dunkel).
+              </li>
+              <li>
+                <code class="font-mono text-xs bg-muted px-1 rounded">legal-lang</code> – Ihre Sprachauswahl auf dieser Seite (DE/EN).
+              </li>
+            </ul>
+            <p class="text-muted-foreground mt-3">
+              Beide Einträge verbleiben ausschließlich auf Ihrem Gerät und werden nicht an uns oder Dritte übermittelt.
+              Es handelt sich um technisch notwendige Speicherungen, für die keine Einwilligung erforderlich ist.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">6. Keine Cookies, kein Tracking, keine Analyse</h2>
+            <p class="text-muted-foreground">
+              Diese Website setzt keine Cookies. Es werden keine Tracking- oder Analysedienste (wie Google Analytics, Matomo o. Ä.)
+              eingesetzt. Es werden keine Nutzerprofile erstellt.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">7. Ihre Rechte als betroffene Person</h2>
+            <p class="text-muted-foreground mb-3">
+              Sie haben gegenüber dem Verantwortlichen folgende Rechte hinsichtlich der Sie betreffenden personenbezogenen Daten:
+            </p>
+            <ul class="list-disc list-inside text-muted-foreground space-y-1">
+              <li>Recht auf Auskunft (Art. 15 DSGVO)</li>
+              <li>Recht auf Berichtigung (Art. 16 DSGVO)</li>
+              <li>Recht auf Löschung (Art. 17 DSGVO)</li>
+              <li>Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
+              <li>Recht auf Datenübertragbarkeit (Art. 20 DSGVO)</li>
+              <li>Recht auf Widerspruch gegen die Verarbeitung (Art. 21 DSGVO)</li>
+            </ul>
+            <p class="text-muted-foreground mt-3">
+              Zur Geltendmachung Ihrer Rechte wenden Sie sich bitte an:
+              <a href="mailto:arash@kadkhodaei.de" class="text-primary hover:underline">arash@kadkhodaei.de</a>
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">8. Beschwerderecht bei einer Aufsichtsbehörde</h2>
+            <p class="text-muted-foreground">
+              Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer personenbezogenen Daten
+              durch uns zu beschweren. Zuständige Aufsichtsbehörde ist der
+              <a
+                href="https://www.baden-wuerttemberg.datenschutz.de"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary hover:underline"
+              >
+                Landesbeauftragte für Datenschutz und Informationsfreiheit Baden-Württemberg
+              </a>.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">9. Aktualität und Änderungen</h2>
+            <p class="text-muted-foreground">
+              Diese Datenschutzerklärung ist aktuell gültig und hat den Stand April 2026.
+              Durch die Weiterentwicklung dieser Website oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben kann
+              es notwendig werden, diese Datenschutzerklärung zu ändern.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- ── ENGLISH ── -->
+        <div data-lang="en" class="space-y-10 text-sm leading-relaxed text-foreground">
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">1. Controller</h2>
+            <p class="text-muted-foreground">
+              The controller within the meaning of the General Data Protection Regulation (GDPR) is:<br /><br />
+              Arash Kadkhodaei<br />
+              Kapellenweg 14<br />
+              79822 Titisee-Neustadt<br />
+              Germany<br />
+              Email: <a href="mailto:arash@kadkhodaei.de" class="text-primary hover:underline">arash@kadkhodaei.de</a>
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">2. Hosting (GitHub Pages)</h2>
+            <p class="text-muted-foreground">
+              This website is hosted via GitHub Pages. The provider is GitHub, Inc., 88 Colin P Kelly Jr St,
+              San Francisco, CA 94107, USA.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              When you visit this website, GitHub automatically collects information in so-called server log files that your browser
+              transmits. This includes in particular: IP address, browser type and version, operating system used, referrer URL,
+              date and time of the server request.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              These data are processed by GitHub as a technical service provider on behalf of the controller.
+              The legal basis is Art. 6(1)(f) GDPR (legitimate interest in operating a functional website).
+              These data are not merged with other data sources.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              Data transfer to the USA is based on the EU-US Data Privacy Framework.
+              For more information, see GitHub's privacy statement:
+              <a
+                href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary hover:underline"
+              >
+                docs.github.com/site-policy/privacy-policies/github-general-privacy-statement
+              </a>
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">3. Embedding a GitHub profile image</h2>
+            <p class="text-muted-foreground">
+              The résumé page of this website loads a profile picture directly from GitHub, Inc.'s servers
+              (<code class="font-mono text-xs bg-muted px-1 rounded">github.com/arash77.png</code>).
+              Your IP address is transmitted to GitHub in the process. This is technically necessary and is based on
+              Art. 6(1)(f) GDPR (legitimate interest in displaying current profile content).
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">4. Contact by email</h2>
+            <p class="text-muted-foreground">
+              If you contact us by email, your details including the contact information you provide will be stored for the purpose
+              of processing your enquiry and for any follow-up questions. We will not share these data without your consent.
+              The legal basis is Art. 6(1)(f) GDPR (legitimate interest in responding to enquiries).
+              Data are deleted once the enquiry has been fully answered and there is no statutory retention obligation.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">5. Local storage</h2>
+            <p class="text-muted-foreground">
+              This website stores two entries in your browser's local storage:
+            </p>
+            <ul class="list-disc list-inside text-muted-foreground mt-2 space-y-1">
+              <li>
+                <code class="font-mono text-xs bg-muted px-1 rounded">theme</code> – your colour scheme preference (light/dark).
+              </li>
+              <li>
+                <code class="font-mono text-xs bg-muted px-1 rounded">legal-lang</code> – your language selection on this page (DE/EN).
+              </li>
+            </ul>
+            <p class="text-muted-foreground mt-3">
+              Both entries remain exclusively on your device and are not transmitted to us or any third party.
+              These are technically necessary and do not require consent.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">6. No cookies, no tracking, no analytics</h2>
+            <p class="text-muted-foreground">
+              This website does not set any cookies. No tracking or analytics services (such as Google Analytics, Matomo, etc.)
+              are used. No user profiles are created.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">7. Your rights as a data subject</h2>
+            <p class="text-muted-foreground mb-3">
+              You have the following rights with regard to the personal data concerning you:
+            </p>
+            <ul class="list-disc list-inside text-muted-foreground space-y-1">
+              <li>Right of access (Art. 15 GDPR)</li>
+              <li>Right to rectification (Art. 16 GDPR)</li>
+              <li>Right to erasure (Art. 17 GDPR)</li>
+              <li>Right to restriction of processing (Art. 18 GDPR)</li>
+              <li>Right to data portability (Art. 20 GDPR)</li>
+              <li>Right to object to processing (Art. 21 GDPR)</li>
+            </ul>
+            <p class="text-muted-foreground mt-3">
+              To exercise your rights, please contact:
+              <a href="mailto:arash@kadkhodaei.de" class="text-primary hover:underline">arash@kadkhodaei.de</a>
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">8. Right to lodge a complaint</h2>
+            <p class="text-muted-foreground">
+              You have the right to lodge a complaint with a data protection supervisory authority regarding our processing of your
+              personal data. The competent supervisory authority is the
+              <a
+                href="https://www.baden-wuerttemberg.datenschutz.de"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary hover:underline"
+              >
+                State Commissioner for Data Protection and Freedom of Information of Baden-Württemberg
+              </a>.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">9. Currency and changes</h2>
+            <p class="text-muted-foreground">
+              This privacy policy is currently valid and dated April 2026.
+              Due to the further development of this website or changes in legal or regulatory requirements,
+              it may become necessary to amend this privacy policy.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+</Layout>
