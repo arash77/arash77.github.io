@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import { experiences, education, languages, resumeSkillTiers, conferences } from '../data/resume';
 import { Download, MapPin, Mail, Briefcase, GraduationCap, BookOpen, FileText, ExternalLink, User, Globe, Code } from 'lucide-react';
 import { IconGithub, IconLinkedin } from '../components/BrandIcons';
+import { SITE } from '../lib/utils';
 ---
 
 <Layout
@@ -16,9 +17,13 @@ import { IconGithub, IconLinkedin } from '../components/BrandIcons';
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-12 animate-fade-up">
         <div class="flex items-center gap-5">
           <img
-            src="https://github.com/arash77.png"
+            src={SITE.avatar}
             alt="Arash Kadkhodaei"
-            class="w-20 h-20 rounded-full border-2 border-primary/30 shadow-md"
+            width="80"
+            height="80"
+            loading="lazy"
+            decoding="async"
+            class="w-20 h-20 rounded-full border-2 border-primary/30 shadow-md object-cover"
           />
           <div>
             <h1 class="text-3xl font-bold">Arash Kadkhodaei</h1>
