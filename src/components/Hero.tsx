@@ -136,7 +136,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll hint */}
-      <div className="absolute bottom-8 inset-x-0 hidden sm:flex flex-col items-center gap-2 text-muted-foreground animate-bounce">
+      <div className="absolute bottom-8 inset-x-0 hidden [@media(min-width:640px)_and_(min-height:44rem)]:flex flex-col items-center gap-2 text-muted-foreground animate-bounce">
         <span className="text-xs font-mono">scroll</span>
         <div className="w-px h-8 bg-linear-to-b from-muted-foreground to-transparent" />
       </div>
