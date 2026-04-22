@@ -65,7 +65,7 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <Font cssVariable="--font-jetbrains-mono" preload />
 
     <!-- JSON-LD Person schema -->
-    <script type="application/ld+json" set:html={JSON.stringify({
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Person',
       name: 'Arash Kadkhodaei',
@@ -101,6 +101,15 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
           if (themeColorMeta) {
             themeColorMeta.setAttribute('content', isDark ? '#041618' : '#f7fcfc');
           }
+        } catch (_) {}
+      })();
+    </script>
+    <!-- Legal language init (prevent flash on legal pages) -->
+    <script is:inline>
+      (function () {
+        try {
+          var lang = localStorage.getItem('legal-lang');
+          if (lang === 'en') document.documentElement.setAttribute('data-legal-lang', 'en');
         } catch (_) {}
       })();
     </script>

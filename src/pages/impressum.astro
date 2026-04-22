@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import LegalToggle from '../components/LegalToggle';
+import LegalToggle from '../components/LegalToggle.astro';
 ---
 
 <Layout
@@ -9,21 +9,23 @@ import LegalToggle from '../components/LegalToggle';
 >
   <style is:global>
     #legal-content [data-lang="en"] { display: none; }
-    #legal-content[data-legal-lang="en"] [data-lang="de"] { display: none; }
-    #legal-content[data-legal-lang="en"] [data-lang="en"] { display: revert; }
+    html[data-legal-lang="en"] #legal-content [data-lang="de"] { display: none; }
+    html[data-legal-lang="en"] #legal-content [data-lang="en"] { display: revert; }
   </style>
 
   <section class="py-24">
     <div class="container mx-auto px-4 max-w-3xl">
-      <div class="text-center mb-12">
+      <div class="text-center mb-12 animate-fade-up animate-delay-1">
         <p lang="en" class="text-sm font-mono text-secondary tracking-widest uppercase mb-2">Legal</p>
         <h1 lang="de" class="text-4xl font-bold mb-4">Impressum</h1>
         <div class="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
       </div>
 
-      <LegalToggle client:load />
+      <div class="animate-fade-up animate-delay-2">
+        <LegalToggle />
+      </div>
 
-      <div id="legal-content">
+      <div id="legal-content" class="animate-fade-up animate-delay-3">
 
         <!-- ── GERMAN ── -->
         <div lang="de" data-lang="de" class="space-y-10 text-sm leading-relaxed text-foreground">

@@ -31,3 +31,15 @@ export const NAV_LINKS = [
   { href: '/projects', label: 'Projects' },
   { href: '/resume', label: 'Resume' },
 ] as const;
+
+export const LEGAL_LANGS = {
+  DE: 'de',
+  EN: 'en',
+} as const;
+
+export type LegalLang = (typeof LEGAL_LANGS)[keyof typeof LEGAL_LANGS];
+
+export const STORAGE_KEYS = {
+  THEME: 'theme',
+  LEGAL_LANG: 'legal-lang',
+} as const;
