@@ -300,6 +300,15 @@
   @apply text-primary hover:text-primary/80 underline underline-offset-4 transition-colors;
 }
 
+/* Animation Utilities */
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
+
+.animate-delay-1 { animation-delay: 0.05s; }
+.animate-delay-2 { animation-delay: 0.2s; }
+.animate-delay-3 { animation-delay: 0.35s; }
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,
