@@ -40,6 +40,5 @@ export const LEGAL_LANGS = {
 export type LegalLang = (typeof LEGAL_LANGS)[keyof typeof LEGAL_LANGS];
 
 export const STORAGE_KEYS = {
-  THEME: 'theme',
   LEGAL_LANG: 'legal-lang',
 } as const;

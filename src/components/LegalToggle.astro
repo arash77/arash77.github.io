@@ -3,18 +3,16 @@
 import { LEGAL_LANGS } from '@/lib/utils';
 ---
 <div class="legal-toggle-group flex items-center gap-1 mb-10" role="group" aria-label="Language / Sprache">
-  <button 
-    type="button" 
-    data-lang-btn={LEGAL_LANGS.DE} 
-    aria-pressed="true" 
+  <button
+    type="button"
+    data-lang-btn={LEGAL_LANGS.DE}
     class="legal-toggle-btn px-3 py-1.5 text-xs font-mono uppercase tracking-widest rounded-md border transition-colors cursor-pointer"
   >
     Deutsch
   </button>
-  <button 
-    type="button" 
-    data-lang-btn={LEGAL_LANGS.EN} 
-    aria-pressed="false" 
+  <button
+    type="button"
+    data-lang-btn={LEGAL_LANGS.EN}
     class="legal-toggle-btn px-3 py-1.5 text-xs font-mono uppercase tracking-widest rounded-md border transition-colors cursor-pointer"
   >
     English
@@ -76,7 +74,8 @@ import { LEGAL_LANGS } from '@/lib/utils';
 
   // Use event delegation on the document level to catch clicks from any instance
   document.addEventListener('click', (event) => {
-    const target = event.target as HTMLElement;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
     const btn = target.closest<HTMLButtonElement>('.legal-toggle-btn');
     
     if (!btn) return;
