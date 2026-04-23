@@ -4,6 +4,7 @@ import { Font } from 'astro:assets';
 import Navbar from '../components/Navbar';
 import { IconGithub, IconLinkedin } from '../components/BrandIcons';
 import { Mail } from 'lucide-react';
+import { LEGAL_LANGS, STORAGE_KEYS } from '../lib/utils';
 
 interface Props {
   title?: string;
@@ -65,7 +66,7 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <Font cssVariable="--font-jetbrains-mono" preload />
 
     <!-- JSON-LD Person schema -->
-    <script type="application/ld+json" set:html={JSON.stringify({
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Person',
       name: 'Arash Kadkhodaei',
@@ -101,6 +102,15 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
           if (themeColorMeta) {
             themeColorMeta.setAttribute('content', isDark ? '#041618' : '#f7fcfc');
           }
+        } catch (_) {}
+      })();
+    </script>
+    <!-- Legal language init (prevent flash on legal pages) -->
+    <script is:inline define:vars={{ legalLangKey: STORAGE_KEYS.LEGAL_LANG, enValue: LEGAL_LANGS.EN }}>
+      (function () {
+        try {
+          var lang = localStorage.getItem(legalLangKey);
+          if (lang === enValue) document.documentElement.setAttribute('data-legal-lang', enValue);
         } catch (_) {}
       })();
     </script>

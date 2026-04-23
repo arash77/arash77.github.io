@@ -1,0 +1,101 @@
+---
+// src/components/LegalToggle.astro
+import { LEGAL_LANGS } from '@/lib/utils';
+---
+<div class="legal-toggle-group flex items-center gap-1 mb-10" role="group" aria-label="Language / Sprache">
+  <button
+    type="button"
+    data-lang-btn={LEGAL_LANGS.DE}
+    aria-pressed="true"
+    class="legal-toggle-btn px-3 py-1.5 text-xs font-mono uppercase tracking-widest rounded-md border transition-colors cursor-pointer"
+  >
+    Deutsch
+  </button>
+  <button
+    type="button"
+    data-lang-btn={LEGAL_LANGS.EN}
+    aria-pressed="false"
+    class="legal-toggle-btn px-3 py-1.5 text-xs font-mono uppercase tracking-widest rounded-md border transition-colors cursor-pointer"
+  >
+    English
+  </button>
+</div>
+
+<style>
+  /* Default (DE active) — matches existing React inactive/active Tailwind styling */
+  .legal-toggle-group [data-lang-btn="de"] {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary));
+  }
+  .legal-toggle-group [data-lang-btn="en"] {
+    color: hsl(var(--muted-foreground));
+    border-color: hsl(var(--border));
+  }
+  .legal-toggle-group [data-lang-btn="en"]:hover {
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--primary) / 0.4);
+  }
+  /* EN active — flip */
+  :global(html[data-legal-lang="en"]) .legal-toggle-group [data-lang-btn="de"] {
+    background-color: transparent;
+    color: hsl(var(--muted-foreground));
+    border-color: hsl(var(--border));
+  }
+  :global(html[data-legal-lang="en"]) .legal-toggle-group [data-lang-btn="de"]:hover {
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--primary) / 0.4);
+  }
+  :global(html[data-legal-lang="en"]) .legal-toggle-group [data-lang-btn="en"] {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary));
+  }
+</style>
+
+<script>
+  import { LEGAL_LANGS, STORAGE_KEYS } from '@/lib/utils';
+
+  /**
+   * Syncs the aria-pressed state for all toggle buttons on the page.
+   * Querying within the function ensures we always have a fresh list 
+   * of buttons if instances are somehow added dynamically.
+   */
+  function syncPressed() {
+    const isEn = document.documentElement.getAttribute('data-legal-lang') === LEGAL_LANGS.EN;
+    const current = isEn ? LEGAL_LANGS.EN : LEGAL_LANGS.DE;
+    
+    const toggleButtons = document.querySelectorAll<HTMLButtonElement>('.legal-toggle-btn');
+    toggleButtons.forEach((btn) => {
+      btn.setAttribute('aria-pressed', btn.dataset.langBtn === current ? 'true' : 'false');
+    });
+  }
+
+  // Initial sync for all instances on the page
+  syncPressed();
+
+  // Use event delegation on the document level to catch clicks from any instance
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const btn = target.closest<HTMLButtonElement>('.legal-toggle-btn');
+    
+    if (!btn) return;
+
+    const lang = btn.dataset.langBtn === LEGAL_LANGS.EN ? LEGAL_LANGS.EN : LEGAL_LANGS.DE;
+    
+    try { 
+      localStorage.setItem(STORAGE_KEYS.LEGAL_LANG, lang); 
+    } catch (e) {
+      console.warn('[LegalToggle.astro] Failed to persist language preference to localStorage (toggle will still work):', e);
+    }
+
+    if (lang === LEGAL_LANGS.EN) {
+      document.documentElement.setAttribute('data-legal-lang', LEGAL_LANGS.EN);
+    } else {
+      document.documentElement.removeAttribute('data-legal-lang');
+    }
+    
+    syncPressed();
+  });
+</script>
