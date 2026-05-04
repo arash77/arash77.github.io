@@ -2,27 +2,43 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:best-practices",
-    "group:allNonMajor"
+    "group:allDigest"
   ],
-  "schedule": ["* 12-17 * * 5"],
-  "timezone": "UTC",
+  "schedule": ["after 10am on Friday"],
+  "timezone": "Europe/Berlin",
   "prCreation": "not-pending",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 5,
   "labels": ["dependencies"],
   "assignees": ["arash77"],
-  "platformAutomerge": false,
+  "separateMinorPatch": true,
+  "postUpdateOptions": ["pnpmDedupe"],
+  "osvVulnerabilityAlerts": true,
+  "dependencyDashboard": true,
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "prCreation": "immediate"
+  },
   "packageRules": [
     {
-      "matchUpdateTypes": ["major"],
-      "labels": ["dependencies", "major"],
+      "matchUpdateTypes": ["minor"],
+      "groupName": "non-major dependencies",
+      "groupSlug": "all-minor"
+    },
+    {
+      "matchUpdateTypes": ["patch", "digest", "pin"],
+      "automerge": true,
+      "minimumReleaseAge": "3 days",
+      "platformAutomerge": true
+    },
+    {
+      "matchUpdateTypes": ["minor"],
       "automerge": false
     },
     {
-      "matchUpdateTypes": ["minor", "patch"],
-      "labels": ["dependencies", "minor-patch"],
-      "automerge": false
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
-
