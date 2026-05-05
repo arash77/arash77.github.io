@@ -27,7 +27,8 @@
   },
   "packageRules": [
     {
-      "description": "Group all minor dependency updates",
+      "description": "Group npm minor dependency updates",
+      "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor"],
       "groupName": "all minor dependencies",
       "groupSlug": "all-minor",
@@ -41,14 +42,14 @@
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "GitHub Actions patches and digests: protect with release age, no automerge (no CI coverage)",
+      "description": "GitHub Actions patches, pins, and digests: protect with release age, no automerge (no CI coverage)",
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["patch", "pin", "digest"],
       "automerge": false,
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Python dependency patches: protect with release age, no automerge (no CI coverage)",
+      "description": "Python dependency patches and pins: protect with release age, no automerge (no CI coverage)",
       "matchManagers": ["pip_requirements"],
       "matchUpdateTypes": ["patch", "pin"],
       "automerge": false,
