@@ -2,27 +2,63 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:best-practices",
-    "group:allNonMajor"
+    "group:allDigest"
   ],
-  "schedule": ["* 12-17 * * 5"],
-  "timezone": "UTC",
+  "schedule": ["on the first day of the month"],
+  "timezone": "Europe/Berlin",
   "prCreation": "not-pending",
   "prHourlyLimit": 0,
-  "prConcurrentLimit": 5,
+  "prConcurrentLimit": 10,
   "labels": ["dependencies"],
-  "assignees": ["arash77"],
-  "platformAutomerge": false,
+  "separateMinorPatch": true,
+  "platformAutomerge": true,
+  "postUpdateOptions": ["pnpmDedupe"],
+  "osvVulnerabilityAlerts": true,
+  "dependencyDashboard": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "minimumReleaseAge": "3 days",
+    "schedule": ["on the first day of the month"]
+  },
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "prCreation": "immediate",
+    "minimumReleaseAge": "0 days"
+  },
   "packageRules": [
     {
-      "matchUpdateTypes": ["major"],
-      "labels": ["dependencies", "major"],
-      "automerge": false
+      "description": "Group npm minor updates (release age inherited from security:minimumReleaseAgeNpm)",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor"],
+      "groupName": "all minor dependencies",
+      "groupSlug": "all-minor"
     },
     {
-      "matchUpdateTypes": ["minor", "patch"],
-      "labels": ["dependencies", "minor-patch"],
-      "automerge": false
+      "description": "Automerge npm patches, digests, and pins",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["patch", "digest", "pin"],
+      "automerge": true
+    },
+    {
+      "description": "GitHub Actions: 3-day release age, no automerge (no merge_group CI coverage)",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
+      "automerge": false,
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Python (pip_requirements): 3-day release age, no automerge (no CI coverage for scripts/)",
+      "matchManagers": ["pip_requirements"],
+      "matchUpdateTypes": ["patch", "minor", "pin"],
+      "automerge": false,
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Major updates: manual review, 7-day release age",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
-
