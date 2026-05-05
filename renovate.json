@@ -58,7 +58,8 @@
     {
       "description": "Minor updates require manual review",
       "matchUpdateTypes": ["minor"],
-      "automerge": false
+      "automerge": false,
+      "minimumReleaseAge": "3 days"
     },
     {
       "description": "Major updates require manual review and longer release age",
