@@ -4,13 +4,12 @@
     "config:best-practices",
     "group:allDigest"
   ],
-  "schedule": ["after 10am on Friday"],
+  "schedule": ["on the first day of the month"],
   "timezone": "Europe/Berlin",
   "prCreation": "not-pending",
   "prHourlyLimit": 0,
-  "prConcurrentLimit": 5,
+  "prConcurrentLimit": 10,
   "labels": ["dependencies"],
-  "assignees": ["arash77"],
   "separateMinorPatch": true,
   "platformAutomerge": true,
   "postUpdateOptions": ["pnpmDedupe"],
@@ -19,50 +18,44 @@
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true,
-    "minimumReleaseAge": "3 days"
+    "minimumReleaseAge": "3 days",
+    "schedule": ["on the first day of the month"]
   },
   "vulnerabilityAlerts": {
     "labels": ["dependencies", "security"],
-    "prCreation": "immediate"
+    "prCreation": "immediate",
+    "minimumReleaseAge": "0 days"
   },
   "packageRules": [
     {
-      "description": "Group npm minor dependency updates",
+      "description": "Group npm minor updates (release age inherited from security:minimumReleaseAgeNpm)",
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor"],
       "groupName": "all minor dependencies",
-      "groupSlug": "all-minor",
-      "minimumReleaseAge": "3 days"
+      "groupSlug": "all-minor"
     },
     {
-      "description": "Automerge npm patches, digests, and pins after 3 days",
+      "description": "Automerge npm patches, digests, and pins",
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["patch", "digest", "pin"],
-      "automerge": true,
-      "minimumReleaseAge": "3 days"
+      "automerge": true
     },
     {
-      "description": "GitHub Actions patches, pins, and digests: protect with release age, no automerge (no CI coverage)",
+      "description": "GitHub Actions: 3-day release age, no automerge (no merge_group CI coverage)",
       "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
       "automerge": false,
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Python dependency patches and pins: protect with release age, no automerge (no CI coverage)",
+      "description": "Python (pip_requirements): 3-day release age, no automerge (no CI coverage for scripts/)",
       "matchManagers": ["pip_requirements"],
-      "matchUpdateTypes": ["patch", "pin"],
+      "matchUpdateTypes": ["patch", "minor", "pin"],
       "automerge": false,
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Minor updates require manual review",
-      "matchUpdateTypes": ["minor"],
-      "automerge": false,
-      "minimumReleaseAge": "3 days"
-    },
-    {
-      "description": "Major updates require manual review and longer release age",
+      "description": "Major updates: manual review, 7-day release age",
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "minimumReleaseAge": "7 days"
