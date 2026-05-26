@@ -1,0 +1,14 @@
+---
+import { address } from '../data/address';
+
+interface Props {
+  lang: 'de' | 'en';
+}
+
+const { lang } = Astro.props;
+---
+{address.name}<br />
+c/o {lang === 'de' ? address.organization.de : address.organization.en}<br />
+{address.streetAddress}<br />
+{address.postalCode} {address.addressLocalityWithSuffix}<br />
+{lang === 'de' ? address.countryName.de : address.countryName.en}
