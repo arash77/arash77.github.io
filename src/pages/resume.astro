@@ -232,7 +232,7 @@ function formatContributors(contributors: string[]) {
                         return (
                           <>
                             {i > 0 && <span>{c === 'et al.' ? ' ' : '; '}</span>}
-                            <span class={isUser ? 'font-semibold text-foreground underline decoration-primary/40 underline-offset-2' : isSpecial ? 'text-muted-foreground/50 italic' : ''}>
+                            <span class={isUser ? 'font-semibold text-foreground underline decoration-primary/40 underline-offset-2' : isSpecial ? 'text-muted-foreground italic' : ''}>
                               {c}
                             </span>
                           </>
