@@ -4,6 +4,29 @@ import { experiences, education, languages, resumeSkillTiers, conferences } from
 import { Download, MapPin, Mail, Briefcase, GraduationCap, BookOpen, FileText, ExternalLink, User, Globe, Code } from 'lucide-react';
 import { IconGithub, IconLinkedin, IconOrcid } from '../components/BrandIcons';
 import { SITE } from '../lib/utils';
+
+function formatContributors(contributors: string[]) {
+  const isUser = (name: string) => name.toLowerCase().includes('arash kadkhodaei');
+  
+  if (contributors.length <= 5) {
+    return contributors;
+  }
+  
+  const userIndex = contributors.findIndex(isUser);
+  if (userIndex !== -1) {
+    if (userIndex < 3) {
+      return [...contributors.slice(0, 3), 'et al.'];
+    } else {
+      return [
+        ...contributors.slice(0, 2),
+        '...',
+        contributors[userIndex],
+        'et al.'
+      ];
+    }
+  }
+  return [...contributors.slice(0, 3), 'et al.'];
+}
 ---
 
 <Layout
@@ -168,12 +191,12 @@ import { SITE } from '../lib/utils';
             </div>
           </section>
 
-          <!-- Conference Contributions -->
+          <!-- Publications & Presentations -->
           <section aria-labelledby="heading-conferences" class="rounded-xl border border-border bg-card p-6" style="animation: fade-up 0.6s ease both 0.5s;">
             <h2 id="heading-conferences" class="text-sm font-mono text-muted-foreground uppercase tracking-wider mb-6 flex items-center justify-between gap-2">
               <span class="flex items-center gap-2">
                 <BookOpen className="h-4 w-4" aria-hidden="true" />
-                Conference Contributions
+                Publications & Presentations
               </span>
               <a
                 href="https://orcid.org/0009-0006-2228-8123"
@@ -203,12 +226,18 @@ import { SITE } from '../lib/utils';
                       ))}
                     </div>
                     <p class="text-xs text-muted-foreground mb-2">
-                      {pub.contributors.map((c, i) => (
-                        <>
-                          {i > 0 && <span>; </span>}
-                          <span class={c === 'Arash Kadkhodaei' ? 'font-medium text-foreground' : ''}>{c}</span>
-                        </>
-                      ))}
+                      {formatContributors(pub.contributors).map((c, i) => {
+                        const isUser = c.toLowerCase().includes('arash kadkhodaei');
+                        const isSpecial = c === '...' || c === 'et al.';
+                        return (
+                          <>
+                            {i > 0 && <span>{c === 'et al.' ? ' ' : '; '}</span>}
+                            <span class={isUser ? 'font-semibold text-foreground underline decoration-primary/40 underline-offset-2' : isSpecial ? 'text-muted-foreground italic' : ''}>
+                              {c}
+                            </span>
+                          </>
+                        );
+                      })}
                     </p>
                     <div class="flex flex-col gap-0.5">
                       {pub.dois.map((doi) => (
