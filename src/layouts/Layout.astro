@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import { IconGithub, IconLinkedin } from '../components/BrandIcons';
 import { Mail } from 'lucide-react';
 import { LEGAL_LANGS, STORAGE_KEYS } from '../lib/utils';
+import { address } from '../data/address';
 
 interface Props {
   title?: string;
@@ -69,9 +70,9 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <script type="application/ld+json" is:inline set:html={JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Person',
-      name: 'Arash Kadkhodaei',
+      name: address.name,
       url: siteURL,
-      email: 'arash@kadkhodaei.de',
+      email: address.email,
       sameAs: [
         'https://github.com/arash77',
         'https://linkedin.com/in/kadarash',
@@ -83,8 +84,11 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
       },
       address: {
         '@type': 'PostalAddress',
-        addressLocality: 'Freiburg',
-        addressCountry: 'DE',
+        streetAddress: address.streetAddress,
+        addressLocality: address.addressLocality,
+        addressRegion: address.addressRegion,
+        postalCode: address.postalCode,
+        addressCountry: address.addressCountry,
       },
     })} />
 
