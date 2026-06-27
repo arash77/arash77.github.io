@@ -1,0 +1,293 @@
+[
+  {
+    "title": "Galaxy for accessible, reproducible, and collaborative data analyses: 2026 update",
+    "year": "2026",
+    "types": [
+      "Paper"
+    ],
+    "dois": [
+      {
+        "label": "10.1093/nar/gkag469",
+        "href": "https://doi.org/10.1093/nar/gkag469"
+      }
+    ],
+    "contributors": [
+      "Enis Afgan",
+      "Najat Amoukou",
+      "Rafael Andrade Buono",
+      "Mihail Anton",
+      "Christophe Antoniewski",
+      "Patrick Austin",
+      "Ahmed Hamid Awan",
+      "Rolf Backofen",
+      "Wendi Anne Bacon",
+      "Dannon Baker",
+      "Arthur Barreau",
+      "Bérénice Batut",
+      "Matthias Bernt",
+      "Daniel Blankenberg",
+      "Anthony Bretaudeau",
+      "Catherine Joan Bromhead",
+      "Richard Burhans",
+      "Melissa Burke",
+      "Scott Cain",
+      "Danielle Callan",
+      "Martin Cech",
+      "María Chavero-Díez",
+      "Haswane Chei",
+      "Ying Chen",
+      "Diana Chiang",
+      "John M Chilton",
+      "Tyler James Collins",
+      "Frederik Coppens",
+      "Nate Coraor",
+      "Charles Coulombe",
+      "Michael R Crusoe",
+      "Fabio Cumbo",
+      "Triskell Cumunel",
+      "Michael D'Silva",
+      "Armin Dadras",
+      "Céline Dalle",
+      "Khai Dang",
+      "John Y Davis",
+      "Paul De Geest",
+      "Willem de Koning",
+      "Giuseppe Defazio",
+      "Boris Depoortere",
+      "Katherine Do",
+      "José Manuel Domínguez Begines",
+      "Bert Droesbeke",
+      "Erick Nicolas Duarte",
+      "Enol Fernández-del-Castillo",
+      "Jeremy Fix",
+      "Giulio Formenti",
+      "Julian Frey",
+      "Melanie Christine Föll",
+      "Carol Gauthier",
+      "Kilian Gerberding",
+      "Franck Giacomoni",
+      "Jeremy Goecks",
+      "Nuwan A Goonasekera",
+      "Nadia Goué",
+      "Timothy J Griffin",
+      "Björn Andreas Grüning",
+      "Aysam Guerler",
+      "Yann Guitton",
+      "Ove Johan Ragnar Gustafsson",
+      "Kristína Gömöryová",
+      "Magdalena Harakalova",
+      "Helge Hecht",
+      "Alireza Heidari",
+      "Florian Heyl",
+      "Jennifer Hillman-Jackson",
+      "Saskia Hiltemann",
+      "Mina Hojat Ansari",
+      "Hans-Rudolf Hotz",
+      "Cameron John Hyde",
+      "Pierre-Étienne Jacques",
+      "Pratik Dilip Jagtap",
+      "Jayadev Joshi",
+      "Marie Jossé",
+      "Khaled Moahmmad Ahmad Jumah",
+      "Arash Kadkhodaei Elyaderani",
+      "Katarzyna Kamieniecka",
+      "Teja Kattenborn",
+      "Markus Konkol",
+      "Leonid Kostrykin",
+      "Natalie Kucher",
+      "Anup Kumar",
+      "Mira Kuntz",
+      "Bradley William Langhorst",
+      "Delphine Lariviere",
+      "Yvan Le Bras",
+      "Gildas Le Corguillé",
+      "Jean Le Cras",
+      "Justin Lee",
+      "Jan Leendertse",
+      "Hugo Lefeuvre",
+      "Brane Leskošek",
+      "Leandro Miguel Liborio",
+      "Romane Libouban",
+      "Marisa Loach",
+      "Jose David Lopez Tabernero",
+      "Lucille Lopez-Delisle",
+      "Daniel Lusk",
+      "Alexandru Mahmoud",
+      "Molène Mahé",
+      "Wolfgang Maier",
+      "Igor Makunin",
+      "Kirsty McCaffrey",
+      "Jack A Medico",
+      "Subina Mehta",
+      "Hailiang Mei",
+      "Mirela Minkova",
+      "Saim Momin",
+      "Paulo Cilas Morais Lyra Junior",
+      "Teresa Müller",
+      "Amirhossein Naghsh Nilchi",
+      "Tannistha Nandi",
+      "Engy Mohamed Taha Nasr",
+      "Anton Nekrutenko",
+      "Tiffanie Nelson",
+      "Johannes Nussbaum",
+      "Asime James Oba",
+      "Łukasz Opioła",
+      "Kevin Payet",
+      "Melanie Petera",
+      "Polina V Polunina",
+      "Sergei Pond",
+      "Krzysztof Poterlowicz",
+      "Gareth Robert Price",
+      "Junhao Qiu",
+      "Helena Rasche",
+      "Bryan Raubenolt",
+      "Tristan N Reynolds",
+      "Dave Rogers",
+      "Karl Rohr",
+      "Gabriel Ferreira Saudade",
+      "Michelle Terese Savage",
+      "Volodymyr Savchenko",
+      "Michael C Schatz",
+      "Isabelle Schmitz",
+      "Daniela Schneider",
+      "Pauline Seguineau",
+      "Beatriz Serrano-Solano",
+      "Clea Siguret",
+      "Patrik Smeds",
+      "Marco Sollitto",
+      "Nicola Soranzo",
+      "Sanjay Kumar Srikakulam",
+      "Lieven Sterck",
+      "Nikolaos Strepis",
+      "Andrew Stubbs",
+      "Keith Suderman",
+      "Anna Syme",
+      "Marco Antonio Tangaro",
+      "Reyhaneh Tavakoli Koopaei",
+      "Jonathan Andrew Tedds",
+      "Mehmet Tekman",
+      "Wai Cheng (Mike) Thang",
+      "Anil S Thanki",
+      "Michael Uhl",
+      "Janusch Vajna-Jehle",
+      "Marius van den Beek",
+      "Deepti Varshney",
+      "Nikolay Alexandrov Vazov",
+      "Jennifer Vessio",
+      "Pavankumar Videm",
+      "Tomas Vondrak",
+      "Reid Wagner",
+      "Gregory R Watson",
+      "Ralf J M Weber",
+      "Natalie Whitaker-Allen",
+      "Federico Zambelli",
+      "Paul Zierep",
+      "Rand Zoabi"
+    ]
+  },
+  {
+    "title": "RSEc-Atlas",
+    "year": "2026",
+    "types": [
+      "Software"
+    ],
+    "dois": [
+      {
+        "label": "10.5281/ZENODO.20747312",
+        "href": "https://doi.org/10.5281/ZENODO.20747312"
+      }
+    ],
+    "contributors": [
+      "Alireza Heidari",
+      "Arash Kadkhodaei",
+      "Paul Zierep",
+      "Björn Grüning",
+      "Saurabh Dome",
+      "Mihail Anton"
+    ]
+  },
+  {
+    "title": "Serving locally hosted LLMs with Galaxy",
+    "year": "2025",
+    "types": [
+      "Presentation"
+    ],
+    "dois": [
+      {
+        "label": "10.7490/F1000RESEARCH.1120343.1",
+        "href": "https://doi.org/10.7490/F1000RESEARCH.1120343.1"
+      }
+    ],
+    "contributors": [
+      "Arash Kadkhodaei"
+    ]
+  },
+  {
+    "title": "Simple and secure credential handling for tools in Galaxy",
+    "year": "2025",
+    "types": [
+      "Presentation"
+    ],
+    "dois": [
+      {
+        "label": "10.7490/F1000RESEARCH.1120347.1",
+        "href": "https://doi.org/10.7490/F1000RESEARCH.1120347.1"
+      }
+    ],
+    "contributors": [
+      "Alireza Heidari",
+      "Arash Kadkhodaei",
+      "David Lopez",
+      "Bjoern Gruening"
+    ]
+  },
+  {
+    "title": "Community-driven standards development for reference genome generation",
+    "year": "2024",
+    "types": [
+      "Poster",
+      "Presentation"
+    ],
+    "dois": [
+      {
+        "label": "10.7490/F1000RESEARCH.1119761.1",
+        "href": "https://doi.org/10.7490/F1000RESEARCH.1119761.1"
+      },
+      {
+        "label": "10.7490/F1000RESEARCH.1119773.1",
+        "href": "https://doi.org/10.7490/F1000RESEARCH.1119773.1"
+      }
+    ],
+    "contributors": [
+      "Tom Brown",
+      "Diego De Panis",
+      "Romane Libouban",
+      "Saim Momin",
+      "Arash Kadkhodaei",
+      "Anthony Bretaudeau",
+      "Björn Grüning",
+      "Camila Mazzoni"
+    ]
+  },
+  {
+    "title": "Galaxy social",
+    "year": "2024",
+    "types": [
+      "Poster",
+      "Presentation"
+    ],
+    "dois": [
+      {
+        "label": "10.7490/F1000RESEARCH.1119786.1",
+        "href": "https://doi.org/10.7490/F1000RESEARCH.1119786.1"
+      },
+      {
+        "label": "10.7490/F1000RESEARCH.1119787.1",
+        "href": "https://doi.org/10.7490/F1000RESEARCH.1119787.1"
+      }
+    ],
+    "contributors": [
+      "Arash Kadkhodaei"
+    ]
+  }
+]

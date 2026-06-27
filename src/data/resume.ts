@@ -187,6 +187,8 @@ export const languages: Language[] = [
 
 // ─────────────────────────────────────────────────────────────
 
+import conferencesData from './conferences.json';
+
 export interface Doi {
   label: string;
   href: string;
@@ -200,46 +202,4 @@ export interface Conference {
   contributors: string[];
 }
 
-export const conferences: Conference[] = [
-  {
-    title: 'Serving locally hosted LLMs with Galaxy',
-    year: '2025',
-    types: ['Presentation'],
-    dois: [
-      { label: '10.7490/F1000RESEARCH.1120343.1', href: 'https://doi.org/10.7490/f1000research.1120343.1' },
-    ],
-    contributors: ['Arash Kadkhodaei'],
-  },
-  {
-    title: 'Simple and secure credential handling for tools in Galaxy',
-    year: '2025',
-    types: ['Presentation'],
-    dois: [
-      { label: '10.7490/F1000RESEARCH.1120347.1', href: 'https://doi.org/10.7490/f1000research.1120347.1' },
-    ],
-    contributors: ['Alireza Heidari', 'Arash Kadkhodaei', 'David Lopez', 'Bjoern Gruening'],
-  },
-  {
-    title: 'Community-driven standards development for reference genome generation',
-    year: '2024',
-    types: ['Presentation', 'Poster'],
-    dois: [
-      { label: '10.7490/F1000RESEARCH.1119773.1', href: 'https://doi.org/10.7490/f1000research.1119773.1' },
-      { label: '10.7490/F1000RESEARCH.1119761.1', href: 'https://doi.org/10.7490/f1000research.1119761.1' },
-    ],
-    contributors: [
-      'Tom Brown', 'Diego De Panis', 'Romane Libouban', 'Saim Momin', 'Arash Kadkhodaei',
-      'Anthony Bretaudeau', 'Björn Grüning', 'Camila Mazzoni',
-    ],
-  },
-  {
-    title: 'Galaxy social',
-    year: '2024',
-    types: ['Presentation', 'Poster'],
-    dois: [
-      { label: '10.7490/F1000RESEARCH.1119787.1', href: 'https://doi.org/10.7490/f1000research.1119787.1' },
-      { label: '10.7490/F1000RESEARCH.1119786.1', href: 'https://doi.org/10.7490/f1000research.1119786.1' },
-    ],
-    contributors: ['Arash Kadkhodaei'],
-  },
-];
+export const conferences: Conference[] = conferencesData as Conference[];
