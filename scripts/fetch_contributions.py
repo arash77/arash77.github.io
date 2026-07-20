@@ -348,7 +348,9 @@ def update_projects_file(
 
     os.makedirs(content_dir, exist_ok=True)
 
-    # Load existing files to check for duplicates
+    # Load existing files to check for duplicates. Project files store GitHub
+    # URLs in a ``links`` array of {label, url} objects; collect every repo
+    # already referenced so we don't re-document it.
     existing_repos: set = set()
     for fname in os.listdir(content_dir):
         if fname.endswith(".json"):
@@ -356,7 +358,9 @@ def update_projects_file(
             try:
                 with open(fpath, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    for link in data.get("url", ""):
+                    for link in data.get("links", []):
+                        if not isinstance(link, dict):
+                            continue
                         url = link.get("url", "")
                         parsed = urlparse(url)
                         if parsed.hostname == "github.com":
