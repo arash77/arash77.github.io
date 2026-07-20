@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """
 Fetch recent GitHub contributions and update the projects page.
-Uses Gemini AI to create comprehensive project descriptions based on PR activity.
-Integrates new contributions into existing categories.
+Uses any OpenAI-compatible AI API to create comprehensive project descriptions
+based on PR activity. Integrates new contributions into existing categories.
+
+Provider configuration uses two env vars:
+``AI_MODELS`` is a simple ordered list of model IDs to try (priority order —
+reorder it freely). ``AI_PROVIDERS`` is a JSON array mapping each server to the
+model IDs it serves, its base URL, and the env var holding its token. Tokens are
+read from the env var each provider names, so no secrets are ever stored here.
 """
 
 import json
@@ -17,27 +23,106 @@ from github import Auth, Github
 from openai import OpenAI
 
 
-GEMINI_MODELS = [
-    "gemini-3-flash-preview",
-    "gemini-3.1-flash-lite-preview",
+# Built-in default config (public only — no secrets). Each provider names the
+# env var holding its token via ``token_env`` and lists the model IDs it serves
+# via ``models``. A provider whose token is unset is skipped at runtime.
+# Overridden entirely by AI_PROVIDERS (JSON array) / AI_MODELS when set.
+DEFAULT_AI_PROVIDERS = [
+    {
+        "name": "Gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "token_env": "GEMINI_TOKEN",
+        "models": ["gemini-2.5-flash", "gemini-2.5-flash-lite"],
+    },
+    {
+        "name": "OpenRouter",
+        "base_url": "https://openrouter.ai/api/v1",
+        "token_env": "OPENROUTER_API_KEY",
+        "models": ["google/gemma-4-31b-it:free"],
+    },
+]
+
+# Simple ordered list of model IDs to try. THIS IS THE PRIORITY ORDER —
+# reorder it to change which model is tried first. A model ID that no
+# configured provider serves (or whose provider has no token) is skipped.
+DEFAULT_AI_MODELS = [
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
+    "google/gemma-4-31b-it:free",
 ]
 
 
-class GeminiClient:
-    """Client for Gemini AI API with model cascade fallback."""
+def _load_json(env_var: str, default):
+    """Load JSON from an env var, falling back to default on any issue."""
+    raw = os.environ.get(env_var, "").strip()
+    if not raw:
+        return default
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        print(f"  {env_var} is invalid JSON ({exc}); using default")
+        return default
 
-    def __init__(self, token: str):
-        self.client = OpenAI(
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            api_key=token,
-        )
+
+def _load_models() -> List[str]:
+    """Load the ordered model-ID list from AI_MODELS, or the default list.
+
+    AI_MODELS may be a JSON array of strings (preferred) or a newline/comma-
+    separated plain string for easy editing in repo variables.
+    """
+    raw = os.environ.get("AI_MODELS", "").strip()
+    if not raw:
+        return list(DEFAULT_AI_MODELS)
+    # JSON array of strings takes precedence.
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list) and all(isinstance(x, str) for x in parsed):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+    # Plain text fallback: split on newlines and/or commas, drop empties.
+    lines = [line.strip() for line in raw.replace(",", "\n").splitlines()]
+    return [m for m in lines if m]
+
+
+class MultiProviderAIClient:
+    """AI client that cascades across OpenAI-compatible providers by model ID.
+
+    ``AI_MODELS`` is a simple ordered list of model IDs (priority order).
+    ``AI_PROVIDERS`` (JSON array) maps each server to the model IDs it serves,
+    its base URL, and the env var holding its token. The client walks the model
+    list in order; for each ID it tries every provider that serves it, skipping
+    any provider without a token, and returns the first non-empty response. On
+    any failure (auth, rate limit, 404, network) it logs and falls through to
+    the next provider/model. No secrets are hardcoded; tokens are read from the
+    env var each provider names.
+    """
+
+    def __init__(self):
+        providers = _load_json("AI_PROVIDERS", DEFAULT_AI_PROVIDERS)
+        self.providers: List[Dict] = [
+            p for p in providers if p.get("name") and p.get("base_url")
+        ] if isinstance(providers, list) else []
+        self.models = _load_models()
+        # Cache one OpenAI client per provider name (keyed on base_url+token).
+        self._clients: Dict[str, OpenAI] = {}
+
+    def _client_for(self, provider_cfg: Dict) -> OpenAI:
+        key = provider_cfg["name"]
+        if key not in self._clients:
+            self._clients[key] = OpenAI(
+                base_url=provider_cfg["base_url"],
+                api_key=os.environ[provider_cfg["token_env"]],
+            )
+        return self._clients[key]
 
     def generate_project_description(
         self, repo_name: str, prs: List[Dict]
     ) -> Optional[str]:
         """Generate a comprehensive project description based on PRs."""
+
+        if not self.models:
+            return None
 
         pr_details = []
         for pr in prs[:15]:  # Limit to most recent 15
@@ -68,20 +153,40 @@ Write ONLY the description text, no additional formatting or labels. Make it sou
             {"role": "user", "content": prompt},
         ]
 
-        for model in GEMINI_MODELS:
-            try:
-                response = self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=0.7,
-                    max_tokens=1000,
-                )
-                content = response.choices[0].message.content
-                if content:
-                    print(f"  Used {model}")
-                    return content.strip()
-            except Exception as e:
-                print(f"  {model} failed: {e}")
+        for model_id in self.models:
+            serving = [
+                p for p in self.providers
+                if model_id in p.get("models", [])
+            ]
+            if not serving:
+                print(f"  [{model_id}] skipped (no provider serves this model)")
+                continue
+
+            for provider_cfg in serving:
+                name = provider_cfg["name"]
+                token_env = provider_cfg.get("token_env", "")
+                token = os.environ.get(token_env, "") if token_env else ""
+                if not token:
+                    print(f"  [{name}/{model_id}] skipped (no token in ${token_env})")
+                    continue
+
+                try:
+                    client = self._client_for(provider_cfg)
+                    # Generous budget: reasoning models spend tokens on internal
+                    # thinking before emitting the answer, so a small cap leaves
+                    # the visible content empty.
+                    response = client.chat.completions.create(
+                        model=model_id,
+                        messages=messages,
+                        temperature=0.7,
+                        max_tokens=4000,
+                    )
+                    content = response.choices[0].message.content
+                    if content:
+                        print(f"  [{name}] used {model_id}")
+                        return content.strip()
+                except Exception as exc:
+                    print(f"  [{name}] {model_id} failed: {exc}")
 
         return None
 
@@ -90,8 +195,7 @@ class ContributionsFetcher:
     def __init__(self, username: str, token: str):
         self.username = username
         self.github = Github(auth=Auth.Token(token))
-        gemini_token = os.environ.get("GEMINI_TOKEN", "")
-        self.ai_client = GeminiClient(gemini_token) if gemini_token else None
+        self.ai_client = MultiProviderAIClient()
 
     def fetch_recent_prs(self, days: int = 30) -> List[Dict]:
         """Fetch recently merged PRs from the past N days."""
