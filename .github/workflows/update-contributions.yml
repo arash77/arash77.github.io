@@ -50,7 +50,12 @@ jobs:
       - name: Check for changes
         id: check_changes
         run: |
-          if git diff --quiet src/content/projects/ src/data/conferences.json; then
+          # Detect both modified tracked files and new untracked files.
+          # `git diff --quiet` alone misses untracked files that the scripts
+          # create, which would silently skip the PR step.
+          if git diff --quiet src/content/projects/ src/data/conferences.json \
+             && ! git ls-files --others --exclude-standard \
+                  src/content/projects/ src/data/conferences.json | grep -q .; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
