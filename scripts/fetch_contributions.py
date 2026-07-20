@@ -172,11 +172,14 @@ Write ONLY the description text, no additional formatting or labels. Make it sou
 
                 try:
                     client = self._client_for(provider_cfg)
+                    # Generous budget: reasoning models spend tokens on internal
+                    # thinking before emitting the answer, so a small cap leaves
+                    # the visible content empty.
                     response = client.chat.completions.create(
                         model=model_id,
                         messages=messages,
                         temperature=0.7,
-                        max_tokens=1000,
+                        max_tokens=4000,
                     )
                     content = response.choices[0].message.content
                     if content:
