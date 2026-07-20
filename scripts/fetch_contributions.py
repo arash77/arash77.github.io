@@ -463,6 +463,37 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
+def _dump_project_json(data: Dict, indent: int = 2) -> str:
+    """Serialize a project card matching the existing on-disk convention.
+
+    Matches the hand-authored format: top-level keys indented ``indent``
+    spaces; ``links`` rendered as an array with each entry on its own line
+    (indented 4 spaces, single-line objects) so appending a link adds one line;
+    ``tags`` and other simple arrays inlined. This keeps additive edits to a
+    minimal diff instead of reflowing the whole file.
+    """
+    pad = " " * indent
+    lines = ["{"]
+    items = list(data.items())
+    for i, (key, value) in enumerate(items):
+        comma = "," if i < len(items) - 1 else ""
+        if key == "links" and isinstance(value, list) and value:
+            lines.append(f'{pad}"links": [')
+            inner_pad = " " * (indent + 2)
+            for j, entry in enumerate(value):
+                entry_comma = "," if j < len(value) - 1 else ""
+                # Match the hand-authored style: a space after "{" and before "}".
+                rendered = json.dumps(entry, ensure_ascii=False)
+                if rendered.startswith("{") and rendered.endswith("}"):
+                    rendered = "{ " + rendered[1:-1] + " }"
+                lines.append(f"{inner_pad}{rendered}{entry_comma}")
+            lines.append(f"{pad}]{comma}")
+        else:
+            lines.append(f'{pad}"{key}": {json.dumps(value, ensure_ascii=False)}{comma}')
+    lines.append("}")
+    return "\n".join(lines)
+
+
 def update_projects_file(
     categorized_entries: Dict[str, List[Dict]],
     content_dir: str = "src/content/projects",
@@ -607,7 +638,7 @@ def update_projects_file(
                     {"label": f"{repo_name} PRs", "url": pr_url}
                 )
                 with open(covering, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
+                    f.write(_dump_project_json(data))
                     f.write("\n")
                 modified = True
                 print(
@@ -645,7 +676,7 @@ def update_projects_file(
             }
 
             with open(fpath, "w", encoding="utf-8") as f:
-                json.dump(project_data, f, indent=2, ensure_ascii=False)
+                f.write(_dump_project_json(project_data))
                 f.write("\n")
 
             # Record coverage so later entries in the same run don't duplicate.
