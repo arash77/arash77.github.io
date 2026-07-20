@@ -83,6 +83,46 @@ def _load_models() -> List[str]:
     # Plain text fallback: split on newlines and/or commas, drop empties.
     lines = [line.strip() for line in raw.replace(",", "\n").splitlines()]
     return [m for m in lines if m]
+def _iter_json_objects(text: str):
+    """Yield substrings of each top-level balanced ``{...}`` object in ``text``.
+
+    Tracks brace depth while respecting string literals (so braces inside JSON
+    strings don't affect nesting) and basic escape sequences. Used to pull JSON
+    cards out of model output that may wrap them in prose or a reasoning block.
+    """
+    i = 0
+    n = len(text)
+    while i < n:
+        start = text.find("{", i)
+        if start == -1:
+            return
+        depth = 0
+        in_str = False
+        escape = False
+        end = None
+        for j in range(start, n):
+            ch = text[j]
+            if in_str:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    end = j
+                    break
+        if end is None:
+            return
+        yield text[start : end + 1]
+        i = end + 1
 
 
 class MultiProviderAIClient:
@@ -227,20 +267,22 @@ Pull Requests:
         if not raw:
             return fallback
 
-        # Find the first '{' ... '}' span (greedy-enough via regex on the
-        # outermost braces present in the text).
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if not match:
-            # No JSON block: use the raw text as the description.
-            return {
-                "title": fallback_title,
-                "description": raw.strip(),
-                "tags": [],
-            }
-
-        try:
-            data = json.loads(match.group(0))
-        except json.JSONDecodeError:
+        # Extract balanced ``{...}`` objects in order and return the first that
+        # parses to a dict with a ``title``. A greedy regex would span from the
+        # first ``{`` to the *last* ``}``, so a reasoning model that emits a
+        # thinking block before the real card would produce an unparseable span
+        # or capture the wrong object; iterating balanced objects avoids both.
+        data: Optional[Dict] = None
+        for obj_str in _iter_json_objects(raw):
+            try:
+                candidate = json.loads(obj_str)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(candidate, dict) and candidate.get("title"):
+                data = candidate
+                break
+        if data is None:
+            # No parseable object with a title: use the raw text as description.
             return {
                 "title": fallback_title,
                 "description": raw.strip(),
@@ -347,6 +389,17 @@ class ContributionsFetcher:
             return "UseGalaxy.eu"
         elif "research-software-ecosystem" in repo_lower:
             return "Bioinformatics"
+        elif "ccxt" in repo_lower:
+            return "Crypto"
+        elif repo_lower.startswith(("pygithub/", "pygithub")) or "/pygithub" in repo_lower:
+            return "Python Libraries"
+        # Heuristic: Python-bot-style personal projects. These are the user's
+        # own repos (already excluded from PR grouping) or small standalone
+        # Python tools; without a stronger signal they default to Other, but a
+        # repo name mentioning "bot" or "telegram" routes to Python Projects to
+        # match the existing python-bots aggregator card.
+        elif any(x in repo_lower for x in ["telegram-bot", "telegram", "-bot", "/bots"]):
+            return "Python Projects"
         else:
             return "Other"
 
@@ -431,15 +484,18 @@ def update_projects_file(
     os.makedirs(content_dir, exist_ok=True)
 
     # Build a coverage index from existing files. A repo is "covered" if either:
-    #   (a) it appears as an org/repo path in some card's ``links`` URLs, or
-    #   (b) its category already has a card — aggregated area cards (e.g.
-    #       galaxy-core.json) are meant to cover a whole category, so a new
-    #       repo in an existing category doesn't get its own card.
-    # The covering file is the first card (sorted by filename) in that category,
-    # or the exact-linking file when (a) applies.
+    #   (a) it appears as an ``org/repo`` path in some card's ``links`` URLs, or
+    #   (b) its short-name is mentioned in some card's ``description`` text
+    #       (aggregated area cards like galaxy-core.json name covered repos in
+    #       prose, e.g. "galaxy-hub", without linking them).
+    # The covering file is the one that actually mentions the repo (exact link
+    # first, then description match) — never just the first card in a category,
+    # which could be an unrelated single-repo card. When several files in a
+    # category match, prefer an aggregator (a card with >1 GitHub repo link) so
+    # additive PR links land on the area summary, not a narrow single-repo card.
     repo_to_file: Dict[str, str] = {}
+    shortname_to_files: Dict[str, List[str]] = defaultdict(list)
     files_data: Dict[str, Dict] = {}
-    category_to_file: Dict[str, str] = {}
 
     for fname in sorted(os.listdir(content_dir)):
         if not fname.endswith(".json"):
@@ -451,9 +507,7 @@ def update_projects_file(
         except Exception:
             continue
         files_data[fpath] = data
-        cat = data.get("category")
-        if isinstance(cat, str):
-            category_to_file.setdefault(cat, fpath)
+        github_repos: List[str] = []
         for link in data.get("links", []):
             if not isinstance(link, dict):
                 continue
@@ -462,21 +516,67 @@ def update_projects_file(
             if parsed.hostname == "github.com":
                 path_parts = parsed.path.lstrip("/").split("/")
                 if len(path_parts) >= 2:
-                    repo_to_file.setdefault(
-                        f"{path_parts[0]}/{path_parts[1]}".lower(), fpath
-                    )
+                    org_repo = f"{path_parts[0]}/{path_parts[1]}".lower()
+                    repo_to_file.setdefault(org_repo, fpath)
+                    github_repos.append(org_repo)
+        # Index short-name -> this file from the description text, so a repo
+        # named only by its short name in prose (e.g. "galaxy-hub") is still
+        # found. Word-boundary match to avoid substring false positives.
+        desc = (data.get("description") or "").lower()
+        for word in re.findall(r"\b([a-z0-9][a-z0-9._-]+)\b", desc):
+            shortname_to_files[word].append(fpath)
 
-    def _covering_file(repo_name: str, category: str) -> Optional[str]:
-        """File that covers this repo, by exact link or by category."""
-        return repo_to_file.get(repo_name.lower()) or category_to_file.get(category)
-
-    def _has_pr_link(data: Dict, repo_name: str) -> bool:
-        """True if the card already links a PR-search URL for this repo."""
+    def _link_count(data: Dict) -> int:
+        """Number of distinct GitHub repo links on this card (aggregator heuristic)."""
+        repos = set()
         for link in data.get("links", []):
             if not isinstance(link, dict):
                 continue
-            url = link.get("url", "")
-            if repo_name in url and "/pulls?" in url:
+            parsed = urlparse(link.get("url", ""))
+            if parsed.hostname == "github.com":
+                parts = parsed.path.lstrip("/").split("/")
+                if len(parts) >= 2:
+                    repos.add(f"{parts[0]}/{parts[1]}".lower())
+        return len(repos)
+
+    def _covering_file(repo_name: str, category: str) -> Optional[str]:
+        """File that covers this repo: exact link, then description short-name.
+
+        Among description matches, prefer an aggregator card (more than one
+        GitHub repo link) so additive PR links land on an area summary rather
+        than a single-repo card that happens to share the short name.
+        """
+        exact = repo_to_file.get(repo_name.lower())
+        if exact:
+            return exact
+        candidates = shortname_to_files.get(repo_name.split("/")[-1].lower(), [])
+        if not candidates:
+            return None
+        # Prefer the candidate with the most GitHub repo links (aggregator).
+        return max(candidates, key=lambda fp: _link_count(files_data.get(fp, {})))
+
+    def _has_pr_link(data: Dict, repo_name: str) -> bool:
+        """True if the card already links a PR-search URL for this repo.
+
+        Matches the repo as a complete ``/org/repo`` path segment so a short
+        repo name that is a prefix of another repo's URL (e.g.
+        ``galaxy-social`` vs ``galaxy-social-assistant``) doesn't yield a false
+        positive: the match must be followed by a path delimiter (``/``,
+        ``?``, ``#``) or end of URL. Comparison is case-insensitive to match
+        the lowercased coverage keys.
+        """
+        needle = f"/{repo_name.lower()}"
+        for link in data.get("links", []):
+            if not isinstance(link, dict):
+                continue
+            url = link.get("url", "").lower()
+            if "/pulls?" not in url:
+                continue
+            idx = url.find(needle)
+            if idx == -1:
+                continue
+            after = idx + len(needle)
+            if after >= len(url) or url[after] in "/?#":
                 return True
         return False
 
@@ -497,32 +597,42 @@ def update_projects_file(
             if covering:
                 # Already covered: don't create a card. Only add a PR-search
                 # link to the covering file if it lacks one (additive).
-                data = files_data.get(covering)
-                if data is not None and not _has_pr_link(data, repo_name):
-                    data.setdefault("links", []).append(
-                        {"label": f"{repo_name} PRs", "url": pr_url}
-                    )
-                    with open(covering, "w", encoding="utf-8") as f:
-                        json.dump(data, f, indent=2, ensure_ascii=False)
-                        f.write("\n")
-                    modified = True
-                    print(
-                        f"➕ Added {repo_name} PR link to {os.path.basename(covering)}"
-                    )
-                else:
+                data = files_data[covering]
+                if _has_pr_link(data, repo_name):
                     print(f"⏭️  Skipping {repo_name} - already covered")
+                    continue
+                # Additive only: append a PR-search link. Curated
+                # title/description/tags/order/featured are never touched.
+                data.setdefault("links", []).append(
+                    {"label": f"{repo_name} PRs", "url": pr_url}
+                )
+                with open(covering, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                    f.write("\n")
+                modified = True
+                print(
+                    f"➕ Added {repo_name} PR link to {os.path.basename(covering)}"
+                )
                 continue
 
-            # Not covered anywhere: create a new per-repo card.
+            # Not covered anywhere: create a new per-repo card. Pick a
+            # non-colliding filename: short slug first, then org-prefixed, then
+            # a numeric suffix so we never overwrite an existing card.
             slug = _slug(repo_short)
-            # Avoid collisions by appending org prefix if slug exists.
             fpath = os.path.join(content_dir, f"{slug}.json")
             if os.path.exists(fpath):
                 slug = _slug(repo_name.replace("/", "-"))
                 fpath = os.path.join(content_dir, f"{slug}.json")
+            if os.path.exists(fpath):
+                i = 2
+                while os.path.exists(
+                    os.path.join(content_dir, f"{slug}-{i}.json")
+                ):
+                    i += 1
+                fpath = os.path.join(content_dir, f"{slug}-{i}.json")
 
             project_data = {
-                "title": entry.get("title") or repo_short.replace("-", " ").replace("_", " ").title(),
+                "title": entry["title"],
                 "description": entry["description"],
                 "category": category,
                 "links": [
