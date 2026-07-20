@@ -586,23 +586,24 @@ def update_projects_file(
         # Prefer the candidate with the most GitHub repo links (aggregator).
         return max(candidates, key=lambda fp: _link_count(files_data.get(fp, {})))
 
-    def _has_pr_link(data: Dict, repo_name: str) -> bool:
-        """True if the card already links a PR-search URL for this repo.
+    def _has_repo_link(data: Dict, repo_name: str) -> bool:
+        """True if the card already links *any* URL for this repo.
 
-        Matches the repo as a complete ``/org/repo`` path segment so a short
-        repo name that is a prefix of another repo's URL (e.g.
-        ``galaxy-social`` vs ``galaxy-social-assistant``) doesn't yield a false
-        positive: the match must be followed by a path delimiter (``/``,
-        ``?``, ``#``) or end of URL. Comparison is case-insensitive to match
-        the lowercased coverage keys.
+        A repo can be linked either as a plain Repository URL
+        (``.../org/repo``) or as a PR-search URL (``.../org/repo/pulls?...``);
+        either counts as already covered, so we never append a second link to a
+        repo the card already points at. The match is a complete ``/org/repo``
+        path segment so a short repo name that is a prefix of another repo's
+        URL (e.g. ``galaxy-social`` vs ``galaxy-social-assistant``) doesn't
+        yield a false positive: the match must be followed by a path delimiter
+        (``/``, ``?``, ``#``) or end of URL. Comparison is case-insensitive to
+        match the lowercased coverage keys.
         """
         needle = f"/{repo_name.lower()}"
         for link in data.get("links", []):
             if not isinstance(link, dict):
                 continue
             url = link.get("url", "").lower()
-            if "/pulls?" not in url:
-                continue
             idx = url.find(needle)
             if idx == -1:
                 continue
@@ -629,7 +630,7 @@ def update_projects_file(
                 # Already covered: don't create a card. Only add a PR-search
                 # link to the covering file if it lacks one (additive).
                 data = files_data[covering]
-                if _has_pr_link(data, repo_name):
+                if _has_repo_link(data, repo_name):
                     print(f"⏭️  Skipping {repo_name} - already covered")
                     continue
                 # Additive only: append a PR-search link. Curated
