@@ -116,48 +116,19 @@ class MultiProviderAIClient:
             )
         return self._clients[key]
 
-    def generate_project_description(
-        self, repo_name: str, prs: List[Dict]
-    ) -> Optional[str]:
-        """Generate a comprehensive project description based on PRs."""
+    def _complete(self, messages: List[Dict]) -> Optional[str]:
+        """Run the provider/model cascade and return the first non-empty text.
 
+        Walks ``AI_MODELS`` in order; for each ID tries every provider that
+        serves it (skipping providers with no token), returning the first
+        non-empty ``message.content``. Logs each attempt. Returns None if every
+        model/provider fails or yields empty content.
+        """
         if not self.models:
             return None
 
-        pr_details = []
-        for pr in prs[:15]:  # Limit to most recent 15
-            pr_details.append(
-                {
-                    "title": pr.get("title", ""),
-                    "body": pr.get("body", "")[:300] if pr.get("body") else "",
-                    "labels": [label["name"] for label in pr.get("labels", [])],
-                    "merged_at": pr.get("merged_at", ""),
-                }
-            )
-
-        prompt = f"""Based on these recent pull requests to {repo_name}, write a concise, professional project description (2-3 sentences) that explains:
-1. What the contributor worked on
-2. The technical areas or features they contributed to
-3. The impact or purpose of their contributions
-
-Pull Requests:
-{json.dumps(pr_details, indent=2)}
-
-Write ONLY the description text, no additional formatting or labels. Make it sound professional and technical."""
-
-        messages = [
-            {
-                "role": "system",
-                "content": "You are a technical writer creating concise project descriptions based on GitHub contributions. Write in third person, focusing on technical impact.",
-            },
-            {"role": "user", "content": prompt},
-        ]
-
         for model_id in self.models:
-            serving = [
-                p for p in self.providers
-                if model_id in p.get("models", [])
-            ]
+            serving = [p for p in self.providers if model_id in p.get("models", [])]
             if not serving:
                 print(f"  [{model_id}] skipped (no provider serves this model)")
                 continue
@@ -189,6 +160,113 @@ Write ONLY the description text, no additional formatting or labels. Make it sou
                     print(f"  [{name}] {model_id} failed: {exc}")
 
         return None
+
+    def generate_project_entry(
+        self, repo_name: str, prs: List[Dict]
+    ) -> Dict:
+        """Generate a complete project card from recent PRs.
+
+        Returns ``{"title", "description", "tags"}`` for a new project card.
+        Uses a JSON prompt so the card is complete on first generation; the
+        cascade's first parseable JSON object wins. Falls back to a
+        slug-derived title, raw text description, and empty tags if no model
+        returns parseable JSON.
+        """
+        pr_details = []
+        for pr in prs[:15]:  # Limit to most recent 15
+            pr_details.append(
+                {
+                    "title": pr.get("title", ""),
+                    "body": pr.get("body", "")[:300] if pr.get("body") else "",
+                    "labels": [label["name"] for label in pr.get("labels", [])],
+                    "merged_at": pr.get("merged_at", ""),
+                }
+            )
+
+        prompt = f"""Based on these recent merged pull requests to {repo_name}, produce a portfolio project card. Return ONLY a JSON object with these keys (no markdown, no prose outside the JSON):
+
+- "title": a short product/project name (2-4 words, Title Case), based on the repo and what it does.
+- "description": a concise, professional summary (2-3 sentences, third person) of what the contributor worked on, the technical areas, and the impact.
+- "tags": an array of 3-5 short technical tags (TitleCase, e.g. "Python", "Galaxy", "CI/CD", "GitHub Actions", "Automation", "Bioinformatics", "Documentation").
+
+Pull Requests:
+{json.dumps(pr_details, indent=2)}"""
+
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a technical writer creating portfolio project cards from GitHub contributions. You always respond with a single JSON object and nothing else.",
+            },
+            {"role": "user", "content": prompt},
+        ]
+
+        raw = self._complete(messages)
+        entry = self._parse_entry(raw, repo_name, len(prs))
+        return entry
+
+    @staticmethod
+    def _parse_entry(
+        raw: Optional[str], repo_name: str, pr_count: int
+    ) -> Dict:
+        """Tolerantly parse a {title,description,tags} JSON object from raw text.
+
+        Models may wrap JSON in prose or reasoning; extract the first balanced
+        ``{...}`` block. On any failure, fall back to a safe default card.
+        """
+        repo_short = repo_name.split("/")[-1]
+        fallback_title = repo_short.replace("-", " ").replace("_", " ").title()
+        fallback = {
+            "title": fallback_title,
+            "description": (
+                f"Contributed {pr_count} pull request"
+                f"{'s' if pr_count != 1 else ''} to improve functionality and "
+                f"fix issues."
+            ),
+            "tags": [],
+        }
+        if not raw:
+            return fallback
+
+        # Find the first '{' ... '}' span (greedy-enough via regex on the
+        # outermost braces present in the text).
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not match:
+            # No JSON block: use the raw text as the description.
+            return {
+                "title": fallback_title,
+                "description": raw.strip(),
+                "tags": [],
+            }
+
+        try:
+            data = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return {
+                "title": fallback_title,
+                "description": raw.strip(),
+                "tags": [],
+            }
+
+        title = data.get("title") or fallback_title
+        description = data.get("description") or fallback["description"]
+        tags = data.get("tags") or []
+        if not isinstance(tags, list):
+            tags = []
+        # Coerce tags to clean strings; drop empties; dedupe preserving order.
+        seen: set = set()
+        clean_tags: List[str] = []
+        for tag in tags:
+            if not isinstance(tag, str):
+                continue
+            t = tag.strip()
+            if t and t not in seen:
+                seen.add(t)
+                clean_tags.append(t)
+        return {
+            "title": str(title).strip() or fallback_title,
+            "description": str(description).strip() or fallback["description"],
+            "tags": clean_tags,
+        }
 
 
 class ContributionsFetcher:
@@ -284,18 +362,15 @@ class ContributionsFetcher:
         for repo, prs in sorted(
             prs_by_repo.items(), key=lambda x: len(x[1]), reverse=True
         ):
-            print(f"Generating description for {repo}...")
+            print(f"Generating card for {repo}...")
 
-            # Generate AI description
-            description = (
-                self.ai_client.generate_project_description(repo, prs)
-                if self.ai_client
-                else None
-            )
-
-            # Fallback description if AI fails
-            if not description:
-                description = f"Contributed {len(prs)} pull request{'s' if len(prs) > 1 else ''} to improve functionality and fix issues."
+            # Generate AI card fields (title, description, tags). When no AI
+            # client is configured, generate_project_entry returns a safe
+            # default card so the workflow still produces a file.
+            if self.ai_client:
+                ai_entry = self.ai_client.generate_project_entry(repo, prs)
+            else:
+                ai_entry = MultiProviderAIClient._parse_entry(None, repo, len(prs))
 
             # Get PR URL for display
             pr_url = f"https://github.com/{repo}/pulls?q=is%3Apr+author%3A{self.username}+is%3Amerged"
@@ -306,7 +381,9 @@ class ContributionsFetcher:
             # Create entry in the same format as existing ones
             entry = {
                 "repo": repo,
-                "description": description,
+                "title": ai_entry["title"],
+                "description": ai_entry["description"],
+                "tags": ai_entry["tags"],
                 "pr_url": pr_url,
                 "pr_count": len(prs),
             }
@@ -339,8 +416,13 @@ def update_projects_file(
 ):
     """Update Astro content collection JSON files with new contributions.
 
-    Each project becomes/updates a JSON file under src/content/projects/.
-    This replaces the legacy Markdown update approach.
+    Coverage-aware: a repo already referenced by an existing card (via its
+    ``links`` URLs or named in an existing card's ``description`` text) is not
+    given a new card. Instead, if the covering card has no PR-search link for
+    that repo, one is appended (purely additive — title/description/tags/order
+    /featured are never touched). A repo with no existing coverage gets a new
+    per-repo card with AI-generated title/description/tags, ``featured: false``,
+    and ``order: 99`` (sorts after curated cards; the user reorders on review).
     """
     if not categorized_entries:
         print("No new contributions to add")
@@ -348,28 +430,55 @@ def update_projects_file(
 
     os.makedirs(content_dir, exist_ok=True)
 
-    # Load existing files to check for duplicates. Project files store GitHub
-    # URLs in a ``links`` array of {label, url} objects; collect every repo
-    # already referenced so we don't re-document it.
-    existing_repos: set = set()
-    for fname in os.listdir(content_dir):
-        if fname.endswith(".json"):
-            fpath = os.path.join(content_dir, fname)
-            try:
-                with open(fpath, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    for link in data.get("links", []):
-                        if not isinstance(link, dict):
-                            continue
-                        url = link.get("url", "")
-                        parsed = urlparse(url)
-                        if parsed.hostname == "github.com":
-                            # Extract repo path e.g. "org/repo"
-                            path_parts = parsed.path.lstrip("/").split("/")
-                            if len(path_parts) >= 2:
-                                existing_repos.add(f"{path_parts[0]}/{path_parts[1]}")
-            except Exception:
-                pass
+    # Build a coverage index from existing files. A repo is "covered" if either:
+    #   (a) it appears as an org/repo path in some card's ``links`` URLs, or
+    #   (b) its category already has a card — aggregated area cards (e.g.
+    #       galaxy-core.json) are meant to cover a whole category, so a new
+    #       repo in an existing category doesn't get its own card.
+    # The covering file is the first card (sorted by filename) in that category,
+    # or the exact-linking file when (a) applies.
+    repo_to_file: Dict[str, str] = {}
+    files_data: Dict[str, Dict] = {}
+    category_to_file: Dict[str, str] = {}
+
+    for fname in sorted(os.listdir(content_dir)):
+        if not fname.endswith(".json"):
+            continue
+        fpath = os.path.join(content_dir, fname)
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            continue
+        files_data[fpath] = data
+        cat = data.get("category")
+        if isinstance(cat, str):
+            category_to_file.setdefault(cat, fpath)
+        for link in data.get("links", []):
+            if not isinstance(link, dict):
+                continue
+            url = link.get("url", "")
+            parsed = urlparse(url)
+            if parsed.hostname == "github.com":
+                path_parts = parsed.path.lstrip("/").split("/")
+                if len(path_parts) >= 2:
+                    repo_to_file.setdefault(
+                        f"{path_parts[0]}/{path_parts[1]}".lower(), fpath
+                    )
+
+    def _covering_file(repo_name: str, category: str) -> Optional[str]:
+        """File that covers this repo, by exact link or by category."""
+        return repo_to_file.get(repo_name.lower()) or category_to_file.get(category)
+
+    def _has_pr_link(data: Dict, repo_name: str) -> bool:
+        """True if the card already links a PR-search URL for this repo."""
+        for link in data.get("links", []):
+            if not isinstance(link, dict):
+                continue
+            url = link.get("url", "")
+            if repo_name in url and "/pulls?" in url:
+                return True
+        return False
 
     modified = False
 
@@ -381,40 +490,57 @@ def update_projects_file(
         for entry in entries:
             repo_name = entry["repo"]
             repo_short = repo_name.split("/")[-1]
+            pr_url = entry["pr_url"]
+            pr_count = entry.get("pr_count", 1)
 
-            # Skip if already documented
-            if repo_name in existing_repos:
-                print(f"⏭️  Skipping {repo_name} - already in content collection")
+            covering = _covering_file(repo_name, category)
+            if covering:
+                # Already covered: don't create a card. Only add a PR-search
+                # link to the covering file if it lacks one (additive).
+                data = files_data.get(covering)
+                if data is not None and not _has_pr_link(data, repo_name):
+                    data.setdefault("links", []).append(
+                        {"label": f"{repo_name} PRs", "url": pr_url}
+                    )
+                    with open(covering, "w", encoding="utf-8") as f:
+                        json.dump(data, f, indent=2, ensure_ascii=False)
+                        f.write("\n")
+                    modified = True
+                    print(
+                        f"➕ Added {repo_name} PR link to {os.path.basename(covering)}"
+                    )
+                else:
+                    print(f"⏭️  Skipping {repo_name} - already covered")
                 continue
 
-            slug = _slug(f"{repo_short}")
-            # Avoid collisions by appending org prefix if slug exists
+            # Not covered anywhere: create a new per-repo card.
+            slug = _slug(repo_short)
+            # Avoid collisions by appending org prefix if slug exists.
             fpath = os.path.join(content_dir, f"{slug}.json")
             if os.path.exists(fpath):
                 slug = _slug(repo_name.replace("/", "-"))
                 fpath = os.path.join(content_dir, f"{slug}.json")
 
-            pr_url = entry["pr_url"]
-            description = entry["description"]
-            pr_count = entry.get("pr_count", 1)
-
             project_data = {
-                "title": repo_short.replace("-", " ").replace("_", " ").title(),
-                "description": description,
+                "title": entry.get("title") or repo_short.replace("-", " ").replace("_", " ").title(),
+                "description": entry["description"],
                 "category": category,
                 "links": [
                     {"label": "Repository", "url": f"https://github.com/{repo_name}"},
                     {"label": f"PRs ({pr_count})", "url": pr_url},
                 ],
-                "tags": [],
+                "tags": entry.get("tags", []),
                 "featured": False,
+                "order": 99,
             }
 
             with open(fpath, "w", encoding="utf-8") as f:
                 json.dump(project_data, f, indent=2, ensure_ascii=False)
                 f.write("\n")
 
-            existing_repos.add(repo_name)
+            # Record coverage so later entries in the same run don't duplicate.
+            repo_to_file[repo_name.lower()] = fpath
+            files_data[fpath] = project_data
             modified = True
             print(f"✅ Created {fpath} for {repo_name} ({category})")
 
