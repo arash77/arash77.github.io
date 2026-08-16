@@ -14,8 +14,7 @@
     "test": "vitest run && playwright test"
   },
   "dependencies": {
-    "@astrojs/compiler-rs": "^0.1.4",
-    "@astrojs/mdx": "^5.0.0",
+    "@astrojs/mdx": "^7.0.0",
     "@astrojs/react": "^5.0.0",
     "@astrojs/sitemap": "^3.7.1",
     "@gsap/react": "^2.1.0",
