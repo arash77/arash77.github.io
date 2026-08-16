@@ -50,6 +50,12 @@ jobs:
           SITE: https://kadkhodaei.de
 
       - name: Commit baselines
+        # BRANCH goes through env, never `${{ }}` inside the script: expression
+        # interpolation happens before bash parses the line, so quoting it in
+        # the script would not stop a crafted branch name from executing shell
+        # in a job that holds a push-capable token.
+        env:
+          BRANCH: ${{ inputs.branch }}
         run: |
           set -euo pipefail
           git config user.name  'github-actions[bot]'
@@ -60,4 +66,4 @@ jobs:
             exit 0
           fi
           git commit -m 'test(visual): regenerate screenshot baselines'
-          git push origin HEAD:'${{ inputs.branch }}'
+          git push origin "HEAD:refs/heads/$BRANCH"

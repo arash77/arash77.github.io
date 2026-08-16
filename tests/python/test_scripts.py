@@ -175,6 +175,36 @@ class TestMapOrcidType:
         assert publications.map_orcid_type("data-set") == "Data Set"
 
 
+class TestYearSortKey:
+    """Undated works must not outrank real years.
+
+    `year` is a string so it can hold UNKNOWN_YEAR, and sorting those strings
+    descending puts "Unknown" first ("U" > "2") -- i.e. an undated work renders
+    as the most prominent entry on the resume.
+    """
+
+    def test_numeric_years_compare_numerically(self):
+        assert publications.year_sort_key("2026") > publications.year_sort_key("2024")
+
+    def test_unknown_sorts_below_every_real_year(self):
+        assert publications.year_sort_key(publications.UNKNOWN_YEAR) < (
+            publications.year_sort_key("1900")
+        )
+
+    def test_orders_a_realistic_mixed_list_newest_first(self):
+        pubs = [
+            {"year": "2024", "title": "b"},
+            {"year": publications.UNKNOWN_YEAR, "title": "a"},
+            {"year": "2026", "title": "c"},
+        ]
+        pubs.sort(key=lambda p: p["title"])
+        pubs.sort(key=lambda p: publications.year_sort_key(p["year"]), reverse=True)
+        assert [p["year"] for p in pubs] == ["2026", "2024", publications.UNKNOWN_YEAR]
+
+    def test_non_numeric_junk_does_not_raise(self):
+        assert publications.year_sort_key("n/a") == -1
+
+
 def test_scripts_import_cleanly():
     """Guards the actual upgrade failure mode.
 

@@ -161,3 +161,33 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  ci-gate:
+    # The single required status check. Dependency PRs merge themselves once
+    # required checks pass, so the set of required checks IS the safety gate --
+    # and naming each job in branch protection means every new or renamed job
+    # silently widens the hole (which is exactly how Build, Python Script Tests
+    # and Visual Regression ended up advisory-only). Requiring only this job
+    # keeps the gate correct as jobs come and go: add a job to `needs` and it is
+    # enforced immediately, with no branch-protection change.
+    name: CI Gate
+    needs: [build, unit, python, e2e, visual]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Verify every gate job succeeded
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          # `if: always()` means this job runs even when a dependency fails or
+          # is cancelled/skipped, so an explicit check is required -- anything
+          # other than success must fail the gate.
+          if echo "$RESULTS" | jq -e 'to_entries | any(.value.result != "success")' > /dev/null; then
+            echo '::error::CI gate failed — one or more required jobs did not succeed'
+            exit 1
+          fi
+          echo 'CI gate passed — all required jobs succeeded.'

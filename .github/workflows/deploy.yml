@@ -72,19 +72,29 @@ jobs:
           set -euo pipefail
           SITE='https://kadkhodaei.de'
 
-          # GitHub Pages serves the new commit a moment after the deploy API
-          # reports success, so allow a few attempts before calling it broken.
-          for attempt in 1 2 3 4 5; do
-            if curl -fsS --max-time 20 "$SITE" -o /tmp/live.html; then
+          # Wait for the NEW build, not merely for a 200. During the Pages
+          # propagation window the previous deployment still answers 200 with a
+          # valid title and working CSS, so polling for a 200 would happily
+          # smoke-test the old site and report green while the just-deployed
+          # one is broken -- the exact failure this job exists to catch.
+          # /build-info.json carries the commit its build was made from.
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            LIVE_SHA="$(curl -fsS --max-time 20 "$SITE/build-info.json?ts=$GITHUB_RUN_ID-$attempt" \
+              | jq -r '.commit // empty' || true)"
+            if [ "$LIVE_SHA" = "$GITHUB_SHA" ]; then
+              echo "Live site is serving $GITHUB_SHA."
               break
             fi
-            if [ "$attempt" = 5 ]; then
-              echo "::error::$SITE did not return 200 after 5 attempts"
+            if [ "$attempt" = 10 ]; then
+              echo "::error::$SITE never served $GITHUB_SHA (last seen: ${LIVE_SHA:-no response})"
               exit 1
             fi
-            echo "attempt $attempt failed, retrying in 15s"
+            echo "attempt $attempt: serving ${LIVE_SHA:-no response}, waiting for $GITHUB_SHA"
             sleep 15
           done
+
+          curl -fsS --max-time 20 "$SITE" -o /tmp/live.html \
+            || { echo "::error::$SITE did not return 200"; exit 1; }
 
           # A 200 alone is not proof the site works: Pages will happily serve a
           # 404 page or an empty shell. Assert content that only a real build

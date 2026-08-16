@@ -20,14 +20,15 @@
     "schedule": ["on the first day of the month"]
   },
   "vulnerabilityAlerts": {
+    "description": "The one class of update that stays manual. These bypass the release-age cooldown by design (that is the point of a security alert), and a hijacked package typically ships its payload AS a version that resolves an advisory -- so automerging here would hand same-day, unreviewed CI execution to precisely the most attacker-timed PRs, and this repo's CI holds real secrets (GEMINI_TOKEN, OPENROUTER_API_KEY, AI_LOCAL_TOKEN). The site is static, so a delayed fix carries almost no runtime risk, while a bad automerge carries a real one. They land immediately and are labelled, so they are visible at a glance; merging is a deliberate click.",
     "labels": ["dependencies", "security"],
     "prCreation": "immediate",
     "minimumReleaseAge": "0 days",
-    "automerge": true
+    "automerge": false
   },
   "packageRules": [
     {
-      "description": "Every non-major update, all managers, lands in one PR that merges itself once required checks pass. Nothing here should need a human on a normal month. NOTE: this now automerges github-actions and pip_requirements, which used to be manual -- scripts/ still has no PR-level CI, so a bad Python bump surfaces only when the monthly contributions workflow runs.",
+      "description": "Every non-major update, all managers, lands in one PR that merges itself once the CI Gate passes. Nothing here should need a human on a normal month. This also automerges github-actions and pip_requirements, which used to be manual; Python bumps are covered by the Python Script Tests job, but note that job runs pytest and ruff only -- it does not exercise the GitHub/ORCID/AI network paths, which still surface first on the monthly run.",
       "matchUpdateTypes": ["patch", "minor", "digest", "pin"],
       "groupName": "all non-major dependencies",
       "groupSlug": "all-non-major",
@@ -35,7 +36,7 @@
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Majors automerge too, but stay in their own PRs so one bad major cannot hold back everything else. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because the gate covers build, unit, e2e, visual regression and the Python scripts -- if those checks are ever weakened, set automerge back to false.",
+      "description": "Majors automerge too, but stay in their own PRs so one bad major cannot hold back everything else. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because the CI Gate job covers build, unit, e2e, visual regression and the Python scripts, AND is the required status check on main -- automerge waits on required checks only, so if CI Gate is ever dropped from branch protection this silently becomes merge-without-testing.",
       "matchUpdateTypes": ["major"],
       "automerge": true,
       "minimumReleaseAge": "14 days"

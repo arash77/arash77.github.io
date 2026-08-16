@@ -61,16 +61,56 @@ jobs:
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
 
+      # This PR changes /resume and /projects content, so the committed
+      # screenshot baselines no longer match by definition -- the Visual
+      # Regression job would fail on changes that are the entire point of the
+      # PR. Refresh them here, on ubuntu-latest (the only OS whose font
+      # rendering the baselines are valid for), so the PR carries content and
+      # baselines together. The visual suite exists to catch *dependency*
+      # regressions; a content-only diff is reviewed by reading the PR.
+      - name: Set up pnpm
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+
+      - name: Set up Node.js
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Refresh visual baselines for the new content
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: pnpm exec playwright test tests/e2e/visual.spec.ts --update-snapshots
+        env:
+          SITE: https://kadkhodaei.de
+
       - name: Set date variables
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
           echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
           echo "BRANCH_NAME=monthly-portfolio-$(date +%Y-%m-%d)" >> $GITHUB_ENV
-      
+
       - name: Create Pull Request
         if: steps.check_changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
+          # A PR opened with the default GITHUB_TOKEN triggers no workflows
+          # (GitHub's anti-recursion rule), so it would arrive with zero checks
+          # -- and against a required CI Gate it could then never merge without
+          # someone closing and reopening it. PORTFOLIO_PAT is a fine-grained
+          # PAT with contents+pull-requests write; set it to make this PR run
+          # CI like any other. Without it the workflow still works, but the PR
+          # needs a manual close/reopen to kick the checks off.
+          token: ${{ secrets.PORTFOLIO_PAT || secrets.GITHUB_TOKEN }}
           commit-message: "🤖 Update portfolio for month of ${{ env.DATE }}"
           title: "📊 Monthly Portfolio Update"
           body: |
@@ -79,5 +119,6 @@ jobs:
             **Updates included:**
             - 💻 GitHub contributions fetched and summarized via AI
             - 📚 Publications and presentations fetched from ORCID/Crossref
+            - 📸 Visual regression baselines refreshed for the new content
           branch: ${{ env.BRANCH_NAME }}
           delete-branch: true

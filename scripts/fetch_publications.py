@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import sys
 import urllib.request
 import urllib.parse
 from typing import Dict, Optional
@@ -9,10 +10,25 @@ from typing import Dict, Optional
 ORCID_ID = "0009-0006-2228-8123"
 OUTPUT_FILE = "src/data/conferences.json"
 
+# Placeholder for works ORCID has no publication-date for. Rendered verbatim in
+# the year badge, so it is also user-visible text.
+UNKNOWN_YEAR = "Unknown"
+
 
 def normalize_title(title: str) -> str:
     """Normalize a title for grouping duplicates (lowercase, alphanumeric only)."""
     return re.sub(r"[^a-z0-9]", "", title.lower())
+
+
+def year_sort_key(year: str) -> int:
+    """Sort key for a year string, used with reverse=True (newest first).
+
+    Years are strings because UNKNOWN_YEAR shares the field, and comparing them
+    as strings puts "Unknown" above every real year ("U" > "2"), which would
+    render an undated work as the most prominent publication on the resume.
+    Anything non-numeric sorts below every real year instead.
+    """
+    return int(year) if str(year).isdigit() else -1
 
 
 def get_json(url: str, headers: Optional[Dict[str, str]] = None) -> Optional[dict]:
@@ -83,25 +99,42 @@ def main():
         if not summaries:
             continue
 
-        # Use the first summary as the primary reference in the group
+        # summaries[0] is the primary record for title and type, but a group
+        # merges several sources describing the SAME work and the identifiers
+        # are not necessarily on the first one: a hand-entered record (often
+        # first) can lack the DOI and date that a Crossref-sourced sibling in
+        # the same group carries. Reading only summaries[0] therefore drops a
+        # DOI that is sitting one element away -- and losing the DOI also loses
+        # Crossref enrichment, so the entry degrades to a bare title with a
+        # single contributor and an Unknown year. Scan the whole group.
         summary = summaries[0]
-        put_code = summary.get("put-code")
-        title = summary.get("title", {}).get("title", {}).get("value", "")
         work_type = summary.get("type", "")
         mapped_type = map_orcid_type(work_type)
 
-        # Get publication year
-        pub_date = summary.get("publication-date")
-        year = None
-        if pub_date and pub_date.get("year"):
-            year = pub_date.get("year", {}).get("value")
+        def _first(getter):
+            """First truthy value produced by `getter` across the group."""
+            for candidate in summaries:
+                value = getter(candidate)
+                if value:
+                    return value
+            return None
 
-        # Extract DOI if present
+        title = _first(
+            lambda s: s.get("title", {}).get("title", {}).get("value", "")
+        ) or ""
+        put_code = _first(lambda s: s.get("put-code"))
+        year = _first(
+            lambda s: ((s.get("publication-date") or {}).get("year") or {}).get("value")
+        )
+
+        # DOIs live on each summary and, for merged works, on the group itself.
         doi = None
-        ext_ids = summary.get("external-ids", {}).get("external-id", [])
-        for ext_id in ext_ids:
-            if ext_id.get("external-id-type") == "doi":
-                doi = ext_id.get("external-id-value")
+        for source in [group, *summaries]:
+            for ext_id in source.get("external-ids", {}).get("external-id", []):
+                if ext_id.get("external-id-type") == "doi":
+                    doi = ext_id.get("external-id-value")
+                    break
+            if doi:
                 break
 
         print(f"[{idx}/{len(groups)}] Processing: {title}")
@@ -148,7 +181,7 @@ def main():
 
         # Default fallbacks if empty
         if not year:
-            year = "Unknown"
+            year = UNKNOWN_YEAR
         if not contributors:
             contributors = ["Arash Kadkhodaei"]
 
@@ -203,12 +236,38 @@ def main():
         entry["dois"].sort(key=lambda d: d["label"])
         final_publications.append(entry)
 
-    # Sort final publications: Year (descending), then Title (ascending)
-    final_publications.sort(key=lambda x: (x["year"], x["title"]), reverse=True)
-    # Ensure year sorting is fully reversed (newest first), but titles within a year are alphabetical
-    # To do that, we sort by title ascending first, then by year descending:
+    # Sort: year descending (newest first), then title ascending within a year.
+    # Python sorts are stable, so sorting by title first and year second gives
+    # exactly that. `year` is a string and may be UNKNOWN_YEAR, so it cannot be
+    # compared directly -- "Unknown" > "2026" lexicographically, which would put
+    # undated works at the very top of the resume. sort_key() maps it to -1 so
+    # undated entries land last instead.
     final_publications.sort(key=lambda x: x["title"])
-    final_publications.sort(key=lambda x: x["year"], reverse=True)
+    final_publications.sort(key=lambda x: year_sort_key(x["year"]), reverse=True)
+
+    # Refuse to shrink. ORCID answering 200 with a truncated (or empty) group
+    # list is indistinguishable here from "the works were really deleted", and
+    # the caller is an unattended monthly job that opens a PR from whatever
+    # this writes -- so a transient upstream degradation would otherwise ship a
+    # PR deleting the entire Publications section. Growing or holding steady is
+    # always fine; losing entries needs a human.
+    previous = []
+    if os.path.exists(OUTPUT_FILE):
+        try:
+            with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
+                previous = json.load(f)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"Warning: could not read existing {OUTPUT_FILE} ({exc}).")
+
+    if len(final_publications) < len(previous):
+        print(
+            f"ERROR: refusing to overwrite {OUTPUT_FILE}: ORCID returned "
+            f"{len(final_publications)} publications but the file already has "
+            f"{len(previous)}. This usually means a partial upstream response "
+            f"rather than a real deletion. Re-run, or edit the file by hand if "
+            f"the removal is intentional."
+        )
+        sys.exit(1)
 
     # Write out the JSON
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
