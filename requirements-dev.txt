@@ -1,0 +1,6 @@
+# Tooling for the Python CI job (tests/python). Pinned so Renovate can manage
+# it -- unpinned entries give Renovate no version to compute an update from and
+# are silently never updated.
+-r requirements.txt
+pytest==9.1.1
+ruff==0.14.2

@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
 
 concurrency:
   group: pages
@@ -53,3 +54,100 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+
+  smoke:
+    # Last line of defence. Dependency updates merge themselves once the
+    # pre-merge gate is green, so this is what catches anything the gate does
+    # not assert -- a broken asset path, a CDN-level failure, a build that
+    # succeeds but produces a dead site.
+    name: Post-deploy smoke check
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Verify the live site
+        run: |
+          set -euo pipefail
+          SITE='https://kadkhodaei.de'
+
+          # GitHub Pages serves the new commit a moment after the deploy API
+          # reports success, so allow a few attempts before calling it broken.
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS --max-time 20 "$SITE" -o /tmp/live.html; then
+              break
+            fi
+            if [ "$attempt" = 5 ]; then
+              echo "::error::$SITE did not return 200 after 5 attempts"
+              exit 1
+            fi
+            echo "attempt $attempt failed, retrying in 15s"
+            sleep 15
+          done
+
+          # A 200 alone is not proof the site works: Pages will happily serve a
+          # 404 page or an empty shell. Assert content that only a real build
+          # produces.
+          grep -q '<title>' /tmp/live.html \
+            || { echo '::error::no <title> in the served HTML'; exit 1; }
+          grep -qi 'kadkhodaei' /tmp/live.html \
+            || { echo '::error::served HTML does not look like the portfolio'; exit 1; }
+
+          # Styling is the thing the pre-merge visual suite guards; here just
+          # confirm a stylesheet is actually referenced and fetchable, which
+          # catches asset-path breakage from a bundler upgrade.
+          CSS_PATH="$(grep -o 'href="[^"]*\.css"' /tmp/live.html | head -1 | cut -d'"' -f2)"
+          if [ -z "$CSS_PATH" ]; then
+            echo '::error::no stylesheet referenced in the served HTML'
+            exit 1
+          fi
+          case "$CSS_PATH" in
+            http*) CSS_URL="$CSS_PATH" ;;
+            *)     CSS_URL="$SITE$CSS_PATH" ;;
+          esac
+          curl -fsS --max-time 20 "$CSS_URL" -o /dev/null \
+            || { echo "::error::stylesheet $CSS_URL is not fetchable"; exit 1; }
+
+          echo "Live site OK: title present, content matches, CSS at $CSS_PATH loads."
+
+      - name: Open an issue if the live site is broken
+        if: failure()
+        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9.0.0
+        with:
+          script: |
+            const sha = context.sha.slice(0, 7);
+            const title = `Live site smoke check failed after deploying ${sha}`;
+            // Reuse one open issue rather than filing a new one per failed
+            // deploy, so a sustained outage does not bury the inbox.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'deploy-failure',
+            });
+            const body = [
+              `The post-deploy smoke check failed for commit ${context.sha}.`,
+              '',
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              'Dependency updates merge themselves, so this may be an upgrade',
+              'that passed the pre-merge gate. To roll back, revert the offending',
+              'commit on `main` — the deploy workflow will republish.',
+            ].join('\n');
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['deploy-failure'],
+              });
+            }

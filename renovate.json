@@ -22,7 +22,8 @@
   "vulnerabilityAlerts": {
     "labels": ["dependencies", "security"],
     "prCreation": "immediate",
-    "minimumReleaseAge": "0 days"
+    "minimumReleaseAge": "0 days",
+    "automerge": true
   },
   "packageRules": [
     {
@@ -34,10 +35,10 @@
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Majors stay separate and manual -- this is where breakage lives, and isolating them means one bad major cannot hold back everything else.",
+      "description": "Majors automerge too, but stay in their own PRs so one bad major cannot hold back everything else. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because the gate covers build, unit, e2e, visual regression and the Python scripts -- if those checks are ever weakened, set automerge back to false.",
       "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "minimumReleaseAge": "7 days"
+      "automerge": true,
+      "minimumReleaseAge": "14 days"
     },
     {
       "description": "Astro core and integrations must move in lockstep on a major (astro v7 requires @astrojs/mdx v7). Widens the built-in monorepo group to any @astrojs/* package, including ones published outside withastro/astro.",

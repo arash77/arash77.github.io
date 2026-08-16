@@ -10,7 +10,8 @@
     "astro": "astro",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --grep-invert=@visual",
+    "test:visual": "playwright test --grep=@visual",
     "test": "vitest run && playwright test"
   },
   "dependencies": {

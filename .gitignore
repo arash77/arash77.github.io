@@ -34,3 +34,7 @@ __pycache__/
 .playwright-mcp/
 /*.png
 .playwright-cli/
+
+# Playwright run output (baselines under tests/**/*-snapshots/ are committed)
+playwright-report/
+test-results/
