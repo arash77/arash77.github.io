@@ -112,16 +112,19 @@ jobs:
       # automation this exists to guarantee.
       #
       # Setup: create a GitHub App with Contents + Pull requests (read/write),
-      # install it on this repo, then set the PORTFOLIO_APP_ID *variable* and
-      # the PORTFOLIO_APP_PRIVATE_KEY *secret*. The App ID is a variable rather
-      # than a secret so it can be tested in the `if:` below -- it is not
-      # sensitive, and secrets are not readable in step conditions.
+      # install it on this repo, then set the PORTFOLIO_APP_CLIENT_ID
+      # *variable* and the PORTFOLIO_APP_PRIVATE_KEY *secret*. The Client ID is
+      # a variable rather than a secret so it can be tested in the `if:` below
+      # -- it is a public identifier, and secrets are not readable in step
+      # conditions.
       - name: Mint a GitHub App token
         id: app_token
-        if: steps.check_changes.outputs.has_changes == 'true' && vars.PORTFOLIO_APP_ID != ''
+        if: steps.check_changes.outputs.has_changes == 'true' && vars.PORTFOLIO_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ vars.PORTFOLIO_APP_ID }}
+          # `client-id`, not the deprecated `app-id` (this pinned version emits
+          # a deprecation warning for the latter).
+          client-id: ${{ vars.PORTFOLIO_APP_CLIENT_ID }}
           private-key: ${{ secrets.PORTFOLIO_APP_PRIVATE_KEY }}
 
       - name: Create Pull Request
