@@ -36,7 +36,7 @@
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Majors automerge too, but stay in their own PRs so one bad major cannot hold back everything else. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because the CI Gate job covers build, unit, e2e, visual regression and the Python scripts, AND is the required status check on main -- automerge waits on required checks only, so if CI Gate is ever dropped from branch protection this silently becomes merge-without-testing.",
+      "description": "Majors automerge too, but stay in their own PRs so one bad major cannot hold back everything else. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because the required status checks on main -- CI Gate (typecheck, build, unit, e2e, visual regression, Python scripts) and preview (the Cloudflare preview deploy, which lives in its own workflow and so cannot be a CI Gate dependency) -- actually gate it. Automerge waits on required checks only, so if either is dropped from branch protection this silently becomes merge-without-testing.",
       "matchUpdateTypes": ["major"],
       "automerge": true,
       "minimumReleaseAge": "14 days"
@@ -59,6 +59,17 @@
         "@types/react-dom"
       ],
       "groupName": "react monorepo"
+    },
+    {
+      "description": "The only actions no pull request ever executes. update-contributions.yml and update-snapshots.yml trigger on schedule/workflow_dispatch only, so nothing in CI runs them -- a bump here would merge completely untested and first fail on the monthly run, which is the one job that most needs to be reliable. Every other action is exercised by test.yml or by the deploy on push to main, so those stay automerged. Given its own group rather than an automerge exception inside the 29-package non-major group, so that group keeps one unambiguous automerge setting.",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "actions/create-github-app-token",
+        "peter-evans/create-pull-request"
+      ],
+      "groupName": "untested workflow actions",
+      "groupSlug": "untested-workflow-actions",
+      "automerge": false
     }
   ]
 }
