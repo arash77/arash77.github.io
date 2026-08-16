@@ -36,7 +36,7 @@
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Majors automerge too, but stay in their own PRs so one bad major cannot hold back everything else. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because the CI Gate job covers build, unit, e2e, visual regression and the Python scripts, AND is the required status check on main -- automerge waits on required checks only, so if CI Gate is ever dropped from branch protection this silently becomes merge-without-testing.",
+      "description": "Majors automerge too, but stay in their own PRs so one bad major cannot hold back everything else. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because CI Gate (typecheck, build, unit, e2e, visual regression, Python scripts) is the required status check on main -- automerge waits on required checks only, so if CI Gate is ever dropped from branch protection this silently becomes merge-without-testing. Note the Cloudflare preview job is deliberately NOT required: preview.yml has a paths filter that skips .github/**, and a workflow skipped by a paths filter never reports a status, so requiring it would deadlock every actions-only PR forever. Actions it alone exercises are handled by the last rule instead.",
       "matchUpdateTypes": ["major"],
       "automerge": true,
       "minimumReleaseAge": "14 days"
@@ -59,6 +59,20 @@
         "@types/react-dom"
       ],
       "groupName": "react monorepo"
+    },
+    {
+      "description": "Actions a green CI Gate does not actually exercise, so automerging them would ship them untested and they would first fail at the moment they are needed. Three distinct reasons: (1) create-github-app-token and create-pull-request run only in update-contributions.yml, which triggers on schedule/workflow_dispatch, so no PR ever runs them and a break first appears on the monthly job; (2) wrangler-action and sticky-pull-request-comment run only in preview.yml, whose paths filter skips .github/** -- so a PR bumping just those actions does not trigger the very workflow that would test them, and a break silently kills previews for every later PR; (3) upload-artifact is only reached under `if: failure()`, so a green run never touches it and a break surfaces exactly when a Playwright report is needed to debug something else. Deploy-only actions (deploy-pages, upload-pages-artifact, github-script) are deliberately left automerging: they run on every push to main, so they fail loudly right after merge instead of lying in wait. Given its own group rather than an automerge exception inside the 29-package non-major group, so that group keeps one unambiguous automerge setting.",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "actions/create-github-app-token",
+        "peter-evans/create-pull-request",
+        "cloudflare/wrangler-action",
+        "marocchino/sticky-pull-request-comment",
+        "actions/upload-artifact"
+      ],
+      "groupName": "actions CI does not exercise",
+      "groupSlug": "unexercised-actions",
+      "automerge": false
     }
   ]
 }

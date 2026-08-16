@@ -27,6 +27,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Neither `astro build` nor vitest typechecks -- both transpile and throw
+      # the types away. Without this, a `@types/react` or `typescript` bump
+      # merges itself green while the project no longer compiles, which matters
+      # more now that those land unattended. Runs before the build so a type
+      # error is reported as a type error rather than a build failure.
+      - name: Typecheck
+        run: pnpm exec astro check
+
       - name: Build site
         run: pnpm build
         env:
