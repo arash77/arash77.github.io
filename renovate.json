@@ -1,16 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:best-practices",
-    "group:allDigest"
-  ],
+  "extends": ["config:best-practices"],
   "schedule": ["on the first day of the month"],
   "timezone": "Europe/Berlin",
   "prCreation": "not-pending",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 10,
   "labels": ["dependencies"],
-  "separateMinorPatch": true,
   "platformAutomerge": true,
   "automergeStrategy": "squash",
   "postUpdateOptions": ["pnpmDedupe"],
@@ -30,47 +26,30 @@
   },
   "packageRules": [
     {
-      "description": "Group npm minor updates (release age inherited from security:minimumReleaseAgeNpm)",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor"],
-      "groupName": "all minor dependencies",
-      "groupSlug": "all-minor"
-    },
-    {
-      "description": "Automerge npm patches, digests, and pins",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["patch", "digest", "pin"],
-      "automerge": true
-    },
-    {
-      "description": "GitHub Actions: 3-day release age, no automerge (no merge_group CI coverage)",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["patch", "minor", "pin", "digest"],
-      "automerge": false,
+      "description": "Every non-major update, all managers, lands in one PR that merges itself once required checks pass. Nothing here should need a human on a normal month. NOTE: this now automerges github-actions and pip_requirements, which used to be manual -- scripts/ still has no PR-level CI, so a bad Python bump surfaces only when the monthly contributions workflow runs.",
+      "matchUpdateTypes": ["patch", "minor", "digest", "pin"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-non-major",
+      "automerge": true,
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Python (pip_requirements): 3-day release age, no automerge (no CI coverage for scripts/)",
-      "matchManagers": ["pip_requirements"],
-      "matchUpdateTypes": ["patch", "minor", "pin"],
-      "automerge": false,
-      "minimumReleaseAge": "3 days"
-    },
-    {
-      "description": "Major updates: manual review, 7-day release age",
+      "description": "Majors stay separate and manual -- this is where breakage lives, and isolating them means one bad major cannot hold back everything else.",
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "minimumReleaseAge": "7 days"
     },
     {
-      "description": "Astro core and integrations must move in lockstep (astro v7 requires @astrojs/mdx v7). Widens the built-in monorepo group to any @astrojs/* package, including ones outside withastro/astro.",
+      "description": "Astro core and integrations must move in lockstep on a major (astro v7 requires @astrojs/mdx v7). Widens the built-in monorepo group to any @astrojs/* package, including ones published outside withastro/astro.",
       "matchManagers": ["npm"],
+      "matchUpdateTypes": ["major"],
       "matchPackageNames": ["astro", "@astrojs/**"],
       "groupName": "astro monorepo"
     },
     {
-      "description": "React runtime and its DefinitelyTyped types live in separate repos, so the built-in monorepo group misses @types/react. Keep them in one PR.",
+      "description": "React runtime and its DefinitelyTyped types live in separate repos, so the built-in monorepo group misses @types/react. Keep them in one major PR.",
       "matchManagers": ["npm"],
+      "matchUpdateTypes": ["major"],
       "matchPackageNames": [
         "react",
         "react-dom",
