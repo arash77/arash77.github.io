@@ -10,8 +10,9 @@
     "astro": "astro",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test": "vitest run && playwright test"
+    "test:e2e": "playwright test --grep-invert=@visual",
+    "test:visual": "playwright test --grep=@visual",
+    "test": "pnpm test:unit && pnpm test:e2e"
   },
   "dependencies": {
     "@astrojs/mdx": "^7.0.0",

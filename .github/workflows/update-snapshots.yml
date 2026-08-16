@@ -1,0 +1,69 @@
+name: Update Visual Snapshots
+
+# Visual baselines must be rasterised on the same OS that asserts against them.
+# Generating them on a developer machine bakes in that distro's font rendering
+# and makes every CI run fail on a diff nobody introduced. So they are only ever
+# produced here, on ubuntu-latest, and committed back to the branch.
+#
+# Run this after any intentional design change, or once on a new branch to
+# create baselines that do not exist yet.
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to regenerate baselines on'
+        required: true
+        default: 'main'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    name: Regenerate baselines
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Regenerate visual baselines
+        run: pnpm exec playwright test tests/e2e/visual.spec.ts --update-snapshots
+        env:
+          SITE: https://kadkhodaei.de
+
+      - name: Commit baselines
+        # BRANCH goes through env, never `${{ }}` inside the script: expression
+        # interpolation happens before bash parses the line, so quoting it in
+        # the script would not stop a crafted branch name from executing shell
+        # in a job that holds a push-capable token.
+        env:
+          BRANCH: ${{ inputs.branch }}
+        run: |
+          set -euo pipefail
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/e2e/visual.spec.ts-snapshots
+          if git diff --cached --quiet; then
+            echo 'Baselines unchanged — nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'test(visual): regenerate screenshot baselines'
+          git push origin "HEAD:refs/heads/$BRANCH"

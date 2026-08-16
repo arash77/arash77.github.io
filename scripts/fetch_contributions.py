@@ -553,8 +553,20 @@ def update_projects_file(
         # Index short-name -> this file from the description text, so a repo
         # named only by its short name in prose (e.g. "galaxy-hub") is still
         # found. Word-boundary match to avoid substring false positives.
+        #
+        # Only compound tokens are indexed. Every word of every description
+        # used to become a coverage key, which put plain English words like
+        # "tools", "data", "bot" and "hub" in the index -- so a repo whose
+        # short name is an ordinary word (nf-core/tools) matched whichever
+        # unrelated card happened to use that word in prose, and a PR link for
+        # it was silently appended there instead of the repo getting its own
+        # card. Repo names that appear in prose are hyphenated or dotted, so
+        # requiring a separator keeps the real matches and drops the ambiguous
+        # ones.
         desc = (data.get("description") or "").lower()
         for word in re.findall(r"\b([a-z0-9][a-z0-9._-]+)\b", desc):
+            if not any(sep in word for sep in "._-"):
+                continue
             shortname_to_files[word].append(fpath)
 
     def _link_count(data: Dict) -> int:
@@ -581,6 +593,15 @@ def update_projects_file(
         if exact:
             return exact
         candidates = shortname_to_files.get(repo_name.split("/")[-1].lower(), [])
+        # A prose mention is a much weaker signal than a link, so also require
+        # the card to be in the same category as the repo being placed. Without
+        # this the `category` argument was unused and a description match could
+        # attach a link to a card from an entirely unrelated section.
+        candidates = [
+            fp
+            for fp in candidates
+            if (files_data.get(fp, {}).get("category") or "Other") == category
+        ]
         if not candidates:
             return None
         # Prefer the candidate with the most GitHub repo links (aggregator).
