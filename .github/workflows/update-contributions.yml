@@ -99,18 +99,42 @@ jobs:
           echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
           echo "BRANCH_NAME=monthly-portfolio-$(date +%Y-%m-%d)" >> $GITHUB_ENV
 
+      # A PR opened with the default GITHUB_TOKEN triggers no workflows
+      # (GitHub's anti-recursion rule), so it would arrive with zero checks --
+      # and against the required CI Gate it could then never merge without
+      # someone closing and reopening it. A GitHub App installation token is
+      # treated as a distinct actor, so PRs it opens DO run CI.
+      #
+      # Preferred over a PAT: the token is minted per run and expires in an
+      # hour, it is scoped to this repository rather than everything the token
+      # owner can reach, and the App's private key does not expire -- a PAT
+      # would silently lapse after at most a year and quietly stop the
+      # automation this exists to guarantee.
+      #
+      # Setup: create a GitHub App with Contents + Pull requests (read/write),
+      # install it on this repo, then set the PORTFOLIO_APP_CLIENT_ID
+      # *variable* and the PORTFOLIO_APP_PRIVATE_KEY *secret*. The Client ID is
+      # a variable rather than a secret so it can be tested in the `if:` below
+      # -- it is a public identifier, and secrets are not readable in step
+      # conditions.
+      - name: Mint a GitHub App token
+        id: app_token
+        if: steps.check_changes.outputs.has_changes == 'true' && vars.PORTFOLIO_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          # `client-id`, not the deprecated `app-id` (this pinned version emits
+          # a deprecation warning for the latter).
+          client-id: ${{ vars.PORTFOLIO_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PORTFOLIO_APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: steps.check_changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
-          # A PR opened with the default GITHUB_TOKEN triggers no workflows
-          # (GitHub's anti-recursion rule), so it would arrive with zero checks
-          # -- and against a required CI Gate it could then never merge without
-          # someone closing and reopening it. PORTFOLIO_PAT is a fine-grained
-          # PAT with contents+pull-requests write; set it to make this PR run
-          # CI like any other. Without it the workflow still works, but the PR
-          # needs a manual close/reopen to kick the checks off.
-          token: ${{ secrets.PORTFOLIO_PAT || secrets.GITHUB_TOKEN }}
+          # Falls back to GITHUB_TOKEN when the App is not configured: the PR is
+          # still created correctly, it just arrives without checks and needs a
+          # close/reopen to start them.
+          token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
           commit-message: "🤖 Update portfolio for month of ${{ env.DATE }}"
           title: "📊 Monthly Portfolio Update"
           body: |
