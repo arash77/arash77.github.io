@@ -12,9 +12,11 @@
   "labels": ["dependencies"],
   "separateMinorPatch": true,
   "platformAutomerge": true,
+  "automergeStrategy": "squash",
   "postUpdateOptions": ["pnpmDedupe"],
   "osvVulnerabilityAlerts": true,
   "dependencyDashboard": true,
+  "dependencyDashboardOSVVulnerabilitySummary": "unresolved",
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true,
@@ -59,6 +61,23 @@
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Astro core and integrations must move in lockstep (astro v7 requires @astrojs/mdx v7). Widens the built-in monorepo group to any @astrojs/* package, including ones outside withastro/astro.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["astro", "@astrojs/**"],
+      "groupName": "astro monorepo"
+    },
+    {
+      "description": "React runtime and its DefinitelyTyped types live in separate repos, so the built-in monorepo group misses @types/react. Keep them in one PR.",
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
+      "groupName": "react monorepo"
     }
   ]
 }
