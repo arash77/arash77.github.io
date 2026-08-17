@@ -3,6 +3,18 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # The "GitHub PRs" stat on /projects is fetched at build time, so it only
+  # refreshes when the site is rebuilt -- without this it silently drifts
+  # behind between pushes. An off-peak minute on purpose: GitHub's cron queue
+  # backs up 30-60 minutes at :00 and can drop runs entirely under load.
+  #
+  # Note this makes the post-deploy smoke job a no-op on scheduled runs: it
+  # polls until build-info.json reports GITHUB_SHA, which for a schedule run is
+  # already the SHA the live site serves, so it passes on the first attempt
+  # against the *old* deployment. Acceptable -- the checks that matter run on
+  # the push that introduced the commit.
+  schedule:
+    - cron: '37 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -38,6 +50,14 @@ jobs:
         run: pnpm build
         env:
           SITE: https://kadkhodaei.de
+          # src/pages/projects.astro queries the GitHub search API for the
+          # merged-PR count. Unauthenticated search allows 10 requests per
+          # minute per IP -- and a hosted runner's IP is shared with every
+          # other Actions job on it, so an unauthenticated build can be rate
+          # limited through no fault of its own and fall back to a stale
+          # number. The default token raises this to 30/minute and returns the
+          # identical count (search only ever sees public repositories).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5

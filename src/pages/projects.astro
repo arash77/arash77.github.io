@@ -11,8 +11,13 @@ const projects = projectEntries
   }))
   .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 
-// C10: fetch merged PR count at build time. Falls back to '380+' on any failure.
-const FALLBACK_PR_COUNT = '380+';
+// C10: fetch merged PR count at build time. Falls back to '480+' on any failure.
+//
+// The fallback is a rounded floor rather than a precise figure on purpose: it
+// renders whenever the API call fails, and a stale precise number would be
+// visibly *wrong* rather than merely out of date. Raise it when it is no longer
+// a floor -- the real count is checkable at the search URL below.
+const FALLBACK_PR_COUNT = '480+';
 let mergedPrCount: string = FALLBACK_PR_COUNT;
 
 if (import.meta.env.PROD) {
