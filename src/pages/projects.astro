@@ -20,6 +20,15 @@ const projects = projectEntries
 const FALLBACK_PR_COUNT = '480+';
 let mergedPrCount: string = FALLBACK_PR_COUNT;
 
+// Astro builds inside the Actions step, so a `::warning::` prefix promotes this
+// to a run-summary annotation. Dependency PRs automerge, and a plain build-log
+// line is invisible in that flow -- the number would silently sit at the
+// fallback forever.
+function warnBuild(message: string) {
+  const prefix = process.env.GITHUB_ACTIONS ? '::warning::' : '';
+  console.log(`${prefix}[projects.astro] ${message}`);
+}
+
 if (import.meta.env.PROD) {
   try {
     const token = import.meta.env.GITHUB_TOKEN;
@@ -29,17 +38,33 @@ if (import.meta.env.PROD) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 
+    // `is:public` is load-bearing, not decorative: issue search returns what
+    // the caller can see, so an authenticated request would otherwise fold in
+    // merged PRs from private repos and publish them as a public figure.
     const res = await fetch(
-      'https://api.github.com/search/issues?q=author%3Aarash77+type%3Apr+is%3Amerged&per_page=1',
+      'https://api.github.com/search/issues?q=author%3Aarash77+type%3Apr+is%3Amerged+is%3Apublic&per_page=1',
       { headers }
     );
 
-    if (res.ok) {
-      const data: { total_count: number } = await res.json();
-      mergedPrCount = String(data.total_count);
+    // Throw rather than branch, so every failure reports through one site.
+    if (!res.ok) {
+      // statusText is empty over HTTP/2, which api.github.com speaks; the
+      // rate-limit header is what separates a throttled 403 from a denied one.
+      const remaining = res.headers.get('x-ratelimit-remaining') ?? 'unknown';
+      throw new Error(`search returned ${res.status} (rate-limit remaining: ${remaining})`);
     }
-  } catch {
-    // network or parse failure — use fallback
+
+    const data: unknown = await res.json();
+    const total = (data as { total_count?: unknown }).total_count;
+    if (typeof total !== 'number') {
+      // Without this, a shape change ships the string "undefined" to the page.
+      throw new Error('search returned no numeric total_count');
+    }
+    mergedPrCount = String(total);
+  } catch (err) {
+    warnBuild(
+      `GitHub PR count unavailable (${err instanceof Error ? err.message : String(err)}); using fallback ${FALLBACK_PR_COUNT}.`
+    );
   }
 } else {
   console.warn('[projects.astro] Skipping GitHub PR fetch in non-prod environment.');

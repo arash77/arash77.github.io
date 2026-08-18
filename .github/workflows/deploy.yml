@@ -7,29 +7,30 @@ on:
   # refreshes when the site is rebuilt -- without this it silently drifts
   # behind between pushes. An off-peak minute on purpose: GitHub's cron queue
   # backs up 30-60 minutes at :00 and can drop runs entirely under load.
-  #
-  # Note this makes the post-deploy smoke job a no-op on scheduled runs: it
-  # polls until build-info.json reports GITHUB_SHA, which for a schedule run is
-  # already the SHA the live site serves, so it passes on the first attempt
-  # against the *old* deployment. Acceptable -- the checks that matter run on
-  # the push that introduced the commit.
   schedule:
     - cron: '37 3 * * *'
   workflow_dispatch:
 
+# Every job narrows this further for itself; the shared floor is read-only.
 permissions:
   contents: read
-  pages: write
-  id-token: write
-  issues: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Queue rather than cancel. This was written when `push` was the only
+  # trigger; with the cron added, cancelling would let the nightly run kill a
+  # push deploy mid-publish and skip its smoke check.
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Narrower than the workflow-level block on purpose: `pnpm build` runs
+    # every dependency's build-time code with this token, and dependency
+    # updates merge themselves -- so it must not carry pages:write (publish an
+    # arbitrary deployment) or issues:write (post as the repo).
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -55,8 +56,14 @@ jobs:
           # minute per IP -- and a hosted runner's IP is shared with every
           # other Actions job on it, so an unauthenticated build can be rate
           # limited through no fault of its own and fall back to a stale
-          # number. The default token raises this to 30/minute and returns the
-          # identical count (search only ever sees public repositories).
+          # number. The default token raises this to 30/minute.
+          #
+          # Issue search returns what the *caller* can see, not merely public
+          # repositories -- the same query run against a user PAT returns 536
+          # where an unauthenticated one returns 489, the difference being
+          # merged PRs in private repos. The query itself pins `is:public` so
+          # the published figure stays caller-independent if this is ever
+          # swapped for a broader token.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Pages artifact
@@ -67,6 +74,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # The only job that publishes. No checkout, so it does not need contents.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -97,19 +108,25 @@ jobs:
           # valid title and working CSS, so polling for a 200 would happily
           # smoke-test the old site and report green while the just-deployed
           # one is broken -- the exact failure this job exists to catch.
-          # /build-info.json carries the commit its build was made from.
+          # /build-info.json carries the run+attempt that produced the build.
+          # Match on that rather than the commit for two reasons: a scheduled
+          # run rebuilds the SHA the live site already serves, and a "re-run
+          # all jobs" rebuilds it too -- either would match on attempt 1
+          # against the *old* deployment and smoke-test nothing. GITHUB_RUN_ID
+          # alone is not enough, because it is stable across re-runs.
+          WANT="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            LIVE_SHA="$(curl -fsS --max-time 20 "$SITE/build-info.json?ts=$GITHUB_RUN_ID-$attempt" \
-              | jq -r '.commit // empty' || true)"
-            if [ "$LIVE_SHA" = "$GITHUB_SHA" ]; then
-              echo "Live site is serving $GITHUB_SHA."
+            LIVE_RUN="$(curl -fsS --max-time 20 "$SITE/build-info.json?ts=$WANT-$attempt" \
+              | jq -r '.run // empty' || true)"
+            if [ "$LIVE_RUN" = "$WANT" ]; then
+              echo "Live site is serving run $WANT ($GITHUB_SHA)."
               break
             fi
             if [ "$attempt" = 10 ]; then
-              echo "::error::$SITE never served $GITHUB_SHA (last seen: ${LIVE_SHA:-no response})"
+              echo "::error::$SITE never served run $WANT (last seen: ${LIVE_RUN:-no response})"
               exit 1
             fi
-            echo "attempt $attempt: serving ${LIVE_SHA:-no response}, waiting for $GITHUB_SHA"
+            echo "attempt $attempt: serving run ${LIVE_RUN:-no response}, waiting for $WANT"
             sleep 15
           done
 
