@@ -26,7 +26,10 @@ let mergedPrCount: string = FALLBACK_PR_COUNT;
 // fallback forever.
 function warnBuild(message: string) {
   const prefix = process.env.GITHUB_ACTIONS ? '::warning::' : '';
-  console.log(`${prefix}[projects.astro] ${message}`);
+  // Leading newline is required, not cosmetic: Astro writes its route line
+  // without a trailing one, so this lands mid-line and Actions only parses a
+  // workflow command that starts a line -- no newline, no annotation.
+  console.log(`\n${prefix}[projects.astro] ${message}`);
 }
 
 if (import.meta.env.PROD) {

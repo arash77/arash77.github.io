@@ -31,6 +31,14 @@ jobs:
     # arbitrary deployment) or issues:write (post as the repo).
     permissions:
       contents: read
+    outputs:
+      # Consumed by `smoke` to prove the live site serves THIS build. It has to
+      # be an output rather than something smoke recomputes from its own env:
+      # "Re-run failed jobs" bumps GITHUB_RUN_ATTEMPT run-wide but does NOT
+      # re-run this job or redeploy, so a recomputed id would demand a build
+      # that was never published and fail on every retry forever. Outputs of a
+      # job that was not re-run are preserved, so this stays truthful.
+      build-id: ${{ steps.build-id.outputs.value }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -47,10 +55,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Derive a build id
+        id: build-id
+        run: echo "value=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
       - name: Build Astro site
         run: pnpm build
         env:
           SITE: https://kadkhodaei.de
+          # Baked into /build-info.json for the smoke check to match on.
+          BUILD_ID: ${{ steps.build-id.outputs.value }}
           # src/pages/projects.astro queries the GitHub search API for the
           # merged-PR count. Unauthenticated search allows 10 requests per
           # minute per IP -- and a hosted runner's IP is shared with every
@@ -92,13 +106,17 @@ jobs:
     # not assert -- a broken asset path, a CDN-level failure, a build that
     # succeeds but produces a dead site.
     name: Post-deploy smoke check
-    needs: deploy
+    needs: [build, deploy]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
     steps:
       - name: Verify the live site
+        env:
+          # Taken from the build job, never recomputed here -- see that job's
+          # `outputs` block for why that distinction is load-bearing.
+          WANT: ${{ needs.build.outputs.build-id }}
         run: |
           set -euo pipefail
           SITE='https://kadkhodaei.de'
@@ -108,15 +126,21 @@ jobs:
           # valid title and working CSS, so polling for a 200 would happily
           # smoke-test the old site and report green while the just-deployed
           # one is broken -- the exact failure this job exists to catch.
-          # /build-info.json carries the run+attempt that produced the build.
-          # Match on that rather than the commit for two reasons: a scheduled
-          # run rebuilds the SHA the live site already serves, and a "re-run
-          # all jobs" rebuilds it too -- either would match on attempt 1
-          # against the *old* deployment and smoke-test nothing. GITHUB_RUN_ID
-          # alone is not enough, because it is stable across re-runs.
-          WANT="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          # /build-info.json carries the id of the build that produced it.
+          # Match on that rather than the commit: a scheduled run rebuilds the
+          # SHA the live site already serves, and so does "re-run all jobs" --
+          # either would match on the first poll against the *old* deployment
+          # and smoke-test nothing.
+          #
+          # The value matched on is preserved across re-runs; the cache-buster
+          # deliberately is NOT. Pages serves build-info.json with max-age=600,
+          # so reusing $WANT alone would re-fetch the very URLs a failed
+          # attempt already cached against the old deployment, and the retry
+          # would fail for the same stale reason. $GITHUB_RUN_ATTEMPT
+          # increments per attempt, which is what makes the URLs fresh.
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            LIVE_RUN="$(curl -fsS --max-time 20 "$SITE/build-info.json?ts=$WANT-$attempt" \
+            LIVE_RUN="$(curl -fsS --max-time 20 \
+              "$SITE/build-info.json?ts=$WANT-$GITHUB_RUN_ATTEMPT-$attempt" \
               | jq -r '.run // empty' || true)"
             if [ "$LIVE_RUN" = "$WANT" ]; then
               echo "Live site is serving run $WANT ($GITHUB_SHA)."
