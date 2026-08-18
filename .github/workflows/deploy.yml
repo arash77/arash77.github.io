@@ -132,25 +132,35 @@ jobs:
           # either would match on the first poll against the *old* deployment
           # and smoke-test nothing.
           #
-          # The value matched on is preserved across re-runs; the cache-buster
-          # deliberately is NOT. Pages serves build-info.json with max-age=600,
-          # so reusing $WANT alone would re-fetch the very URLs a failed
-          # attempt already cached against the old deployment, and the retry
-          # would fail for the same stale reason. $GITHUB_RUN_ATTEMPT
-          # increments per attempt, which is what makes the URLs fresh.
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            LIVE_RUN="$(curl -fsS --max-time 20 \
-              "$SITE/build-info.json?ts=$WANT-$GITHUB_RUN_ATTEMPT-$attempt" \
+          # There is no cache-busting to be had here, despite what earlier
+          # revisions of this loop assumed. Pages serves build-info.json with
+          # max-age=600 and its CDN does not key on the query string: five
+          # distinct ?ts= values return the same object, at the same age, from
+          # five different edge nodes, and no-cache request headers are ignored
+          # too. Only a distinct *path* misses. So the poll cannot force a
+          # fresh read -- it can only outlast the TTL, which is why the window
+          # below is deliberately longer than 600s rather than the ~150s that
+          # a bustable cache would have justified. It costs nothing when the
+          # deployment lands promptly, since the loop breaks on the first match.
+          #
+          # An empty WANT would match an old build-info.json that predates the
+          # `run` key (jq prints "" for both), turning the whole job green
+          # while proving nothing -- the failure mode this job exists to resist.
+          [ -n "$WANT" ] || { echo '::error::build id never arrived from the build job'; exit 1; }
+
+          MAX_ATTEMPTS=45
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            LIVE_RUN="$(curl -fsS --max-time 20 "$SITE/build-info.json" \
               | jq -r '.run // empty' || true)"
             if [ "$LIVE_RUN" = "$WANT" ]; then
               echo "Live site is serving run $WANT ($GITHUB_SHA)."
               break
             fi
-            if [ "$attempt" = 10 ]; then
+            if [ "$attempt" = "$MAX_ATTEMPTS" ]; then
               echo "::error::$SITE never served run $WANT (last seen: ${LIVE_RUN:-no response})"
               exit 1
             fi
-            echo "attempt $attempt: serving run ${LIVE_RUN:-no response}, waiting for $WANT"
+            echo "attempt $attempt/$MAX_ATTEMPTS: serving run ${LIVE_RUN:-no response}, waiting for $WANT"
             sleep 15
           done
 
@@ -187,8 +197,14 @@ jobs:
         uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9.0.0
         with:
           script: |
+            // A scheduled rebuild deploys a commit that was already live and
+            // healthy, so the push-path advice below ("revert the offending
+            // commit") would revert an unrelated healthy change.
+            const scheduled = context.eventName === 'schedule';
             const sha = context.sha.slice(0, 7);
-            const title = `Live site smoke check failed after deploying ${sha}`;
+            const title = scheduled
+              ? 'Live site smoke check failed on a scheduled rebuild'
+              : `Live site smoke check failed after deploying ${sha}`;
             // Reuse one open issue rather than filing a new one per failed
             // deploy, so a sustained outage does not bury the inbox.
             const existing = await github.rest.issues.listForRepo({
@@ -198,13 +214,22 @@ jobs:
               labels: 'deploy-failure',
             });
             const body = [
-              `The post-deploy smoke check failed for commit ${context.sha}.`,
+              scheduled
+                ? `The nightly rebuild of ${context.sha} failed its smoke check. That commit was already live and healthy before this run.`
+                : `The post-deploy smoke check failed for commit ${context.sha}.`,
               '',
               `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
               '',
-              'Dependency updates merge themselves, so this may be an upgrade',
-              'that passed the pre-merge gate. To roll back, revert the offending',
-              'commit on `main` — the deploy workflow will republish.',
+              ...(scheduled
+                ? [
+                    'Nothing was merged, so there is no commit to revert. Look at',
+                    'Pages propagation or the GitHub search API rather than the diff.',
+                  ]
+                : [
+                    'Dependency updates merge themselves, so this may be an upgrade',
+                    'that passed the pre-merge gate. To roll back, revert the offending',
+                    'commit on `main` — the deploy workflow will republish.',
+                  ]),
             ].join('\n');
             if (existing.data.length > 0) {
               await github.rest.issues.createComment({

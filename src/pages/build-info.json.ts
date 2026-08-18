@@ -16,8 +16,9 @@ import type { APIRoute } from 'astro';
 // does not rebuild. `commit` stays for humans reading the file.
 //
 // Evaluated at build time (this is a static build, so the value is baked into
-// the emitted file and the response headers below are not served by Pages --
-// the smoke check busts caches with a query string instead).
+// the emitted file and the response headers below are not served by Pages,
+// which serves this path with max-age=600 and ignores the query string when
+// caching -- the smoke check waits that TTL out rather than busting it).
 const commit = process.env.GITHUB_SHA ?? 'unknown';
 const run = process.env.BUILD_ID ?? 'unknown';
 

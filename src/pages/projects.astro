@@ -24,8 +24,13 @@ let mergedPrCount: string = FALLBACK_PR_COUNT;
 // to a run-summary annotation. Dependency PRs automerge, and a plain build-log
 // line is invisible in that flow -- the number would silently sit at the
 // fallback forever.
+//
+// Gated on BUILD_ID rather than GITHUB_ACTIONS because test.yml and preview.yml
+// also build inside Actions, without a token, on a shared runner IP -- they are
+// the builds most likely to be rate limited and the least worth alarming about,
+// since they publish nothing. An annotation that fires routinely gets ignored.
 function warnBuild(message: string) {
-  const prefix = process.env.GITHUB_ACTIONS ? '::warning::' : '';
+  const prefix = process.env.BUILD_ID ? '::warning::' : '';
   // Leading newline is required, not cosmetic: Astro writes its route line
   // without a trailing one, so this lands mid-line and Actions only parses a
   // workflow command that starts a line -- no newline, no annotation.
@@ -58,7 +63,17 @@ if (import.meta.env.PROD) {
     }
 
     const data: unknown = await res.json();
-    const total = (data as { total_count?: unknown }).total_count;
+    const { total_count: total, incomplete_results: incomplete } = data as {
+      total_count?: unknown;
+      incomplete_results?: unknown;
+    };
+
+    // A timed-out search still returns a *numeric* total_count -- just a
+    // partial one. It would pass the type check below and render as a precise
+    // figure, which is the one outcome the rounded fallback exists to prevent.
+    if (incomplete === true) {
+      throw new Error('search returned incomplete results');
+    }
     if (typeof total !== 'number') {
       // Without this, a shape change ships the string "undefined" to the page.
       throw new Error('search returned no numeric total_count');
