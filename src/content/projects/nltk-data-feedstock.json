@@ -1,0 +1,12 @@
+{
+  "title": "Conda-Forge NLTK Distribution",
+  "description": "The contributor maintained and updated the Conda-Forge feedstock for NLTK data, successfully upgrading the repository to the latest dataset snapshot. This work involved managing recipe metadata and leveraging Conda's automated packaging infrastructure to build and verify the distribution. These updates ensure that data scientists and NLP researchers have seamless, reliable access to essential natural language processing resources.",
+  "category": "Other",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/conda-forge/nltk_data-feedstock" },
+    { "label": "PRs (1)", "url": "https://github.com/conda-forge/nltk_data-feedstock/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Conda", "Python", "NLP", "DevOps", "PackageManagement"],
+  "featured": false,
+  "order": 99
+}
