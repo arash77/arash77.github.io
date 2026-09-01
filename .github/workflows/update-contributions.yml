@@ -117,8 +117,18 @@ jobs:
       # a variable rather than a secret so it can be tested in the `if:` below
       # -- it is a public identifier, and secrets are not readable in step
       # conditions.
+      #
+      # An installation keeps the permission set it was installed with: if the
+      # App's permissions are widened afterwards, the owner must accept the
+      # upgrade at github.com/settings/installations before the token actually
+      # carries them. Skipping that step is what makes the push below 403 with
+      # "Permission to <repo> denied to <app>[bot]".
       - name: Mint a GitHub App token
         id: app_token
+        # A token that cannot push is worse than no token: without this, the
+        # run dies at `git push` with an opaque 403 and produces no PR at all.
+        # Failing here instead lets the GITHUB_TOKEN fallback below take over.
+        continue-on-error: true
         if: steps.check_changes.outputs.has_changes == 'true' && vars.PORTFOLIO_APP_CLIENT_ID != ''
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
@@ -126,12 +136,28 @@ jobs:
           # a deprecation warning for the latter).
           client-id: ${{ vars.PORTFOLIO_APP_CLIENT_ID }}
           private-key: ${{ secrets.PORTFOLIO_APP_PRIVATE_KEY }}
+          # Ask for exactly what create-pull-request needs, so a short-changed
+          # installation is rejected here with a readable message rather than
+          # silently handing back a read-only token.
+          permission-contents: write
+          permission-pull-requests: write
+
+      # `continue-on-error` turns a misconfigured App into a green run, which
+      # would hide the problem for another month. Say so loudly instead.
+      - name: Warn that the App token was unavailable
+        if: steps.app_token.outcome == 'failure'
+        run: >-
+          echo "::warning::Could not mint a GitHub App token -- check that the
+          App has Contents + Pull requests write and that the permission upgrade
+          was accepted on the installation. Falling back to GITHUB_TOKEN: the PR
+          opens without checks and needs a close/reopen to start CI."
 
       - name: Create Pull Request
         if: steps.check_changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
-          # Falls back to GITHUB_TOKEN when the App is not configured: the PR is
+          # Falls back to GITHUB_TOKEN whenever the App yields no token --
+          # unconfigured, under-permissioned, or a bad private key. The PR is
           # still created correctly, it just arrives without checks and needs a
           # close/reopen to start them.
           token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
