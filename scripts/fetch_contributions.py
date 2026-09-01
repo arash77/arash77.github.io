@@ -316,6 +316,10 @@ class ContributionsFetcher:
         self.username = username
         self.github = Github(auth=Auth.Token(token))
         self.ai_client = MultiProviderAIClient()
+        # repo full name -> full name of the upstream it was forked from, for
+        # repos encountered in group_prs_by_repo. Filled there because that is
+        # where the Repository object is already fetched.
+        self.fork_sources: Dict[str, str] = {}
 
     def fetch_recent_prs(self, days: int = 30) -> List[Dict]:
         """Fetch recently merged PRs from the past N days."""
@@ -354,11 +358,20 @@ class ContributionsFetcher:
             if repo_full_name.startswith(f"{self.username}/"):
                 continue
 
-            # Skip private repositories
+            # Skip private repositories. The Repository object fetched here
+            # also carries the fork/source fields, so record the upstream in
+            # the same call rather than paying for a second one.
             try:
-                if self.github.get_repo(repo_full_name).private:
+                repo = self.github.get_repo(repo_full_name)
+                if repo.private:
                     print(f"  Skipping private repo: {repo_full_name}")
                     continue
+                # `source` is the root of the fork chain, not the immediate
+                # parent -- a fork of a fork still resolves to the real
+                # upstream. It is None for a non-fork, and can be None on a
+                # fork whose upstream is gone.
+                if repo.fork and repo.source is not None:
+                    self.fork_sources[repo_full_name] = repo.source.full_name
             except Exception:
                 continue
 
@@ -439,6 +452,7 @@ class ContributionsFetcher:
                 "tags": ai_entry["tags"],
                 "pr_url": pr_url,
                 "pr_count": len(prs),
+                "fork_source": self.fork_sources.get(repo),
             }
 
             categorized[category].append(entry)
@@ -645,6 +659,21 @@ def update_projects_file(
             repo_short = repo_name.split("/")[-1]
             pr_url = entry["pr_url"]
             pr_count = entry.get("pr_count", 1)
+
+            # A fork of a repo that is already covered adds nothing: the
+            # upstream card represents the work, and the fork's own PRs are
+            # usually review rounds on someone else's branch. Skip it outright
+            # rather than appending a PR link -- a link to a personal fork is
+            # noise on an area card, and the upstream's PR search would not
+            # return the fork-merged PRs anyway. A fork whose upstream is *not*
+            # covered still gets its own card, so nothing is silently lost.
+            fork_source = entry.get("fork_source")
+            if fork_source and _covering_file(fork_source, category):
+                print(
+                    f"⏭️  Skipping {repo_name} - fork of {fork_source}, "
+                    "already covered"
+                )
+                continue
 
             covering = _covering_file(repo_name, category)
             if covering:
