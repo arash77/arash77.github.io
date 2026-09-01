@@ -14,6 +14,7 @@ modules failing to import at all.
 import importlib.util
 import json
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -214,3 +215,159 @@ def test_scripts_import_cleanly():
     """
     assert hasattr(contributions, "ContributionsFetcher")
     assert hasattr(publications, "main")
+
+
+class TestForkAwareCoverage:
+    """A fork of an already-covered repo must not become its own card.
+
+    The September 2026 run added a card for IvoLeist/galaxytools -- a fork of
+    bgruening/galaxytools, which galaxy-core.json already links. Coverage was
+    an exact owner/repo match, so a fork could never resolve to its upstream.
+    """
+
+    @staticmethod
+    def _covered_card(content_dir):
+        """An aggregator card linking the upstream repo, like galaxy-core.json."""
+        card = {
+            "title": "Galaxy Core",
+            "description": "Contributions to the core Galaxy platform.",
+            "category": "Galaxy Core",
+            "links": [
+                {
+                    "label": "bgruening/galaxytools PRs",
+                    "url": "https://github.com/bgruening/galaxytools/pulls?q=is%3Apr",
+                },
+                {
+                    "label": "galaxyproject/galaxy PRs",
+                    "url": "https://github.com/galaxyproject/galaxy/pulls?q=is%3Apr",
+                },
+            ],
+            "tags": ["Python"],
+            "featured": True,
+            "order": 4,
+        }
+        path = content_dir / "galaxy-core.json"
+        path.write_text(json.dumps(card, indent=2) + "\n", encoding="utf-8")
+        return path
+
+    @staticmethod
+    def _entry(repo, fork_source=None):
+        return {
+            "repo": repo,
+            "title": "Some Title",
+            "description": "Some description.",
+            "tags": ["Python"],
+            "pr_url": f"https://github.com/{repo}/pulls?q=is%3Apr",
+            "pr_count": 4,
+            "fork_source": fork_source,
+        }
+
+    def test_fork_of_covered_repo_creates_no_card(self, tmp_path):
+        card = self._covered_card(tmp_path)
+        before = card.read_text(encoding="utf-8")
+
+        contributions.update_projects_file(
+            {
+                "Galaxy Core": [
+                    self._entry(
+                        "IvoLeist/galaxytools",
+                        fork_source="bgruening/galaxytools",
+                    )
+                ]
+            },
+            content_dir=str(tmp_path),
+        )
+
+        assert not (tmp_path / "galaxytools.json").exists()
+        # Skipped outright: no PR link appended to the upstream's card either.
+        assert card.read_text(encoding="utf-8") == before
+
+    def test_fork_of_uncovered_repo_still_gets_a_card(self, tmp_path):
+        self._covered_card(tmp_path)
+
+        contributions.update_projects_file(
+            {
+                "Other": [
+                    self._entry("someone/unrelated-fork", fork_source="upstream/unrelated-fork")
+                ]
+            },
+            content_dir=str(tmp_path),
+        )
+
+        assert (tmp_path / "unrelated-fork.json").exists()
+
+    def test_non_fork_is_unaffected(self, tmp_path):
+        self._covered_card(tmp_path)
+
+        contributions.update_projects_file(
+            {"Other": [self._entry("conda-forge/nltk_data-feedstock")]},
+            content_dir=str(tmp_path),
+        )
+
+        assert (tmp_path / "nltk-data-feedstock.json").exists()
+
+
+class TestGroupPrsByRepo:
+    """group_prs_by_repo records the upstream of any fork it encounters."""
+
+    @staticmethod
+    def _fetcher(repos):
+        """A ContributionsFetcher with github/ai stubbed out (no network)."""
+        fetcher = contributions.ContributionsFetcher.__new__(
+            contributions.ContributionsFetcher
+        )
+        fetcher.username = "arash77"
+        fetcher.ai_client = None
+        fetcher.fork_sources = {}
+        fetcher.github = SimpleNamespace(get_repo=lambda name: repos[name])
+        return fetcher
+
+    @staticmethod
+    def _pr(repo):
+        return {"repository_url": f"https://api.github.com/repos/{repo}"}
+
+    def test_records_fork_source(self):
+        fetcher = self._fetcher(
+            {
+                "IvoLeist/galaxytools": SimpleNamespace(
+                    private=False,
+                    fork=True,
+                    source=SimpleNamespace(full_name="bgruening/galaxytools"),
+                )
+            }
+        )
+
+        grouped = fetcher.group_prs_by_repo([self._pr("IvoLeist/galaxytools")])
+
+        assert "IvoLeist/galaxytools" in grouped
+        assert fetcher.fork_sources == {
+            "IvoLeist/galaxytools": "bgruening/galaxytools"
+        }
+
+    def test_non_fork_records_nothing(self):
+        fetcher = self._fetcher(
+            {
+                "galaxyproject/galaxy": SimpleNamespace(
+                    private=False, fork=False, source=None
+                )
+            }
+        )
+
+        fetcher.group_prs_by_repo([self._pr("galaxyproject/galaxy")])
+
+        assert fetcher.fork_sources == {}
+
+    def test_fork_with_deleted_upstream_records_nothing(self):
+        """`source` is None when the upstream is gone -- must not crash."""
+        fetcher = self._fetcher(
+            {
+                "someone/orphan": SimpleNamespace(
+                    private=False, fork=True, source=None
+                )
+            }
+        )
+
+        grouped = fetcher.group_prs_by_repo([self._pr("someone/orphan")])
+
+        assert "someone/orphan" in grouped
+        assert fetcher.fork_sources == {}
