@@ -214,3 +214,56 @@ def test_scripts_import_cleanly():
     """
     assert hasattr(contributions, "ContributionsFetcher")
     assert hasattr(publications, "main")
+
+
+class TestUnservedModelWarning:
+    """AI_MODELS entries no provider serves must be called out at startup.
+
+    The 2026-09 run had `gemini-3.7-flash` and `gemini-3.6-flash` at the top of
+    AI_MODELS while AI_PROVIDERS listed neither, so the stated first choice was
+    silently demoted and every card came from the third model down.
+    """
+
+    PROVIDERS = json.dumps(
+        [
+            {
+                "name": "Gemini",
+                "base_url": "https://example.invalid/v1/",
+                "token_env": "GEMINI_TOKEN",
+                "models": ["gemini-3.5-flash"],
+            }
+        ]
+    )
+
+    def _client(self, monkeypatch, models, actions=False):
+        monkeypatch.setenv("AI_PROVIDERS", self.PROVIDERS)
+        monkeypatch.setenv("AI_MODELS", models)
+        monkeypatch.setenv("GITHUB_ACTIONS", "true" if actions else "")
+        return contributions.MultiProviderAIClient()
+
+    def test_names_every_unserved_model(self, monkeypatch, capsys):
+        self._client(monkeypatch, "gemini-3.7-flash\ngemini-3.6-flash\ngemini-3.5-flash")
+
+        out = capsys.readouterr().out
+        assert "WARNING" in out
+        assert "gemini-3.7-flash" in out and "gemini-3.6-flash" in out
+        assert "2 of 3" in out
+        # The served model must not be reported as missing.
+        assert out.count("gemini-3.5-flash") == 0
+
+    def test_silent_when_every_model_is_served(self, monkeypatch, capsys):
+        self._client(monkeypatch, "gemini-3.5-flash")
+
+        assert capsys.readouterr().out == ""
+
+    def test_emits_an_annotation_under_actions(self, monkeypatch, capsys):
+        self._client(monkeypatch, "gemini-3.7-flash", actions=True)
+
+        assert "::warning::" in capsys.readouterr().out
+
+    def test_no_annotation_outside_actions(self, monkeypatch, capsys):
+        self._client(monkeypatch, "gemini-3.7-flash")
+
+        out = capsys.readouterr().out
+        assert "WARNING" in out
+        assert "::warning::" not in out

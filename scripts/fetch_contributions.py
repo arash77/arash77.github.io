@@ -146,6 +146,32 @@ class MultiProviderAIClient:
         self.models = _load_models()
         # Cache one OpenAI client per provider name (keyed on base_url+token).
         self._clients: Dict[str, OpenAI] = {}
+        self._warn_unserved_models()
+
+    def _warn_unserved_models(self) -> None:
+        """Warn once about AI_MODELS entries that no provider serves.
+
+        The cascade skips such a model and moves on, so a stale AI_PROVIDERS
+        silently demotes the intended first choice rather than failing. In the
+        2026-09 run the two highest-priority models were both unserved and
+        every card was written by the third; `_complete` did say so, but once
+        per model *per repo*, buried mid-log, and it never reads as a config
+        error. Say it once, up front, and as a real annotation under Actions so
+        it lands on the run summary instead of line 400 of the log.
+        """
+        served = {m for p in self.providers for m in p.get("models", [])}
+        unserved = [m for m in self.models if m not in served]
+        if not unserved:
+            return
+        joined = ", ".join(unserved)
+        message = (
+            f"{len(unserved)} of {len(self.models)} AI_MODELS entries are "
+            f"served by no AI_PROVIDERS entry and will be skipped: {joined}"
+        )
+        print(f"  WARNING: {message}")
+        # Annotation only under Actions -- locally it is just noise.
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            print(f"::warning::{message}")
 
     def _client_for(self, provider_cfg: Dict) -> OpenAI:
         key = provider_cfg["name"]
