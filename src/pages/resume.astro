@@ -140,10 +140,10 @@ function formatContributors(contributors: string[]) {
               <Briefcase className="h-4 w-4" aria-hidden="true" />
               Experience
             </h2>
-            <div class="space-y-6 border-l border-border pl-5">
+            <div class="space-y-6 border-l border-primary/30 pl-5">
               {experiences.map((exp) => (
                 <article class="relative pl-6">
-                  <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-primary bg-card" aria-hidden="true" />
+                  <div class="absolute -left-[28px] top-1 w-4 h-4 rounded-full border-2 border-primary bg-card" aria-hidden="true" />
                   <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
                     <div>
                       <h3 class="font-semibold">{exp.role}</h3>
@@ -172,10 +172,10 @@ function formatContributors(contributors: string[]) {
               <GraduationCap className="h-4 w-4" aria-hidden="true" />
               Education
             </h2>
-            <div class="space-y-6 border-l border-border pl-5">
+            <div class="space-y-6 border-l border-primary/30 pl-5">
               {education.map((edu) => (
                 <article class="relative pl-6">
-                  <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-primary bg-card" aria-hidden="true" />
+                  <div class="absolute -left-[28px] top-1 w-4 h-4 rounded-full border-2 border-primary bg-card" aria-hidden="true" />
                   <div class="flex items-start justify-between gap-2 mb-1">
                     <div class="min-w-0">
                       <h3 class="font-semibold">{edu.degree} — {edu.field}</h3>
