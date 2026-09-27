@@ -1,0 +1,12 @@
+{
+  "title": "NLTK Data – Conda Feedstock",
+  "description": "Updated the conda-forge feedstock for NLTK data to the 2026.07.01 corpus snapshot, keeping the packaged datasets current for Conda users.",
+  "category": "Python Libraries",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/conda-forge/nltk_data-feedstock" },
+    { "label": "PRs (1)", "url": "https://github.com/conda-forge/nltk_data-feedstock/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Python", "Conda", "NLP", "Packaging"],
+  "featured": false,
+  "order": 11
+}

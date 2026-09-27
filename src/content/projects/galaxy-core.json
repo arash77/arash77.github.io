@@ -6,7 +6,8 @@
     { "label": "galaxyproject/galaxy PRs", "url": "https://github.com/galaxyproject/galaxy/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" },
     { "label": "bgruening/galaxytools PRs", "url": "https://github.com/bgruening/galaxytools/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" },
     { "label": "galaxyproject/planemo PRs", "url": "https://github.com/galaxyproject/planemo/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" },
-    { "label": "galaxyproject/galaxy-hub PRs", "url": "https://github.com/galaxyproject/galaxy-hub/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+    { "label": "galaxyproject/galaxy-hub PRs", "url": "https://github.com/galaxyproject/galaxy-hub/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" },
+    { "label": "galaxyproject/tools-iuc PRs", "url": "https://github.com/galaxyproject/tools-iuc/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
   ],
   "tags": ["Python", "Galaxy", "CI/CD", "Bioinformatics"],
   "featured": true,
