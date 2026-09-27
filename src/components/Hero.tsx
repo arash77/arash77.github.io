@@ -20,7 +20,7 @@ export default function Hero() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     gsap.set(imageRef.current, { scale: 0.8 });
-    gsap.set([tagsRef.current], { y: 15 });
+    gsap.set(tagsRef.current, { y: 15 });
     gsap.set(nameRef.current, { y: 30 });
     gsap.set([subtitleRef.current, ctaRef.current], { y: 20 });
 

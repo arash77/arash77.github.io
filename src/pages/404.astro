@@ -1,5 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { buttonVariants } from '../components/ui/button';
+import { cn } from '@/lib/utils';
+
+const homeLink = cn(buttonVariants({ variant: 'default', size: 'lg' }), 'active:scale-[0.98]');
+const projectsLink = cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'active:scale-[0.98]');
 ---
 
 <Layout title="Page not found – Arash Kadkhodaei" description="This page does not exist.">
@@ -11,10 +16,10 @@ import Layout from '../layouts/Layout.astro';
         The page you are looking for does not exist or has moved.
       </p>
       <div class="flex flex-wrap justify-center gap-4">
-        <a href="/" class="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-11 px-8 text-sm font-medium hover:bg-primary/90 transition-colors">
+        <a href="/" class={homeLink}>
           Back to home
         </a>
-        <a href="/projects" class="inline-flex items-center justify-center rounded-md border border-input bg-background h-11 px-8 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
+        <a href="/projects" class={projectsLink}>
           View projects
         </a>
       </div>

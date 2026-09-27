@@ -171,7 +171,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
               {featuredFiltered.map((project) => (
                 <article
                   key={project.id}
-                  className="gsap-reveal project-card rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover:shadow-tinted transition-[border-color,box-shadow] duration-150"
+                  className="gsap-reveal project-card rounded-xl border border-border bg-card p-6 card-hover hover:shadow-tinted"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                     <span
@@ -212,7 +212,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
           </div>
         )}
 
-        {/* Regular tier — compact 3-column grid */}
+        {/* Regular tier — compact 2-column grid */}
         {regularFiltered.length > 0 && (
           <div>
             {featuredFiltered.length > 0 && (
@@ -224,7 +224,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
               {regularFiltered.map((project) => (
                 <article
                   key={project.id}
-                  className="gsap-reveal project-card flex flex-col rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-tinted transition-[border-color,box-shadow] duration-150"
+                  className="gsap-reveal project-card flex flex-col rounded-xl border border-border bg-card p-5 card-hover hover:shadow-tinted"
                 >
                   <div className="mb-2">
                     <span

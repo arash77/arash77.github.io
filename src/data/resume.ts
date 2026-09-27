@@ -108,7 +108,7 @@ export const education: EducationItem[] = [
 
 export interface SkillCategory {
   title: string;
-  color: 'default' | 'secondary' | 'amber' | 'rose' | 'indigo' | 'violet';
+  color: 'default' | 'secondary' | 'amber' | 'rose' | 'sky';
   skills: string[];
 }
 
@@ -135,7 +135,7 @@ export const skillCategories: SkillCategory[] = [
   },
   {
     title: 'Testing & Tooling',
-    color: 'secondary',
+    color: 'sky',
     skills: ['PyTest', 'Playwright', 'Selenium', 'MyPy', 'Git'],
   },
   {

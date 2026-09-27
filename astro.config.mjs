@@ -11,7 +11,7 @@ export default defineConfig({
   fonts: [
     {
       name: 'Geist',
-      cssVariable: '--font-inter',
+      cssVariable: '--font-geist',
       provider: fontProviders.fontsource(),
       weights: [400, 500, 600, 700, 800],
     },

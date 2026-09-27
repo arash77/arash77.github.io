@@ -48,20 +48,18 @@
   --color-amber: hsl(var(--amber));
   --color-amber-foreground: hsl(var(--amber-foreground));
 
-  --color-indigo: hsl(var(--indigo));
-  --color-indigo-foreground: hsl(var(--indigo-foreground));
 
   --color-rose: hsl(var(--rose));
   --color-rose-foreground: hsl(var(--rose-foreground));
+  --color-sky: hsl(var(--sky));
+  --color-sky-foreground: hsl(var(--sky-foreground));
 
-  --color-violet: hsl(var(--violet));
-  --color-violet-foreground: hsl(var(--violet-foreground));
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  --font-sans: var(--font-inter, system-ui), system-ui, sans-serif;
+  --font-sans: var(--font-geist, system-ui), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono, Fira Code), Fira Code, monospace;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
@@ -194,12 +192,10 @@
     --secondary-foreground: 186 40% 98%;
     --amber: 35 80% 35%;
     --amber-foreground: 40 40% 98%;
-    --indigo: 199 70% 34%;
-    --indigo-foreground: 199 40% 98%;
     --rose: 350 65% 40%;
     --rose-foreground: 350 40% 98%;
-    --violet: 174 62% 30%;
-    --violet-foreground: 174 40% 98%;
+    --sky: 199 80% 30%;
+    --sky-foreground: 199 40% 98%;
     --muted: 186 25% 88%;
     --muted-foreground: 186 22% 28%;
     --accent: 186 25% 88%;
@@ -225,12 +221,10 @@
     --secondary-foreground: 186 65% 8%;
     --amber: 35 75% 55%;
     --amber-foreground: 35 65% 8%;
-    --indigo: 199 70% 62%;
-    --indigo-foreground: 199 65% 8%;
     --rose: 350 60% 62%;
     --rose-foreground: 350 65% 8%;
-    --violet: 174 55% 58%;
-    --violet-foreground: 174 65% 8%;
+    --sky: 199 75% 62%;
+    --sky-foreground: 199 65% 8%;
     --muted: 186 38% 14%;
     --muted-foreground: 186 16% 72%;
     --accent: 186 38% 14%;
@@ -258,18 +252,40 @@
   }
 }
 
-/* Tinted shadows — carry the page hue instead of neutral black */
-.shadow-tinted {
-  box-shadow: 0 1px 2px hsla(186, 50%, 20%, 0.06), 0 4px 12px hsla(186, 50%, 20%, 0.08);
+/* Tinted shadows — carry the page hue instead of neutral black.
+   Registered as a Tailwind v4 utility so it lands in @layer utilities and
+   composes with ring-* (var(--tw-ring-shadow)) like core shadow utilities;
+   hover:/dark: variants are generated automatically. */
+@utility shadow-tinted {
+  box-shadow:
+    0 1px 2px hsla(186, 50%, 20%, var(--tinted-a1, 0.06)),
+    0 4px 12px hsla(186, 50%, 20%, var(--tinted-a2, 0.08)),
+    var(--tw-ring-shadow, 0 0 #0000);
 }
-.hover\:shadow-tinted:hover {
-  box-shadow: 0 2px 4px hsla(186, 50%, 20%, 0.08), 0 8px 24px hsla(186, 50%, 20%, 0.12);
+.dark {
+  --tinted-a1: 0.5;
+  --tinted-a2: 0.4;
 }
-.dark .shadow-tinted {
-  box-shadow: 0 1px 2px hsla(186, 80%, 3%, 0.5), 0 4px 12px hsla(186, 80%, 3%, 0.4);
+@utility hover-shadow-tinted {
+  &:hover {
+    box-shadow:
+      0 2px 4px hsla(186, 50%, 20%, var(--tinted-b1, 0.08)),
+      0 8px 24px hsla(186, 50%, 20%, var(--tinted-b2, 0.12)),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
 }
-.dark .hover\:shadow-tinted:hover {
-  box-shadow: 0 2px 4px hsla(186, 80%, 3%, 0.55), 0 8px 24px hsla(186, 80%, 3%, 0.45);
+.dark {
+  --tinted-b1: 0.55;
+  --tinted-b2: 0.45;
+}
+
+/* Shared card hover recipe — one source of truth for project/skill/contact cards */
+@utility card-hover {
+  transition-property: border-color, box-shadow;
+  transition-duration: 150ms;
+  &:hover {
+    border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+  }
 }
 
 /* Custom scrollbar */
@@ -338,10 +354,16 @@
   /* Deterministic end-state for ambient blobs: freeze them instead of letting
      the 0.01ms "reduced" duration replay the full 12s keyframe path, whose
      position at capture time depends on when the screenshot happens to run. */
-  .animate-blob-drift-1,
-  .animate-blob-drift-2,
-  .animate-blob-drift-3 {
+  .animate-blob-drift-1 {
     animation: none !important;
     transform: translate(-50%, -50%) !important;
+  }
+  .animate-blob-drift-2 {
+    animation: none !important;
+    transform: translate(50%, 50%) !important;
+  }
+  .animate-blob-drift-3 {
+    animation: none !important;
+    transform: translate(-50%, 0%) !important;
   }
 }
