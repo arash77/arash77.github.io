@@ -44,12 +44,12 @@ const CATEGORIES: ProjectCategory[] = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Bioinformatics: 'bg-teal-500/10 text-teal-800 dark:text-teal-300 border-teal-500/20',
-  'Galaxy Core': 'bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 border-cyan-500/20',
-  'Galaxy Training': 'bg-sky-500/10 text-sky-800 dark:text-sky-300 border-sky-500/20',
-  'UseGalaxy.eu': 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20',
+  Bioinformatics: 'bg-teal-500/10 text-teal-900 dark:text-teal-300 border-teal-500/20',
+  'Galaxy Core': 'bg-cyan-500/10 text-cyan-900 dark:text-cyan-300 border-cyan-500/20',
+  'Galaxy Training': 'bg-sky-500/10 text-sky-900 dark:text-sky-300 border-sky-500/20',
+  'UseGalaxy.eu': 'bg-emerald-500/10 text-emerald-900 dark:text-emerald-300 border-emerald-500/20',
   'Python Projects': 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20',
-  'Python Libraries': 'bg-green-500/10 text-green-800 dark:text-green-300 border-green-500/20',
+  'Python Libraries': 'bg-green-500/10 text-green-900 dark:text-green-300 border-green-500/20',
   Crypto: 'bg-orange-500/10 text-orange-800 dark:text-orange-300 border-orange-500/20',
 };
 

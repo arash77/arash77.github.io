@@ -48,12 +48,10 @@
   --color-amber: hsl(var(--amber));
   --color-amber-foreground: hsl(var(--amber-foreground));
 
-
   --color-rose: hsl(var(--rose));
   --color-rose-foreground: hsl(var(--rose-foreground));
   --color-sky: hsl(var(--sky));
   --color-sky-foreground: hsl(var(--sky-foreground));
-
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
