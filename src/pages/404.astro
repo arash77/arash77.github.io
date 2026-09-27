@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Page not found – Arash Kadkhodaei" description="This page does not exist.">
+  <section class="min-h-dvh flex items-center justify-center py-24">
+    <div class="container mx-auto px-4 max-w-3xl text-center">
+      <p class="font-mono text-secondary mb-4">404</p>
+      <h1 class="text-4xl font-bold mb-4">Page not found</h1>
+      <p class="text-muted-foreground text-lg mb-8">
+        The page you are looking for does not exist or has moved.
+      </p>
+      <div class="flex flex-wrap justify-center gap-4">
+        <a href="/" class="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-11 px-8 text-sm font-medium hover:bg-primary/90 transition-colors">
+          Back to home
+        </a>
+        <a href="/projects" class="inline-flex items-center justify-center rounded-md border border-input bg-background h-11 px-8 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
+          View projects
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

@@ -14,21 +14,19 @@ export default function Hero() {
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
-  const helloRef = useRef<HTMLParagraphElement>(null);
   const tagsRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     gsap.set(imageRef.current, { scale: 0.8 });
-    gsap.set([helloRef.current, tagsRef.current], { y: 15 });
+    gsap.set([tagsRef.current], { y: 15 });
     gsap.set(nameRef.current, { y: 30 });
     gsap.set([subtitleRef.current, ctaRef.current], { y: 20 });
 
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
     tl.to(imageRef.current, { opacity: 1, visibility: 'inherit', scale: 1, duration: 0.8 })
-      .to(helloRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.4')
       .to(nameRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.7 }, '-=0.4')
       .to(subtitleRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.6 }, '-=0.3')
       .to(tagsRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.2')
@@ -38,7 +36,7 @@ export default function Hero() {
   return (
     <section
       ref={containerRef}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-mesh pt-16"
+      className="relative min-h-dvh flex items-center justify-center overflow-hidden gradient-mesh pt-16"
     >
       {/* Decorative blobs */}
       <div
@@ -59,7 +57,7 @@ export default function Hero() {
           {/* Profile image */}
           <div ref={imageRef} className="gsap-reveal relative shrink-0">
             <div className="relative">
-              <div className="relative rounded-full border-4 border-background shadow-xl ring-1 ring-border/50 w-44 h-44 lg:w-56 lg:h-56 overflow-hidden">
+              <div className="relative rounded-full border-4 border-background shadow-tinted ring-1 ring-border/50 w-44 h-44 lg:w-56 lg:h-56 overflow-hidden">
                 <img
                   src={SITE.avatar}
                   alt={SITE.name}
@@ -75,14 +73,11 @@ export default function Hero() {
 
           {/* Text content */}
           <div className="flex-1 text-center lg:text-left">
-            <p ref={helloRef} className="gsap-reveal text-sm font-mono text-secondary mb-3 tracking-widest uppercase">
-              Hello, I'm
-            </p>
             <h1
               ref={nameRef}
               className="gsap-reveal text-5xl lg:text-7xl font-bold tracking-tight mb-4"
             >
-              Arash <span className="bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">Kadkhodaei</span>
+              Arash <span className="text-secondary">Kadkhodaei</span>
             </h1>
             <p
               ref={subtitleRef}
@@ -136,7 +131,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll hint */}
-      <div className="absolute bottom-8 inset-x-0 hidden [@media(min-width:640px)_and_(min-height:44rem)]:flex flex-col items-center gap-2 text-muted-foreground animate-bounce">
+      <div className="absolute bottom-8 inset-x-0 hidden [@media(min-width:640px)_and_(min-height:44rem)]:flex flex-col items-center gap-2 text-muted-foreground animate-fade-in">
         <span className="text-xs font-mono">scroll</span>
         <div className="w-px h-8 bg-linear-to-b from-muted-foreground to-transparent" />
       </div>

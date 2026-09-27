@@ -135,12 +135,12 @@ export const skillCategories: SkillCategory[] = [
   },
   {
     title: 'Testing & Tooling',
-    color: 'indigo',
+    color: 'secondary',
     skills: ['PyTest', 'Playwright', 'Selenium', 'MyPy', 'Git'],
   },
   {
     title: 'Core Domains',
-    color: 'violet',
+    color: 'amber',
     skills: ['IoT & Embedded Systems', 'Bioinformatics', 'Image Processing'],
   },
 ];

@@ -44,11 +44,11 @@ const CATEGORIES: ProjectCategory[] = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Bioinformatics: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
-  'Galaxy Core': 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20',
-  'Galaxy Training': 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
-  'UseGalaxy.eu': 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20',
-  'Python Projects': 'bg-yellow-500/10 text-yellow-800 dark:text-yellow-300 border-yellow-500/20',
+  Bioinformatics: 'bg-teal-500/10 text-teal-800 dark:text-teal-300 border-teal-500/20',
+  'Galaxy Core': 'bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 border-cyan-500/20',
+  'Galaxy Training': 'bg-sky-500/10 text-sky-800 dark:text-sky-300 border-sky-500/20',
+  'UseGalaxy.eu': 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20',
+  'Python Projects': 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20',
   'Python Libraries': 'bg-green-500/10 text-green-800 dark:text-green-300 border-green-500/20',
   Crypto: 'bg-orange-500/10 text-orange-800 dark:text-orange-300 border-orange-500/20',
 };
@@ -171,7 +171,7 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
               {featuredFiltered.map((project) => (
                 <article
                   key={project.id}
-                  className="gsap-reveal project-card rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150"
+                  className="gsap-reveal project-card rounded-xl border border-border bg-card p-6 hover:border-primary/30 hover:shadow-tinted transition-[border-color,box-shadow] duration-150"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                     <span
@@ -220,11 +220,11 @@ export default function ProjectsGrid({ projects }: ProjectsGridProps) {
                 Other Contributions
               </p>
             )}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4">
               {regularFiltered.map((project) => (
                 <article
                   key={project.id}
-                  className="gsap-reveal project-card flex flex-col rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150"
+                  className="gsap-reveal project-card flex flex-col rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:shadow-tinted transition-[border-color,box-shadow] duration-150"
                 >
                   <div className="mb-2">
                     <span

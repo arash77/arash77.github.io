@@ -35,9 +35,6 @@ export default function Experience() {
     <section id="experience" ref={sectionRef} className="py-12 bg-muted/30">
       <div className="container mx-auto px-4 max-w-5xl">
         <div ref={headingRef} className="gsap-reveal text-center mb-8">
-          <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
-            My journey
-          </p>
           <h2 className="text-4xl font-bold mb-4">Experience</h2>
           <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
@@ -71,7 +68,7 @@ export default function Experience() {
                       <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
                       <time dateTime={exp.dateStart}>{exp.period}</time>
                       {exp.current && (
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse ml-1" />
+                        <span className="w-2 h-2 rounded-full bg-green-500 ml-1" aria-hidden="true" />
                       )}
                     </div>
                   </div>

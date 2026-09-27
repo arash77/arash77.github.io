@@ -194,12 +194,12 @@
     --secondary-foreground: 186 40% 98%;
     --amber: 35 80% 35%;
     --amber-foreground: 40 40% 98%;
-    --indigo: 230 55% 42%;
-    --indigo-foreground: 230 40% 98%;
+    --indigo: 199 70% 34%;
+    --indigo-foreground: 199 40% 98%;
     --rose: 350 65% 40%;
     --rose-foreground: 350 40% 98%;
-    --violet: 265 50% 45%;
-    --violet-foreground: 265 40% 98%;
+    --violet: 174 62% 30%;
+    --violet-foreground: 174 40% 98%;
     --muted: 186 25% 88%;
     --muted-foreground: 186 22% 28%;
     --accent: 186 25% 88%;
@@ -225,12 +225,12 @@
     --secondary-foreground: 186 65% 8%;
     --amber: 35 75% 55%;
     --amber-foreground: 35 65% 8%;
-    --indigo: 230 55% 65%;
-    --indigo-foreground: 230 65% 8%;
+    --indigo: 199 70% 62%;
+    --indigo-foreground: 199 65% 8%;
     --rose: 350 60% 62%;
     --rose-foreground: 350 65% 8%;
-    --violet: 265 55% 68%;
-    --violet-foreground: 265 65% 8%;
+    --violet: 174 55% 58%;
+    --violet-foreground: 174 65% 8%;
     --muted: 186 38% 14%;
     --muted-foreground: 186 16% 72%;
     --accent: 186 38% 14%;
@@ -256,6 +256,20 @@
     @apply bg-background text-foreground font-sans;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+}
+
+/* Tinted shadows — carry the page hue instead of neutral black */
+.shadow-tinted {
+  box-shadow: 0 1px 2px hsla(186, 50%, 20%, 0.06), 0 4px 12px hsla(186, 50%, 20%, 0.08);
+}
+.hover\:shadow-tinted:hover {
+  box-shadow: 0 2px 4px hsla(186, 50%, 20%, 0.08), 0 8px 24px hsla(186, 50%, 20%, 0.12);
+}
+.dark .shadow-tinted {
+  box-shadow: 0 1px 2px hsla(186, 80%, 3%, 0.5), 0 4px 12px hsla(186, 80%, 3%, 0.4);
+}
+.dark .hover\:shadow-tinted:hover {
+  box-shadow: 0 2px 4px hsla(186, 80%, 3%, 0.55), 0 8px 24px hsla(186, 80%, 3%, 0.45);
 }
 
 /* Custom scrollbar */
@@ -320,5 +334,14 @@
   .gsap-reveal {
     opacity: 1 !important;
     visibility: visible !important;
+  }
+  /* Deterministic end-state for ambient blobs: freeze them instead of letting
+     the 0.01ms "reduced" duration replay the full 12s keyframe path, whose
+     position at capture time depends on when the screenshot happens to run. */
+  .animate-blob-drift-1,
+  .animate-blob-drift-2,
+  .animate-blob-drift-3 {
+    animation: none !important;
+    transform: translate(-50%, -50%) !important;
   }
 }

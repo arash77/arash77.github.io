@@ -140,7 +140,7 @@ function formatContributors(contributors: string[]) {
               <Briefcase className="h-4 w-4" aria-hidden="true" />
               Experience
             </h2>
-            <div class="space-y-6 border-l-2 border-border">
+            <div class="space-y-6 border-l border-border pl-5">
               {experiences.map((exp) => (
                 <article class="relative pl-6">
                   <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-primary bg-card" aria-hidden="true" />
@@ -151,7 +151,7 @@ function formatContributors(contributors: string[]) {
                     </div>
                     <div class="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted rounded-full px-2.5 py-1 whitespace-nowrap font-mono">
                       <time datetime={exp.dateStart}>{exp.period}</time>
-                      {exp.current && <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" aria-hidden="true" />}
+                      {exp.current && <span class="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />}
                     </div>
                   </div>
                   <ul class="space-y-1">
@@ -172,7 +172,7 @@ function formatContributors(contributors: string[]) {
               <GraduationCap className="h-4 w-4" aria-hidden="true" />
               Education
             </h2>
-            <div class="space-y-6 border-l-2 border-border">
+            <div class="space-y-6 border-l border-border pl-5">
               {education.map((edu) => (
                 <article class="relative pl-6">
                   <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-primary bg-card" aria-hidden="true" />
