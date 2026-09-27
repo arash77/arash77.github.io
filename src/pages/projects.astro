@@ -11,9 +11,31 @@ const projects = projectEntries
   }))
   .sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 
-// C10: fetch merged PR count at build time. Falls back to '380+' on any failure.
-const FALLBACK_PR_COUNT = '380+';
+// C10: fetch merged PR count at build time. Falls back to '480+' on any failure.
+//
+// The fallback is a rounded floor rather than a precise figure on purpose: it
+// renders whenever the API call fails, and a stale precise number would be
+// visibly *wrong* rather than merely out of date. Raise it when it is no longer
+// a floor -- the real count is checkable at the search URL below.
+const FALLBACK_PR_COUNT = '480+';
 let mergedPrCount: string = FALLBACK_PR_COUNT;
+
+// Astro builds inside the Actions step, so a `::warning::` prefix promotes this
+// to a run-summary annotation. Dependency PRs automerge, and a plain build-log
+// line is invisible in that flow -- the number would silently sit at the
+// fallback forever.
+//
+// Gated on BUILD_ID rather than GITHUB_ACTIONS because test.yml and preview.yml
+// also build inside Actions, without a token, on a shared runner IP -- they are
+// the builds most likely to be rate limited and the least worth alarming about,
+// since they publish nothing. An annotation that fires routinely gets ignored.
+function warnBuild(message: string) {
+  const prefix = process.env.BUILD_ID ? '::warning::' : '';
+  // Leading newline is required, not cosmetic: Astro writes its route line
+  // without a trailing one, so this lands mid-line and Actions only parses a
+  // workflow command that starts a line -- no newline, no annotation.
+  console.log(`\n${prefix}[projects.astro] ${message}`);
+}
 
 if (import.meta.env.PROD) {
   try {
@@ -24,17 +46,43 @@ if (import.meta.env.PROD) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 
+    // `is:public` is load-bearing, not decorative: issue search returns what
+    // the caller can see, so an authenticated request would otherwise fold in
+    // merged PRs from private repos and publish them as a public figure.
     const res = await fetch(
-      'https://api.github.com/search/issues?q=author%3Aarash77+type%3Apr+is%3Amerged&per_page=1',
+      'https://api.github.com/search/issues?q=author%3Aarash77+type%3Apr+is%3Amerged+is%3Apublic&per_page=1',
       { headers }
     );
 
-    if (res.ok) {
-      const data: { total_count: number } = await res.json();
-      mergedPrCount = String(data.total_count);
+    // Throw rather than branch, so every failure reports through one site.
+    if (!res.ok) {
+      // statusText is empty over HTTP/2, which api.github.com speaks; the
+      // rate-limit header is what separates a throttled 403 from a denied one.
+      const remaining = res.headers.get('x-ratelimit-remaining') ?? 'unknown';
+      throw new Error(`search returned ${res.status} (rate-limit remaining: ${remaining})`);
     }
-  } catch {
-    // network or parse failure — use fallback
+
+    const data: unknown = await res.json();
+    const { total_count: total, incomplete_results: incomplete } = data as {
+      total_count?: unknown;
+      incomplete_results?: unknown;
+    };
+
+    // A timed-out search still returns a *numeric* total_count -- just a
+    // partial one. It would pass the type check below and render as a precise
+    // figure, which is the one outcome the rounded fallback exists to prevent.
+    if (incomplete === true) {
+      throw new Error('search returned incomplete results');
+    }
+    if (typeof total !== 'number') {
+      // Without this, a shape change ships the string "undefined" to the page.
+      throw new Error('search returned no numeric total_count');
+    }
+    mergedPrCount = String(total);
+  } catch (err) {
+    warnBuild(
+      `GitHub PR count unavailable (${err instanceof Error ? err.message : String(err)}); using fallback ${FALLBACK_PR_COUNT}.`
+    );
   }
 } else {
   console.warn('[projects.astro] Skipping GitHub PR fetch in non-prod environment.');
