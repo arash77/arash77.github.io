@@ -9,6 +9,14 @@ for (const path of PAGES) {
   });
 }
 
+// Cloudflare Pages treats a build without a top-level 404.html as a
+// single-page app and answers every unknown URL with the homepage and a 200.
+test('unknown paths get the 404 page with status 404', async ({ page }) => {
+  const response = await page.goto('/this-page-does-not-exist');
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+});
+
 test('nav links navigate correctly', async ({ page }) => {
   await page.goto('/');
 
