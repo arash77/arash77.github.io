@@ -85,6 +85,16 @@ jobs:
         with:
           path: dist/
 
+      # The Pages artifact is a tarball shaped for deploy-pages; a plain copy
+      # of the same build is what `deploy-cloudflare` publishes.
+      - name: Upload build for Cloudflare Pages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -100,13 +110,77 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
 
+  deploy-cloudflare:
+    # Publishes the same build to the Cloudflare Pages project `kadkhodaei`
+    # while the domain moves off GitHub Pages: once the apex is proxied through
+    # Cloudflare (for HTTP/3), GitHub stops renewing its certificate. Until DNS
+    # points at the project, this deployment is only reachable at
+    # kadkhodaei.pages.dev.
+    needs: build
+    # `--branch=main` below publishes to production, so a manual dispatch from
+    # any other ref must not reach it.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # package.json only, and nothing installed: this job holds the Cloudflare
+      # token, so no dependency's install-time code may run next to it.
+      - name: Check out package.json
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      # Without an installed wrangler the action falls back to its built-in
+      # default (3.90.0 at the pinned commit). Reading the version keeps this
+      # on the one Renovate maintains, same as the preview workflow gets.
+      - name: Read the pinned wrangler version
+        id: wrangler
+        run: |
+          set -euo pipefail
+          VERSION="$(jq -r '.devDependencies.wrangler // empty' package.json)"
+          [ -n "$VERSION" ] || { echo '::error::no wrangler devDependency in package.json'; exit 1; }
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download the build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist/
+
+      # Without a top-level 404.html, Pages treats the upload as a single-page
+      # app and answers every unknown URL with the homepage and a 200, so dead
+      # links would stop being 404s. GitHub Pages never did this, which is why
+      # nothing else in the pipeline asserts it.
+      - name: Require a 404 page
+        run: |
+          test -f dist/404.html \
+            || { echo '::error::dist/404.html is missing; Cloudflare Pages would serve the homepage for every unknown URL'; exit 1; }
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: ${{ steps.wrangler.outputs.version }}
+          command: pages deploy dist/ --project-name=kadkhodaei --branch=main
+
   smoke:
     # Last line of defence. Dependency updates merge themselves once the
     # pre-merge gate is green, so this is what catches anything the gate does
     # not assert -- a broken asset path, a CDN-level failure, a build that
     # succeeds but produces a dead site.
     name: Post-deploy smoke check
-    needs: [build, deploy]
+    needs: [build, deploy, deploy-cloudflare]
+    # While both hosts receive every build, check the live site if either one
+    # published it. Before the DNS move kadkhodaei.de is GitHub Pages, so a
+    # Cloudflare failure must not skip the check; after it, the reverse.
+    if: >-
+      !cancelled() && needs.build.result == 'success'
+      && (needs.deploy.result == 'success' || needs.deploy-cloudflare.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -190,7 +264,16 @@ jobs:
           curl -fsS --max-time 20 "$CSS_URL" -o /dev/null \
             || { echo "::error::stylesheet $CSS_URL is not fetchable"; exit 1; }
 
-          echo "Live site OK: title present, content matches, CSS at $CSS_PATH loads."
+          # Unknown paths must stay 404s. Cloudflare Pages answers them with the
+          # homepage and a 200 when the build has no 404.html; deploy-cloudflare
+          # refuses such a build, and this catches it on the live domain if that
+          # guard ever goes. A fresh path per run, so no cached answer is read.
+          MISSING="$SITE/smoke-check-missing-$WANT"
+          STATUS="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$MISSING")"
+          [ "$STATUS" = 404 ] \
+            || { echo "::error::$MISSING returned $STATUS, expected 404"; exit 1; }
+
+          echo "Live site OK: title present, content matches, CSS at $CSS_PATH loads, unknown paths 404."
 
       - name: Open an issue if the live site is broken
         if: failure()
