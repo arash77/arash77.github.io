@@ -38,8 +38,11 @@ jobs:
       - name: Build Astro site
         run: pnpm build
         env:
-          SITE: https://pr-${{ github.event.pull_request.number }}.kadkhodaei-preview.pages.dev
+          SITE: https://pr-${{ github.event.pull_request.number }}.kadkhodaei.pages.dev
 
+      # Previews live in the production project `kadkhodaei` as `pr-N` branches:
+      # only `main` is its production branch, so these never replace the live
+      # site, and Pages marks them noindex.
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
@@ -48,7 +51,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           packageManager: pnpm
-          command: pages deploy dist/ --project-name=kadkhodaei-preview --branch=pr-${{ github.event.pull_request.number }}
+          command: pages deploy dist/ --project-name=kadkhodaei --branch=pr-${{ github.event.pull_request.number }}
 
       - name: Comment preview URL on PR
         uses: marocchino/sticky-pull-request-comment@v3
