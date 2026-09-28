@@ -93,7 +93,7 @@ jobs:
           name: dist
           path: dist/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   deploy:
     needs: build
@@ -125,11 +125,15 @@ jobs:
     permissions:
       contents: read
     steps:
-      # package.json only, and nothing installed: this job holds the Cloudflare
-      # token, so no dependency's install-time code may run next to it.
+      # package.json only, and nothing but wrangler installed: this job holds
+      # the Cloudflare token, so no other dependency's install-time code may
+      # run next to it. It goes under source/ rather than the workspace root
+      # because the action installs with `npm i wrangler@<version>` there, and
+      # npm reconciles every dependency of a package.json it finds in the cwd.
       - name: Check out package.json
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          path: source
           sparse-checkout: package.json
           sparse-checkout-cone-mode: false
           persist-credentials: false
@@ -141,7 +145,7 @@ jobs:
         id: wrangler
         run: |
           set -euo pipefail
-          VERSION="$(jq -r '.devDependencies.wrangler // empty' package.json)"
+          VERSION="$(jq -r '.devDependencies.wrangler // empty' source/package.json)"
           [ -n "$VERSION" ] || { echo '::error::no wrangler devDependency in package.json'; exit 1; }
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -166,7 +170,9 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: ${{ steps.wrangler.outputs.version }}
-          command: pages deploy dist/ --project-name=kadkhodaei --branch=main
+          # The workspace root is not a git checkout, so wrangler cannot read
+          # the commit itself; pass it so the Pages dashboard still shows it.
+          command: pages deploy dist/ --project-name=kadkhodaei --branch=main --commit-hash=${{ github.sha }}
 
   smoke:
     # Last line of defence. Dependency updates merge themselves once the
