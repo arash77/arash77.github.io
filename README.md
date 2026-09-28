@@ -2,7 +2,7 @@
 
 Personal portfolio website for [Arash Kadkhodaei](https://kadkhodaei.de).
 
-Built with **Astro 5**, **Tailwind CSS**, **shadcn/ui**, and **GSAP** animations. Hosted on **GitHub Pages**.
+Built with **Astro 5**, **Tailwind CSS**, **shadcn/ui**, and **GSAP** animations. Hosted on **Cloudflare Pages**.
 
 ## Stack
 
@@ -13,7 +13,7 @@ Built with **Astro 5**, **Tailwind CSS**, **shadcn/ui**, and **GSAP** animations
 | Animations | GSAP + ScrollTrigger |
 | React Islands | `@astrojs/react` (Navbar, Hero, sections) |
 | Content | Astro Content Collections (JSON) |
-| Hosting | GitHub Pages via Actions |
+| Hosting | Cloudflare Pages via Actions |
 
 ## Development
 
