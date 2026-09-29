@@ -9,6 +9,8 @@ const { lang } = Astro.props;
 ---
 {address.name}<br />
 c/o {lang === 'de' ? address.organization.de : address.organization.en}<br />
+{lang === 'de' ? address.department.de : address.department.en}<br />
+{lang === 'de' ? address.room.de : address.room.en}<br />
 {address.streetAddress}<br />
 {address.postalCode} {address.addressLocalityWithSuffix}<br />
 {lang === 'de' ? address.countryName.de : address.countryName.en}

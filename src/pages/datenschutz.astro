@@ -2,6 +2,13 @@
 import Layout from '../layouts/Layout.astro';
 import LegalToggle from '../components/LegalToggle.astro';
 import AddressBlock from '../components/AddressBlock.astro';
+
+const link = 'text-primary underline';
+const cloudflareDpa = 'https://www.cloudflare.com/cloudflare-customer-dpa/';
+const cloudflarePrivacy = 'https://www.cloudflare.com/privacypolicy/';
+const cloudflareDpfEntry = 'https://www.dataprivacyframework.gov/participant/5666';
+const googlePrivacy = 'https://policies.google.com/privacy';
+const lfdi = 'https://www.baden-wuerttemberg.datenschutz.de';
 ---
 
 <Layout
@@ -36,166 +43,238 @@ import AddressBlock from '../components/AddressBlock.astro';
             <p class="text-muted-foreground">
               Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:<br /><br />
               <AddressBlock lang="de" /><br />
-              E-Mail: <a href="mailto:arash@kadkhodaei.de" class="text-primary underline">arash@kadkhodaei.de</a>
+              E-Mail: <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a>
             </p>
           </div>
 
           <div>
-            <h2 class="text-lg font-semibold mb-3 text-foreground">2. Hosting (Cloudflare Pages)</h2>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">2. Hosting und Auslieferung der Website (Cloudflare)</h2>
             <p class="text-muted-foreground">
-              Diese Website wird über Cloudflare Pages gehostet und über das Netzwerk von Cloudflare ausgeliefert. Anbieter ist
-              die Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA.
+              Diese Website wird über Cloudflare Pages gehostet und über das Netzwerk von Cloudflare ausgeliefert, das sie
+              auch vor Überlastungs- und Angriffsversuchen schützt. Anbieter und mein Vertragspartner ist die Cloudflare, Inc.,
+              101 Townsend St., San Francisco, CA 94107, USA („Cloudflare“).
             </p>
             <p class="text-muted-foreground mt-3">
-              Beim Aufruf dieser Website erhebt Cloudflare automatisch Informationen in sogenannten Server-Logdateien, die Ihr Browser
-              übermittelt. Dazu gehören insbesondere: IP-Adresse, Browsertyp und -version, verwendetes Betriebssystem, Referrer-URL,
-              Datum und Uhrzeit der Serveranfrage.
+              Bei jedem Aufruf dieser Website verarbeitet Cloudflare die technisch erforderlichen Verbindungsdaten, die Ihr
+              Browser übermittelt, insbesondere Ihre IP-Adresse, Datum und Uhrzeit der Anfrage, die aufgerufene Seite (URL),
+              die Referrer-URL sowie Angaben zu Browser und Betriebssystem (User-Agent).
             </p>
             <p class="text-muted-foreground mt-3">
-              Diese Daten werden von Cloudflare als Auftragsverarbeiter im Auftrag des Verantwortlichen verarbeitet; Grundlage ist
-              das
-              <a
-                href="https://www.cloudflare.com/cloudflare-customer-dpa/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline"
-              >
-                Cloudflare Data Processing Addendum
-              </a>
-              (Art. 28 DSGVO). Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren und
-              funktionsfähigen Bereitstellung der Website, einschließlich der Abwehr von Angriffen). Eine Zusammenführung dieser
-              Daten mit anderen Datenquellen findet nicht statt.
+              <strong class="font-medium text-foreground">Zweck und Rechtsgrundlage:</strong> Die Verarbeitung dient dazu, die
+              Website auszuliefern und ihre Sicherheit und Stabilität zu gewährleisten, insbesondere Überlastungsangriffe (DDoS)
+              und missbräuchliche Zugriffe zu erkennen und abzuwehren. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Mein
+              berechtigtes Interesse liegt in einer sicheren, stabilen und schnellen Bereitstellung dieser Website
+              (vgl. Erwägungsgrund 49 DSGVO). Informationen zu meiner Interessenabwägung erhalten Sie auf Anfrage.
             </p>
             <p class="text-muted-foreground mt-3">
-              Die Speicherdauer richtet sich danach, wie lange die Daten für die Auslieferung und Absicherung der Website
-              erforderlich sind; Einzelheiten regelt die Datenschutzerklärung von Cloudflare.
+              <strong class="font-medium text-foreground">Rolle von Cloudflare:</strong> Soweit Cloudflare diese Daten
+              verarbeitet, um die Website auszuliefern und mir Protokoll- und Statistikdaten bereitzustellen, handelt Cloudflare
+              als mein Auftragsverarbeiter. Grundlage ist das
+              <a href={cloudflareDpa} target="_blank" rel="noopener noreferrer" class={link}>Cloudflare Data Processing Addendum</a>,
+              das Bestandteil meines Vertrags mit Cloudflare ist (Art. 28 DSGVO). Darüber hinaus leitet Cloudflare nach eigenen
+              Angaben aus dem Datenverkehr seines Netzwerks Sicherheitsinformationen ab (z. B. Einschätzungen, ob eine IP-Adresse
+              mit Angriffen in Verbindung steht) und verarbeitet diese in eigener Verantwortung, um sein Netzwerk und seine Kunden
+              vor Missbrauch und Angriffen zu schützen. Insoweit ist Cloudflare selbst Verantwortlicher; Einzelheiten enthält die
+              <a href={cloudflarePrivacy} target="_blank" rel="noopener noreferrer" class={link}>Datenschutzerklärung von Cloudflare</a>.
+              Anfragen, die Cloudflare als Angriff oder Missbrauch einstuft, können dabei automatisch blockiert werden. Ich selbst
+              führe diese Daten nicht mit anderen Datenquellen zusammen und nutze sie nicht, um Besucher zu identifizieren.
             </p>
             <p class="text-muted-foreground mt-3">
-              Die Datenübertragung in die USA erfolgt auf Grundlage des Angemessenheitsbeschlusses der EU-Kommission zum
-              EU-US Data Privacy Framework (Art. 45 DSGVO), unter dem Cloudflare zertifiziert ist.
-              Weitere Informationen finden Sie in der Datenschutzerklärung von Cloudflare:
-              <a
-                href="https://www.cloudflare.com/privacypolicy/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline"
-              >
-                www.cloudflare.com/privacypolicy
-              </a>
+              <strong class="font-medium text-foreground">Speicherdauer:</strong> Ich selbst speichere keine Server-Logdateien,
+              lade keine herunter und werte sie nicht aus. Allenfalls sehe ich anlassbezogen (etwa bei Störungen oder Angriffen)
+              die Sicherheitsereignisse ein, die Cloudflare mir anzeigt. Nach eigenen Angaben speichert Cloudflare
+              personenbezogene Daten so lange, wie es für die Zwecke der Verarbeitung und zur Erfüllung gesetzlicher Pflichten
+              erforderlich ist; eine feste Speicherfrist hat Cloudflare nicht veröffentlicht.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Pflicht zur Bereitstellung:</strong> Die Bereitstellung dieser Daten
+              ist weder gesetzlich noch vertraglich vorgeschrieben. Ohne sie kann die Website jedoch technisch nicht ausgeliefert
+              werden.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Übermittlung in Drittländer:</strong> Cloudflare betreibt ein
+              weltweites Netz von Rechenzentren. Anfragen werden in der Regel von einem Rechenzentrum in der Nähe des Besuchers
+              beantwortet; eine Verarbeitung außerhalb der EU bzw. des EWR, insbesondere in den USA, kann jedoch nicht
+              ausgeschlossen werden. Übermittlungen an die Cloudflare, Inc. in den USA erfolgen auf Grundlage des
+              Angemessenheitsbeschlusses der Europäischen Kommission zum EU-U.S. Data Privacy Framework (Durchführungsbeschluss
+              (EU) 2023/1795, Art. 45 DSGVO), unter dem die Cloudflare, Inc. zertifiziert ist
+              (<a href={cloudflareDpfEntry} target="_blank" rel="noopener noreferrer" class={link}>Eintrag in der DPF-Liste</a>).
+              Für Übermittlungen in andere Drittländer sowie für den Fall, dass die Zertifizierung entfällt oder der
+              Angemessenheitsbeschluss aufgehoben wird, sieht mein Vertrag mit Cloudflare die Standardvertragsklauseln der
+              Europäischen Kommission vor (Durchführungsbeschluss (EU) 2021/914, Art. 46 Abs. 2 lit. c DSGVO). Weitere
+              Informationen finden Sie in der Datenschutzerklärung von Cloudflare:
+              <a href={cloudflarePrivacy} target="_blank" rel="noopener noreferrer" class={link}>www.cloudflare.com/privacypolicy</a>
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">3. Kontaktaufnahme per E-Mail</h2>
             <p class="text-muted-foreground">
-              Wenn Sie uns per E-Mail kontaktieren, werden Ihre Angaben inklusive der von Ihnen angegebenen Kontaktdaten
-              zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert.
-              Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Beantwortung von Anfragen).
-              Die Daten werden gelöscht, sobald die Anfrage abschließend beantwortet ist und keine gesetzliche
-              Aufbewahrungspflicht besteht.
+              Wenn Sie mir eine E-Mail schreiben, verarbeite ich Ihre E-Mail-Adresse, Ihren Namen (sofern angegeben), den
+              Inhalt Ihrer Nachricht einschließlich etwaiger Anhänge sowie technische Angaben der E-Mail (z. B. Zeitpunkt,
+              Kopfzeilen, Ergebnisse der Absender-Authentifizierung), um Ihre Anfrage zu beantworten und etwaige Anschlussfragen
+              zu bearbeiten. Wenn ich Ihnen antworte, verarbeite ich außerdem den Inhalt meiner Antwort und die
+              Empfängeradressen.
             </p>
             <p class="text-muted-foreground mt-3">
-              E-Mails an Adressen unter kadkhodaei.de werden über Cloudflare Email Routing (Cloudflare, Inc., siehe Abschnitt 2)
-              empfangen und an ein E-Mail-Postfach bei Gmail weitergeleitet, wo sie gespeichert werden. Anbieter von Gmail ist die
-              Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland. Dabei kann eine Übermittlung in die USA an
-              die Google LLC erfolgen; sie erfolgt auf Grundlage des EU-US Data Privacy Framework, unter dem die Google LLC
-              zertifiziert ist. Weitere Informationen finden Sie in der Datenschutzerklärung von Google:
-              <a
-                href="https://policies.google.com/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline"
-              >
-                policies.google.com/privacy
-              </a>
+              <strong class="font-medium text-foreground">Rechtsgrundlage:</strong> Soweit Ihre Anfrage auf den Abschluss oder
+              die Durchführung eines Vertrags mit Ihnen gerichtet ist, ist Rechtsgrundlage Art. 6 Abs. 1 lit. b DSGVO. In allen
+              anderen Fällen ist Rechtsgrundlage Art. 6 Abs. 1 lit. f DSGVO; mein berechtigtes Interesse besteht darin, an mich
+              gerichtete Nachrichten zu beantworten und die Korrespondenz zu führen. Informationen zu meiner Interessenabwägung
+              erhalten Sie auf Anfrage.
             </p>
             <p class="text-muted-foreground mt-3">
-              Darüber hinaus geben wir diese Daten nicht ohne Ihre Einwilligung weiter.
+              <strong class="font-medium text-foreground">Pflicht zur Bereitstellung:</strong> Die Kontaktaufnahme ist
+              freiwillig und weder gesetzlich noch vertraglich vorgeschrieben. Ohne Angabe einer E-Mail-Adresse kann ich Ihnen
+              jedoch nicht antworten.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Empfang über Cloudflare Email Routing:</strong> E-Mails an
+              arash@kadkhodaei.de nimmt Cloudflare Email Routing (Cloudflare, Inc., siehe Abschnitt 2) entgegen und leitet sie
+              automatisch an mein Postfach weiter. Cloudflare handelt dabei als mein Auftragsverarbeiter auf Grundlage des in
+              Abschnitt 2 genannten Data Processing Addendum. Nach Angaben von Cloudflare werden die Nachrichten in Echtzeit
+              weitergeleitet und nicht gespeichert; Cloudflare prüft sie dabei automatisiert auf Spam und Phishing sowie auf die
+              Absender-Authentifizierung (SPF, DKIM, DMARC). Zu jeder Nachricht protokolliert Cloudflare Metadaten (Absender- und
+              Empfängeradresse, Zeitpunkt, Zustellstatus, Authentifizierungsergebnisse), die nach Angaben von Cloudflare bis zu
+              30 Tage abrufbar sind. Für Übermittlungen in Drittländer gelten die Angaben in Abschnitt 2.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Postfach und Antworten:</strong> Mein Postfach wird von Gmail
+              bereitgestellt, einem Dienst der Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland („Google“).
+              Dort werden eingehende E-Mails gespeichert. Auch meine Antworten versende ich über die Server von Gmail (mit der
+              Absenderadresse arash@kadkhodaei.de); Google verarbeitet daher auch die Empfängeradressen und den Inhalt meiner
+              Antworten. Google verarbeitet die Nachrichten auf Grundlage seiner eigenen Nutzungsbedingungen und
+              Datenschutzerklärung
+              (<a href={googlePrivacy} target="_blank" rel="noopener noreferrer" class={link}>policies.google.com/privacy</a>),
+              unter anderem automatisiert zur Erkennung von Spam, Schadsoftware und Missbrauch. Google verarbeitet Daten auch auf
+              Servern außerhalb der EU, insbesondere in den USA. Übermittlungen an die Google LLC stützt Google nach eigenen
+              Angaben auf das EU-U.S. Data Privacy Framework, unter dem die Google LLC zertifiziert ist, sowie auf
+              Standardvertragsklauseln der Europäischen Kommission.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Speicherdauer:</strong> Ich bewahre E-Mail-Korrespondenz
+              einschließlich meiner Antworten in meinem Postfach auf; eine feste Löschfrist habe ich nicht festgelegt. Auf Ihre
+              Anfrage lösche ich Ihre Nachrichten, soweit ich sie nicht zur Geltendmachung, Ausübung oder Verteidigung von
+              Rechtsansprüchen benötige oder eine gesetzliche Aufbewahrungspflicht besteht.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Weitergabe:</strong> Darüber hinaus gebe ich Ihre Daten nur weiter,
+              wenn Sie eingewilligt haben oder ich gesetzlich dazu verpflichtet bin.
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">4. Lokaler Speicher (localStorage)</h2>
             <p class="text-muted-foreground">
-              Diese Website speichert zwei Einträge im lokalen Speicher Ihres Browsers:
+              Diese Website speichert höchstens zwei Einträge im lokalen Speicher (localStorage) Ihres Browsers, und zwar erst,
+              wenn Sie die jeweilige Einstellung aktiv wählen:
             </p>
             <ul class="list-disc list-inside text-muted-foreground mt-2 space-y-1">
               <li>
-                <code class="font-mono text-xs bg-muted px-1 rounded">theme</code> – Ihre Farbschema-Präferenz (hell/dunkel).
+                <code class="font-mono text-xs bg-muted px-1 rounded">theme</code> – Ihre Farbschema-Auswahl (hell/dunkel),
+                gespeichert beim Klick auf den Farbschema-Schalter.
               </li>
               <li>
-                <code class="font-mono text-xs bg-muted px-1 rounded">legal-lang</code> – Ihre Sprachauswahl auf dieser Seite (DE/EN).
+                <code class="font-mono text-xs bg-muted px-1 rounded">legal-lang</code> – Ihre Sprachauswahl (DE/EN) auf den
+                Seiten „Impressum“ und „Datenschutz“, gespeichert beim Klick auf den Sprachschalter.
               </li>
             </ul>
             <p class="text-muted-foreground mt-3">
-              Beide Einträge verbleiben ausschließlich auf Ihrem Gerät und werden nicht an uns oder Dritte übermittelt.
-              Sie werden erst gespeichert, wenn Sie die jeweilige Einstellung aktiv wählen, und sind für diese von Ihnen
-              ausdrücklich gewünschte Funktion unbedingt erforderlich; eine Einwilligung ist daher nicht erforderlich
-              (§ 25 Abs. 2 Nr. 2 TDDDG). Sie können die Einträge jederzeit über die Einstellungen Ihres Browsers löschen.
+              Beide Einträge verbleiben ausschließlich auf Ihrem Gerät, können nur von dieser Website ausgelesen werden und
+              werden nicht an mich oder Dritte übermittelt. Sie enthalten keine Kennung, sondern nur den gewählten Wert
+              (z. B. „dark“ oder „en“). Sie sind für die von Ihnen ausdrücklich gewünschte Funktion unbedingt erforderlich; eine
+              Einwilligung ist daher nicht erforderlich (§ 25 Abs. 2 Nr. 2 TDDDG). Die Einträge haben kein Ablaufdatum: Sie
+              bleiben gespeichert, bis Sie die Einstellung ändern oder den Website-Speicher in Ihrem Browser löschen.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              Solange Sie kein Farbschema gewählt haben, richtet sich die Darstellung nach der Einstellung Ihres Betriebssystems
+              (hell/dunkel). Diese Einstellung wird nur lokal in Ihrem Browser ausgewertet und weder gespeichert noch
+              übermittelt.
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">5. Keine Cookies, kein Tracking, keine Einbettungen Dritter</h2>
             <p class="text-muted-foreground">
-              Diese Website setzt keine Cookies. Es werden keine Tracking- oder Analysedienste (wie Google Analytics, Matomo o. Ä.)
-              eingesetzt. Es werden keine Nutzerprofile erstellt. Es werden keine Inhalte Dritter (Bilder, Schriften, Videos, Skripte)
-              zur Laufzeit aus externen Quellen nachgeladen — sämtliche Assets werden von derselben Domain ausgeliefert.
+              Diese Website setzt keine Cookies. Es werden keine Tracking- oder Analysedienste eingesetzt und keine
+              Nutzerprofile erstellt. Es werden keine Inhalte Dritter (Bilder, Schriften, Videos, Skripte) zur Laufzeit von
+              externen Servern nachgeladen; sämtliche Dateien werden von dieser Domain ausgeliefert.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              Eine automatisierte Entscheidungsfindung einschließlich Profiling im Sinne von Art. 22 DSGVO findet nicht statt.
+              Die automatische Abwehr von Angriffen durch Cloudflare (Abschnitt 2) hat keine rechtliche oder ähnlich erhebliche
+              Wirkung für Sie.
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">6. Ihre Rechte als betroffene Person</h2>
             <p class="text-muted-foreground mb-3">
-              Sie haben gegenüber dem Verantwortlichen folgende Rechte hinsichtlich der Sie betreffenden personenbezogenen Daten:
+              Sie haben mir gegenüber folgende Rechte hinsichtlich der Sie betreffenden personenbezogenen Daten:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1">
-              <li>Recht auf Auskunft (Art. 15 DSGVO)</li>
-              <li>Recht auf Berichtigung (Art. 16 DSGVO)</li>
-              <li>Recht auf Löschung (Art. 17 DSGVO)</li>
-              <li>Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
-              <li>Recht auf Datenübertragbarkeit (Art. 20 DSGVO)</li>
-              <li>Recht auf Widerspruch gegen die Verarbeitung (Art. 21 DSGVO, siehe Abschnitt 7)</li>
+              <li>
+                Auskunft (Art. 15 DSGVO): Sie können erfahren, ob und welche Daten ich über Sie verarbeite, und weitere
+                Informationen zur Verarbeitung erhalten.
+              </li>
+              <li>
+                Berichtigung (Art. 16 DSGVO): Sie können verlangen, dass unrichtige Daten berichtigt und unvollständige
+                vervollständigt werden.
+              </li>
+              <li>
+                Löschung (Art. 17 DSGVO): Sie können die Löschung Ihrer Daten verlangen, etwa wenn sie nicht mehr benötigt
+                werden oder Sie erfolgreich widersprochen haben, soweit keine gesetzliche Ausnahme greift.
+              </li>
+              <li>
+                Einschränkung der Verarbeitung (Art. 18 DSGVO): Sie können verlangen, dass Ihre Daten nur noch eingeschränkt
+                verarbeitet werden, z. B. solange die Richtigkeit der Daten geprüft wird.
+              </li>
+              <li>
+                Datenübertragbarkeit (Art. 20 DSGVO): Soweit ich Daten auf Grundlage eines Vertrags oder vorvertraglicher
+                Maßnahmen verarbeite (Abschnitt 3), können Sie verlangen, diese in einem strukturierten, gängigen und
+                maschinenlesbaren Format zu erhalten.
+              </li>
+              <li>Widerspruch (Art. 21 DSGVO): siehe Abschnitt 7.</li>
             </ul>
             <p class="text-muted-foreground mt-3">
-              Zur Geltendmachung Ihrer Rechte wenden Sie sich bitte an:
-              <a href="mailto:arash@kadkhodaei.de" class="text-primary underline">arash@kadkhodaei.de</a>
+              Zur Geltendmachung genügt eine formlose E-Mail an
+              <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a>. Da ich Server-Logdaten nicht selbst
+              speichere und Besucher der Website nicht identifizieren kann, kann ich Anfragen zu diesen Daten nur beantworten,
+              wenn Sie mir Angaben machen, die eine Zuordnung ermöglichen (Art. 11 Abs. 2 DSGVO).
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">7. Widerspruchsrecht</h2>
             <p class="text-muted-foreground">
-              Soweit wir Ihre personenbezogenen Daten auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO verarbeiten, haben Sie das
+              Soweit ich Ihre personenbezogenen Daten auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO verarbeite, haben Sie das
               Recht, aus Gründen, die sich aus Ihrer besonderen Situation ergeben, jederzeit Widerspruch gegen diese Verarbeitung
-              einzulegen (Art. 21 Abs. 1 DSGVO). Wir verarbeiten Ihre Daten dann nicht mehr, es sei denn, wir können zwingende
+              einzulegen (Art. 21 Abs. 1 DSGVO). Ich verarbeite Ihre Daten dann nicht mehr, es sei denn, ich kann zwingende
               schutzwürdige Gründe für die Verarbeitung nachweisen, die Ihre Interessen, Rechte und Freiheiten überwiegen, oder
-              die Verarbeitung dient der Geltendmachung, Ausübung oder Verteidigung von Rechtsansprüchen.
+              die Verarbeitung dient der Geltendmachung, Ausübung oder Verteidigung von Rechtsansprüchen. Der Widerspruch ist
+              formfrei; eine E-Mail an <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a> genügt.
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">8. Beschwerderecht bei einer Aufsichtsbehörde</h2>
             <p class="text-muted-foreground">
-              Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer personenbezogenen Daten
-              durch uns zu beschweren. Zuständige Aufsichtsbehörde ist der
-              <a
-                href="https://www.baden-wuerttemberg.datenschutz.de"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline"
-              >
+              Wenn Sie der Ansicht sind, dass die Verarbeitung Ihrer personenbezogenen Daten gegen die DSGVO verstößt, haben Sie
+              unbeschadet eines anderweitigen verwaltungsrechtlichen oder gerichtlichen Rechtsbehelfs das Recht, sich bei einer
+              Datenschutz-Aufsichtsbehörde zu beschweren, insbesondere in dem Mitgliedstaat Ihres gewöhnlichen Aufenthalts, Ihres
+              Arbeitsplatzes oder des Orts des mutmaßlichen Verstoßes (Art. 77 DSGVO). Die für mich zuständige
+              Aufsichtsbehörde ist der
+              <a href={lfdi} target="_blank" rel="noopener noreferrer" class={link}>
                 Landesbeauftragte für den Datenschutz und die Informationsfreiheit Baden-Württemberg
-              </a>.
+              </a>, Heilbronner Straße 35, 70191 Stuttgart (Postanschrift: Postfach 10 29 32, 70025 Stuttgart).
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">9. Aktualität und Änderungen</h2>
             <p class="text-muted-foreground">
-              Diese Datenschutzerklärung ist aktuell gültig und hat den Stand September 2026.
-              Durch die Weiterentwicklung dieser Website oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben kann
-              es notwendig werden, diese Datenschutzerklärung zu ändern.
+              Stand: 29. September 2026. Ich passe diese Datenschutzerklärung an, wenn sich die Website, die eingesetzten
+              Dienste oder die rechtlichen Vorgaben ändern.
             </p>
           </div>
 
@@ -209,162 +288,222 @@ import AddressBlock from '../components/AddressBlock.astro';
             <p class="text-muted-foreground">
               The controller within the meaning of the General Data Protection Regulation (GDPR) is:<br /><br />
               <AddressBlock lang="en" /><br />
-              Email: <a href="mailto:arash@kadkhodaei.de" class="text-primary underline">arash@kadkhodaei.de</a>
+              Email: <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a>
             </p>
           </div>
 
           <div>
-            <h2 class="text-lg font-semibold mb-3 text-foreground">2. Hosting (Cloudflare Pages)</h2>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">2. Hosting and delivery of this website (Cloudflare)</h2>
             <p class="text-muted-foreground">
-              This website is hosted via Cloudflare Pages and delivered through Cloudflare's network. The provider is
-              Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA.
+              This website is hosted on Cloudflare Pages and delivered through Cloudflare's network, which also protects it
+              against overload and attack attempts. The provider and my contracting party is Cloudflare, Inc.,
+              101 Townsend St., San Francisco, CA 94107, USA ("Cloudflare").
             </p>
             <p class="text-muted-foreground mt-3">
-              When you visit this website, Cloudflare automatically collects information in so-called server log files that your browser
-              transmits. This includes in particular: IP address, browser type and version, operating system used, referrer URL,
-              date and time of the server request.
+              Each time this website is accessed, Cloudflare processes the technically necessary connection data transmitted by
+              your browser, in particular your IP address, the date and time of the request, the page requested (URL), the
+              referrer URL and information about your browser and operating system (user agent).
             </p>
             <p class="text-muted-foreground mt-3">
-              These data are processed by Cloudflare as a processor on behalf of the controller, under the
-              <a
-                href="https://www.cloudflare.com/cloudflare-customer-dpa/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline"
-              >
-                Cloudflare Data Processing Addendum
-              </a>
-              (Art. 28 GDPR). The legal basis is Art. 6(1)(f) GDPR (legitimate interest in providing the website securely and
-              reliably, including defending against attacks). These data are not merged with other data sources.
+              <strong class="font-medium text-foreground">Purpose and legal basis:</strong> this processing serves to deliver
+              the website and keep it secure and stable, in particular to detect and fend off overload (DDoS) attacks and abusive
+              access. The legal basis is Art. 6(1)(f) GDPR. My legitimate interest is providing this website securely, reliably
+              and quickly (see Recital 49 GDPR). Information on my balancing of interests is available on request.
             </p>
             <p class="text-muted-foreground mt-3">
-              How long these data are stored depends on how long they are needed to deliver and secure the website; details
-              are set out in Cloudflare's privacy policy.
+              <strong class="font-medium text-foreground">Cloudflare's role:</strong> where Cloudflare processes these data to
+              deliver the website and to provide me with log and statistics data, it acts as my processor. This is based on the
+              <a href={cloudflareDpa} target="_blank" rel="noopener noreferrer" class={link}>Cloudflare Data Processing Addendum</a>,
+              which forms part of my contract with Cloudflare (Art. 28 GDPR). In addition, according to Cloudflare, it derives
+              security information from traffic on its network (for example, assessments of whether an IP address is associated
+              with attacks) and processes this under its own responsibility to protect its network and customers against abuse
+              and attacks. To that extent Cloudflare is itself a controller; details are set out in
+              <a href={cloudflarePrivacy} target="_blank" rel="noopener noreferrer" class={link}>Cloudflare's privacy policy</a>.
+              Requests that Cloudflare classifies as attacks or abuse may be blocked automatically. I do not combine these data
+              with other data sources myself and do not use them to identify visitors.
             </p>
             <p class="text-muted-foreground mt-3">
-              Data transfer to the USA is based on the European Commission's adequacy decision for the EU-US Data Privacy
-              Framework (Art. 45 GDPR), under which Cloudflare is certified.
-              For more information, see Cloudflare's privacy policy:
-              <a
-                href="https://www.cloudflare.com/privacypolicy/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline"
-              >
-                www.cloudflare.com/privacypolicy
-              </a>
+              <strong class="font-medium text-foreground">Storage period:</strong> I do not store, download or analyse server
+              log files myself. At most, where there is a specific reason (such as an outage or attack), I look at the security
+              events Cloudflare displays to me. According to Cloudflare, it keeps personal data for as long as necessary for the
+              purposes of the processing and to comply with legal obligations; Cloudflare has not published a fixed retention
+              period.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Obligation to provide data:</strong> providing these data is not
+              required by law or contract. Without them, however, the website cannot technically be delivered.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Transfers to third countries:</strong> Cloudflare operates a global
+              network of data centres. Requests are normally answered by a data centre close to the visitor, but processing
+              outside the EU/EEA, in particular in the USA, cannot be ruled out. Transfers to Cloudflare, Inc. in the USA are
+              based on the European Commission's adequacy decision for the EU-U.S. Data Privacy Framework (Implementing Decision
+              (EU) 2023/1795, Art. 45 GDPR), under which Cloudflare, Inc. is certified
+              (<a href={cloudflareDpfEntry} target="_blank" rel="noopener noreferrer" class={link}>DPF list entry</a>). For
+              transfers to other third countries, and in case the certification lapses or the adequacy decision is revoked, my
+              contract with Cloudflare provides for the European Commission's Standard Contractual Clauses (Implementing
+              Decision (EU) 2021/914, Art. 46(2)(c) GDPR). For more information, see Cloudflare's privacy policy:
+              <a href={cloudflarePrivacy} target="_blank" rel="noopener noreferrer" class={link}>www.cloudflare.com/privacypolicy</a>
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">3. Contact by email</h2>
             <p class="text-muted-foreground">
-              If you contact us by email, your details including the contact information you provide will be stored for the purpose
-              of processing your enquiry and for any follow-up questions.
-              The legal basis is Art. 6(1)(f) GDPR (legitimate interest in responding to enquiries).
-              Data are deleted once the enquiry has been fully answered and there is no statutory retention obligation.
+              If you email me, I process your email address, your name (if provided), the content of your message including any
+              attachments, and technical details of the email (such as time, headers and sender-authentication results) in order
+              to answer your enquiry and any follow-up questions. When I reply, I also process the content of my reply and the
+              recipient addresses.
             </p>
             <p class="text-muted-foreground mt-3">
-              Emails to addresses at kadkhodaei.de are received via Cloudflare Email Routing (Cloudflare, Inc., see section 2)
-              and forwarded to a Gmail mailbox, where they are stored. The provider of Gmail is Google Ireland Limited,
-              Gordon House, Barrow Street, Dublin 4, Ireland. Data may be transferred to Google LLC in the USA; such transfers
-              are based on the EU-US Data Privacy Framework, under which Google LLC is certified. For more information, see
-              Google's privacy policy:
-              <a
-                href="https://policies.google.com/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline"
-              >
-                policies.google.com/privacy
-              </a>
+              <strong class="font-medium text-foreground">Legal basis:</strong> where your enquiry concerns entering into or
+              performing a contract with you, the legal basis is Art. 6(1)(b) GDPR. In all other cases the legal basis is
+              Art. 6(1)(f) GDPR; my legitimate interest is answering messages sent to me and conducting the correspondence.
+              Information on my balancing of interests is available on request.
             </p>
             <p class="text-muted-foreground mt-3">
-              Beyond this, we will not share these data without your consent.
+              <strong class="font-medium text-foreground">Obligation to provide data:</strong> contacting me is voluntary and
+              not required by law or contract. Without an email address, however, I cannot reply.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Receipt via Cloudflare Email Routing:</strong> emails to
+              arash@kadkhodaei.de are received by Cloudflare Email Routing (Cloudflare, Inc., see section 2) and automatically
+              forwarded to my mailbox. Cloudflare acts as my processor under the Data Processing Addendum referred to in
+              section 2. According to Cloudflare, messages are forwarded in real time and not stored; Cloudflare automatically
+              checks them for spam and phishing and verifies sender authentication (SPF, DKIM, DMARC). For each message
+              Cloudflare logs metadata (sender and recipient address, time, delivery status, authentication results), which
+              according to Cloudflare can be retrieved for up to 30 days. Section 2 applies to transfers to third countries.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Mailbox and replies:</strong> my mailbox is provided by Gmail, a
+              service of Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Ireland ("Google"). Incoming emails are
+              stored there. I also send my replies through Gmail's servers (using the sender address arash@kadkhodaei.de), so
+              Google also processes the recipient addresses and the content of my replies. Google processes the messages under
+              its own terms of service and privacy policy
+              (<a href={googlePrivacy} target="_blank" rel="noopener noreferrer" class={link}>policies.google.com/privacy</a>),
+              including automated analysis to detect spam, malware and abuse. Google also processes data on servers outside the
+              EU, in particular in the USA. According to Google, transfers to Google LLC are based on the EU-U.S. Data Privacy
+              Framework, under which Google LLC is certified, and on the European Commission's Standard Contractual Clauses.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Storage period:</strong> I keep email correspondence, including my
+              replies, in my mailbox; I have not set a fixed deletion period. On request, I delete your messages unless I need
+              them to establish, exercise or defend legal claims or a statutory retention obligation applies.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              <strong class="font-medium text-foreground">Disclosure:</strong> beyond this, I only share your data if you have
+              consented or I am legally required to do so.
             </p>
           </div>
 
           <div>
-            <h2 class="text-lg font-semibold mb-3 text-foreground">4. Local storage</h2>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">4. Local storage (localStorage)</h2>
             <p class="text-muted-foreground">
-              This website stores two entries in your browser's local storage:
+              This website stores at most two entries in your browser's local storage, and only once you actively choose the
+              respective setting:
             </p>
             <ul class="list-disc list-inside text-muted-foreground mt-2 space-y-1">
               <li>
-                <code class="font-mono text-xs bg-muted px-1 rounded">theme</code> – your colour scheme preference (light/dark).
+                <code class="font-mono text-xs bg-muted px-1 rounded">theme</code> – your colour scheme choice (light/dark),
+                saved when you click the colour scheme toggle.
               </li>
               <li>
-                <code class="font-mono text-xs bg-muted px-1 rounded">legal-lang</code> – your language selection on this page (DE/EN).
+                <code class="font-mono text-xs bg-muted px-1 rounded">legal-lang</code> – your language choice (DE/EN) on the
+                "Impressum" and "Datenschutz" pages, saved when you click the language toggle.
               </li>
             </ul>
             <p class="text-muted-foreground mt-3">
-              Both entries remain exclusively on your device and are not transmitted to us or any third party.
-              They are only stored once you actively choose the respective setting, and are strictly necessary for that
-              function you explicitly requested; consent is therefore not required (Section 25(2) No. 2 TDDDG). You can
-              delete them at any time in your browser settings.
+              Both entries remain exclusively on your device, can only be read by this website and are not transmitted to me or
+              any third party. They contain no identifier, only the value you chose (e.g. "dark" or "en"). They are strictly
+              necessary for the function you explicitly requested; consent is therefore not required (Section 25(2) No. 2
+              TDDDG). The entries do not expire: they remain until you change the setting or clear this website's storage in
+              your browser.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              As long as you have not chosen a colour scheme, the display follows your operating system's light/dark setting.
+              This setting is evaluated only locally in your browser and is neither stored nor transmitted.
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">5. No cookies, no tracking, no third-party embeds</h2>
             <p class="text-muted-foreground">
-              This website does not set any cookies. No tracking or analytics services (such as Google Analytics, Matomo, etc.)
-              are used. No user profiles are created. No third-party content (images, fonts, videos, scripts) is loaded
-              from external servers at runtime — all assets are served from the same domain.
+              This website does not set any cookies. No tracking or analytics services are used and no user profiles are
+              created. No third-party content (images, fonts, videos, scripts) is loaded from external servers at runtime; all
+              files are served from this domain.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              No automated decision-making, including profiling, within the meaning of Art. 22 GDPR takes place. Cloudflare's
+              automatic blocking of attacks (section 2) has no legal or similarly significant effect on you.
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">6. Your rights as a data subject</h2>
             <p class="text-muted-foreground mb-3">
-              You have the following rights with regard to the personal data concerning you:
+              You have the following rights against me regarding the personal data concerning you:
             </p>
             <ul class="list-disc list-inside text-muted-foreground space-y-1">
-              <li>Right of access (Art. 15 GDPR)</li>
-              <li>Right to rectification (Art. 16 GDPR)</li>
-              <li>Right to erasure (Art. 17 GDPR)</li>
-              <li>Right to restriction of processing (Art. 18 GDPR)</li>
-              <li>Right to data portability (Art. 20 GDPR)</li>
-              <li>Right to object to processing (Art. 21 GDPR, see section 7)</li>
+              <li>
+                Access (Art. 15 GDPR): to find out whether and which data I process about you, and to receive further
+                information about the processing.
+              </li>
+              <li>Rectification (Art. 16 GDPR): to have inaccurate data corrected and incomplete data completed.</li>
+              <li>
+                Erasure (Art. 17 GDPR): to have your data deleted, e.g. where they are no longer needed or you have
+                successfully objected, unless a statutory exception applies.
+              </li>
+              <li>
+                Restriction of processing (Art. 18 GDPR): to have processing restricted, e.g. while the accuracy of the data is
+                being checked.
+              </li>
+              <li>
+                Data portability (Art. 20 GDPR): where I process data on the basis of a contract or pre-contractual steps
+                (section 3), to receive them in a structured, commonly used and machine-readable format.
+              </li>
+              <li>Objection (Art. 21 GDPR): see section 7.</li>
             </ul>
             <p class="text-muted-foreground mt-3">
-              To exercise your rights, please contact:
-              <a href="mailto:arash@kadkhodaei.de" class="text-primary underline">arash@kadkhodaei.de</a>
+              An informal email to <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a> is sufficient.
+              As I do not store server log data myself and cannot identify visitors to this website, I can only answer requests
+              about such data if you provide details that allow them to be attributed to you (Art. 11(2) GDPR).
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">7. Right to object</h2>
             <p class="text-muted-foreground">
-              Where we process your personal data on the basis of Art. 6(1)(f) GDPR, you have the right to object to this
-              processing at any time on grounds relating to your particular situation (Art. 21(1) GDPR). We will then no longer
-              process your data unless we can demonstrate compelling legitimate grounds for the processing which override your
+              Where I process your personal data on the basis of Art. 6(1)(f) GDPR, you have the right to object to this
+              processing at any time on grounds relating to your particular situation (Art. 21(1) GDPR). I will then no longer
+              process your data unless I can demonstrate compelling legitimate grounds for the processing which override your
               interests, rights and freedoms, or the processing serves the establishment, exercise or defence of legal claims.
+              No particular form is required; an email to
+              <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a> is sufficient.
             </p>
           </div>
 
           <div>
-            <h2 class="text-lg font-semibold mb-3 text-foreground">8. Right to lodge a complaint</h2>
+            <h2 class="text-lg font-semibold mb-3 text-foreground">8. Right to lodge a complaint with a supervisory authority</h2>
             <p class="text-muted-foreground">
-              You have the right to lodge a complaint with a data protection supervisory authority regarding our processing of your
-              personal data. The competent supervisory authority is the
-              <a
-                href="https://www.baden-wuerttemberg.datenschutz.de"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline"
-              >
+              If you consider that the processing of your personal data infringes the GDPR, you have the right, without
+              prejudice to any other administrative or judicial remedy, to lodge a complaint with a data protection supervisory
+              authority, in particular in the Member State of your habitual residence, place of work or place of the alleged
+              infringement (Art. 77 GDPR). The supervisory authority competent for me is the
+              <a href={lfdi} target="_blank" rel="noopener noreferrer" class={link}>
                 State Commissioner for Data Protection and Freedom of Information of Baden-Württemberg
-              </a>.
+              </a> (Landesbeauftragter für den Datenschutz und die Informationsfreiheit Baden-Württemberg),
+              Heilbronner Straße 35, 70191 Stuttgart, Germany (postal address: Postfach 10 29 32, 70025 Stuttgart).
             </p>
           </div>
 
           <div>
             <h2 class="text-lg font-semibold mb-3 text-foreground">9. Validity and changes</h2>
             <p class="text-muted-foreground">
-              This privacy policy is currently valid and dated September 2026.
-              Due to the further development of this website or changes in legal or regulatory requirements,
-              it may become necessary to amend this privacy policy.
+              Last updated: 29 September 2026. I update this privacy policy whenever the website, the services it uses or the
+              legal requirements change.
+            </p>
+            <p class="text-muted-foreground mt-3">
+              This English version is provided for convenience; the German version is authoritative.
             </p>
           </div>
 
