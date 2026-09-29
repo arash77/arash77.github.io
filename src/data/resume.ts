@@ -1,6 +1,8 @@
 // Single source of truth for all resume data.
 // Imported by: Experience.tsx, Education.tsx, Skills.tsx, resume.astro
 
+import type { BadgeVariant } from '@/components/ui/badge';
+
 export interface ExperienceItem {
   role: string;
   company: string;
@@ -108,39 +110,39 @@ export const education: EducationItem[] = [
 
 export interface SkillCategory {
   title: string;
-  color: 'default' | 'secondary' | 'amber' | 'rose' | 'blue' | 'outline';
+  variant: BadgeVariant;
   skills: string[];
 }
 
 export const skillCategories: SkillCategory[] = [
   {
     title: 'Programming Languages',
-    color: 'default',
+    variant: 'default',
     skills: ['Python', 'C/C++', 'JavaScript', 'TypeScript', 'Bash'],
   },
   {
     title: 'Backend Frameworks',
-    color: 'secondary',
+    variant: 'secondary',
     skills: ['FastAPI', 'Pydantic', 'REST API Design', 'ROS'],
   },
   {
     title: 'Databases & Caching',
-    color: 'amber',
+    variant: 'amber',
     skills: ['PostgreSQL', 'MongoDB', 'SQLite', 'Redis'],
   },
   {
     title: 'Infrastructure & DevOps',
-    color: 'rose',
+    variant: 'rose',
     skills: ['Docker', 'GitHub Actions', 'Linux'],
   },
   {
     title: 'Testing & Tooling',
-    color: 'blue',
+    variant: 'blue',
     skills: ['PyTest', 'Playwright', 'Selenium', 'MyPy', 'Git'],
   },
   {
     title: 'Core Domains',
-    color: 'outline',
+    variant: 'outline',
     skills: ['IoT & Embedded Systems', 'Bioinformatics', 'Image Processing'],
   },
 ];

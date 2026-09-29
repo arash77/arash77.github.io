@@ -11,6 +11,8 @@ import { test, expect } from '@playwright/test';
  * Determinism comes from `reducedMotion: 'reduce'`:
  *   - the GSAP hooks in src/components/* return early under that media query
  *   - global.css then forces `.gsap-reveal { opacity: 1; visibility: visible }`
+ *   - the ambient blob drift holds its resting pose (`both` fill-mode on the
+ *     --animate-blob-drift-* tokens) after its single 0.01ms reduced run
  * so pages settle into a fully-rendered static state with no animation frames
  * to race. Fonts are self-hosted via fontsource, so there is no network race.
  *

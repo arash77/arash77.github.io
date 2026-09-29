@@ -63,7 +63,8 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <meta name="theme-color" content="#f7fcfc" />
 
     <!-- Fonts: Geist + JetBrains Mono (self-hosted via Astro Fonts API) -->
-    <Font cssVariable="--font-geist" preload />
+    <!-- Italic is only used on /resume, so it loads on demand there -->
+    <Font cssVariable="--font-geist" preload={[{ style: 'normal' }]} />
     <Font cssVariable="--font-jetbrains-mono" preload />
 
     <!-- JSON-LD Person schema -->

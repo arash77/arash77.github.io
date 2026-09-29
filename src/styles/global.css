@@ -57,12 +57,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  /* Tinted shadows — carry the page hue instead of neutral black. Tint and
-     alphas are themed in :root/.dark; core shadow-* composes them with ring-*. */
-  --shadow-tinted: 0 1px 2px hsl(var(--shadow-tint) / var(--shadow-a1)),
-                   0 4px 12px hsl(var(--shadow-tint) / var(--shadow-a2));
-  --shadow-tinted-lg: 0 2px 4px hsl(var(--shadow-tint) / var(--shadow-b1)),
-                      0 8px 24px hsl(var(--shadow-tint) / var(--shadow-b2));
+  /* Tinted shadows carry the page hue instead of neutral black. Registered in
+     @theme so they get Tailwind's shadow plumbing (variants, composing with
+     ring-*); the tint and alphas are themed in :root/.dark as --tinted*. */
+  --shadow-tinted: 0 1px 2px hsl(var(--tinted) / var(--tinted-a1)),
+                   0 4px 12px hsl(var(--tinted) / var(--tinted-a2));
+  --shadow-tinted-lg: 0 2px 4px hsl(var(--tinted) / var(--tinted-lg-a1)),
+                      0 8px 24px hsl(var(--tinted) / var(--tinted-lg-a2));
 
   --font-sans: var(--font-geist, system-ui), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono, Fira Code), Fira Code, monospace;
@@ -72,8 +73,9 @@
   --animate-fade-up: fade-up 0.6s ease-out both;
   --animate-fade-in: fade-in 0.4s ease-out;
   --animate-gradient-shift: gradient-shift 8s ease infinite;
-  /* `both` holds the 0%/100% pose once the reduced-motion rule cuts the drift
-     to a single 0.01ms run, so screenshots see the same resting position. */
+  /* `both` holds the 0%/100% resting pose once the reduced-motion rule cuts the
+     drift to a single 0.01ms run, so the blobs stay put instead of snapping to
+     an untranslated spot (which also keeps visual baselines deterministic). */
   --animate-blob-drift-1: blob-drift-1 12s ease-in-out infinite both;
   --animate-blob-drift-2: blob-drift-2 15s ease-in-out infinite both;
   --animate-blob-drift-3: blob-drift-3 10s ease-in-out infinite both;
@@ -213,11 +215,11 @@
     --input: 186 22% 80%;
     --ring: 186 72% 28%;
     --radius: 0.75rem;
-    --shadow-tint: 186 50% 20%;
-    --shadow-a1: 0.06;
-    --shadow-a2: 0.08;
-    --shadow-b1: 0.08;
-    --shadow-b2: 0.12;
+    --tinted: 186 50% 20%;             /* shadow tint for shadow-tinted(-lg) */
+    --tinted-a1: 0.06;
+    --tinted-a2: 0.08;
+    --tinted-lg-a1: 0.08;
+    --tinted-lg-a2: 0.12;
   }
 
   .dark {
@@ -246,11 +248,11 @@
     --border: 186 32% 17%;
     --input: 186 32% 17%;
     --ring: 186 72% 55%;
-    --shadow-tint: 186 80% 3%;         /* darker than the surface, so it reads as depth */
-    --shadow-a1: 0.5;
-    --shadow-a2: 0.4;
-    --shadow-b1: 0.55;
-    --shadow-b2: 0.45;
+    --tinted: 186 80% 3%;              /* darker than the surface, so it reads as depth */
+    --tinted-a1: 0.5;
+    --tinted-a2: 0.4;
+    --tinted-lg-a1: 0.55;
+    --tinted-lg-a2: 0.45;
   }
 }
 

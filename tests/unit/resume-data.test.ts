@@ -58,9 +58,9 @@ describe('skillCategories', () => {
     }
   });
 
-  it('gives every category a distinct badge color', () => {
-    const colors = skillCategories.map((cat) => cat.color);
-    expect(new Set(colors).size).toBe(colors.length);
+  it('gives every category a distinct badge variant', () => {
+    const variants = skillCategories.map((cat) => cat.variant);
+    expect(new Set(variants).size).toBe(variants.length);
   });
 });
 

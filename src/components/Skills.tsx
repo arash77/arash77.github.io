@@ -75,7 +75,7 @@ export default function Skills() {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-6">
-          {skillCategories.map(({ title, color, skills }, index) => (
+          {skillCategories.map(({ title, variant, skills }, index) => (
             <div
               key={title}
               className={`gsap-reveal skill-card p-6 rounded-xl border border-border bg-card card-hover${
@@ -93,7 +93,7 @@ export default function Skills() {
                   return (
                     <Badge
                       key={skill}
-                      variant={color}
+                      variant={variant}
                       className="cursor-default hover:brightness-110 transition-[filter] text-xs gap-1.5"
                     >
                       {Icon && <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />}
