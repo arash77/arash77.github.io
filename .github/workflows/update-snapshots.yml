@@ -45,7 +45,10 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Regenerate visual baselines
-        run: pnpm exec playwright test tests/e2e/visual.spec.ts --update-snapshots
+        # `all`, not the bare flag's `changed` preset: `changed` skips any
+        # snapshot that still passes within maxDiffPixelRatio, so small
+        # intentional changes (e.g. a badge re-color) left stale baselines.
+        run: pnpm exec playwright test tests/e2e/visual.spec.ts --update-snapshots=all
         env:
           SITE: https://kadkhodaei.de
 
