@@ -36,7 +36,7 @@ export default function Hero() {
   return (
     <section
       ref={containerRef}
-      className="relative min-h-dvh flex items-center justify-center overflow-hidden gradient-mesh pt-16"
+      className="relative min-h-svh flex items-center justify-center overflow-hidden gradient-mesh pt-16"
     >
       {/* Decorative blobs */}
       <div

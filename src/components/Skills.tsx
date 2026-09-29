@@ -78,7 +78,7 @@ export default function Skills() {
           {skillCategories.map(({ title, color, skills }, index) => (
             <div
               key={title}
-              className={`gsap-reveal skill-card p-6 rounded-xl border border-border bg-card card-hover hover:shadow-tinted${
+              className={`gsap-reveal skill-card p-6 rounded-xl border border-border bg-card card-hover${
                 index === skillCategories.length - 1 && skillCategories.length % 2 === 1
                   ? ' sm:col-span-2'
                   : ''

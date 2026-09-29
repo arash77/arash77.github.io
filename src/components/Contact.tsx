@@ -82,7 +82,7 @@ export default function Contact() {
               href={href}
               target={href.startsWith('http') ? '_blank' : undefined}
               rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
-              className="gsap-reveal contact-item group flex items-center gap-4 p-5 rounded-xl border border-border bg-card card-hover hover:shadow-tinted cursor-pointer"
+              className="gsap-reveal contact-item group flex items-center gap-4 p-5 rounded-xl border border-border bg-card card-hover cursor-pointer"
             >
               <div className={`p-3 rounded-lg bg-muted transition-colors ${color}`}>
                 <Icon className="h-5 w-5" aria-hidden="true" />

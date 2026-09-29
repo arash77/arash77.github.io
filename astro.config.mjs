@@ -13,7 +13,16 @@ export default defineConfig({
       name: 'Geist',
       cssVariable: '--font-geist',
       provider: fontProviders.fontsource(),
-      weights: [400, 500, 600, 700, 800],
+      weights: [400, 500, 600, 700],
+      styles: ['normal'],
+    },
+    {
+      // Only /resume sets italic text, and only at regular weight.
+      name: 'Geist',
+      cssVariable: '--font-geist',
+      provider: fontProviders.fontsource(),
+      weights: [400],
+      styles: ['italic'],
     },
     {
       name: 'JetBrains Mono',

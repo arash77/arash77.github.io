@@ -57,6 +57,11 @@ describe('skillCategories', () => {
       expect(cat.skills.length).toBeGreaterThan(0);
     }
   });
+
+  it('gives every category a distinct badge color', () => {
+    const colors = skillCategories.map((cat) => cat.color);
+    expect(new Set(colors).size).toBe(colors.length);
+  });
 });
 
 describe('conferences', () => {

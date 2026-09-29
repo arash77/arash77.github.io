@@ -1,14 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { buttonVariants } from '../components/ui/button';
-import { cn } from '@/lib/utils';
 
-const homeLink = cn(buttonVariants({ variant: 'default', size: 'lg' }), 'active:scale-[0.98]');
-const projectsLink = cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'active:scale-[0.98]');
+const homeLink = buttonVariants({ size: 'lg' });
+const projectsLink = buttonVariants({ variant: 'outline', size: 'lg' });
 ---
 
 <Layout title="Page not found – Arash Kadkhodaei" description="This page does not exist.">
-  <section class="min-h-dvh flex items-center justify-center py-24">
+  <section class="min-h-svh flex items-center justify-center py-24">
     <div class="container mx-auto px-4 max-w-3xl text-center">
       <p class="font-mono text-secondary mb-4">404</p>
       <h1 class="text-4xl font-bold mb-4">Page not found</h1>

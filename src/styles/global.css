@@ -57,6 +57,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
+  /* Tinted shadows — carry the page hue instead of neutral black. Tint and
+     alphas are themed in :root/.dark; core shadow-* composes them with ring-*. */
+  --shadow-tinted: 0 1px 2px hsl(var(--shadow-tint) / var(--shadow-a1)),
+                   0 4px 12px hsl(var(--shadow-tint) / var(--shadow-a2));
+  --shadow-tinted-lg: 0 2px 4px hsl(var(--shadow-tint) / var(--shadow-b1)),
+                      0 8px 24px hsl(var(--shadow-tint) / var(--shadow-b2));
+
   --font-sans: var(--font-geist, system-ui), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono, Fira Code), Fira Code, monospace;
 
@@ -65,9 +72,11 @@
   --animate-fade-up: fade-up 0.6s ease-out both;
   --animate-fade-in: fade-in 0.4s ease-out;
   --animate-gradient-shift: gradient-shift 8s ease infinite;
-  --animate-blob-drift-1: blob-drift-1 12s ease-in-out infinite;
-  --animate-blob-drift-2: blob-drift-2 15s ease-in-out infinite;
-  --animate-blob-drift-3: blob-drift-3 10s ease-in-out infinite;
+  /* `both` holds the 0%/100% pose once the reduced-motion rule cuts the drift
+     to a single 0.01ms run, so screenshots see the same resting position. */
+  --animate-blob-drift-1: blob-drift-1 12s ease-in-out infinite both;
+  --animate-blob-drift-2: blob-drift-2 15s ease-in-out infinite both;
+  --animate-blob-drift-3: blob-drift-3 10s ease-in-out infinite both;
 
   --background-size-300\%: 300%;
 
@@ -204,6 +213,11 @@
     --input: 186 22% 80%;
     --ring: 186 72% 28%;
     --radius: 0.75rem;
+    --shadow-tint: 186 50% 20%;
+    --shadow-a1: 0.06;
+    --shadow-a2: 0.08;
+    --shadow-b1: 0.08;
+    --shadow-b2: 0.12;
   }
 
   .dark {
@@ -232,6 +246,11 @@
     --border: 186 32% 17%;
     --input: 186 32% 17%;
     --ring: 186 72% 55%;
+    --shadow-tint: 186 80% 3%;         /* darker than the surface, so it reads as depth */
+    --shadow-a1: 0.5;
+    --shadow-a2: 0.4;
+    --shadow-b1: 0.55;
+    --shadow-b2: 0.45;
   }
 }
 
@@ -250,40 +269,9 @@
   }
 }
 
-/* Tinted shadows — carry the page hue instead of neutral black.
-   Registered as a Tailwind v4 utility so it lands in @layer utilities and
-   composes with ring-* (var(--tw-ring-shadow)) like core shadow utilities;
-   hover:/dark: variants are generated automatically. */
-@utility shadow-tinted {
-  box-shadow:
-    0 1px 2px hsla(186, 50%, 20%, var(--tinted-a1, 0.06)),
-    0 4px 12px hsla(186, 50%, 20%, var(--tinted-a2, 0.08)),
-    var(--tw-ring-shadow, 0 0 #0000);
-}
-.dark {
-  --tinted-a1: 0.5;
-  --tinted-a2: 0.4;
-}
-@utility hover-shadow-tinted {
-  &:hover {
-    box-shadow:
-      0 2px 4px hsla(186, 50%, 20%, var(--tinted-b1, 0.08)),
-      0 8px 24px hsla(186, 50%, 20%, var(--tinted-b2, 0.12)),
-      var(--tw-ring-shadow, 0 0 #0000);
-  }
-}
-.dark {
-  --tinted-b1: 0.55;
-  --tinted-b2: 0.45;
-}
-
 /* Shared card hover recipe — one source of truth for project/skill/contact cards */
 @utility card-hover {
-  transition-property: border-color, box-shadow;
-  transition-duration: 150ms;
-  &:hover {
-    border-color: color-mix(in oklab, var(--primary) 30%, transparent);
-  }
+  @apply transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-tinted-lg;
 }
 
 /* Custom scrollbar */
@@ -348,20 +336,5 @@
   .gsap-reveal {
     opacity: 1 !important;
     visibility: visible !important;
-  }
-  /* Deterministic end-state for ambient blobs: freeze them instead of letting
-     the 0.01ms "reduced" duration replay the full 12s keyframe path, whose
-     position at capture time depends on when the screenshot happens to run. */
-  .animate-blob-drift-1 {
-    animation: none !important;
-    transform: translate(-50%, -50%) !important;
-  }
-  .animate-blob-drift-2 {
-    animation: none !important;
-    transform: translate(50%, 50%) !important;
-  }
-  .animate-blob-drift-3 {
-    animation: none !important;
-    transform: translate(-50%, 0%) !important;
   }
 }

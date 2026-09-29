@@ -108,7 +108,7 @@ export const education: EducationItem[] = [
 
 export interface SkillCategory {
   title: string;
-  color: 'default' | 'secondary' | 'amber' | 'rose' | 'sky';
+  color: 'default' | 'secondary' | 'amber' | 'rose' | 'sky' | 'outline';
   skills: string[];
 }
 
@@ -140,7 +140,7 @@ export const skillCategories: SkillCategory[] = [
   },
   {
     title: 'Core Domains',
-    color: 'amber',
+    color: 'outline',
     skills: ['IoT & Embedded Systems', 'Bioinformatics', 'Image Processing'],
   },
 ];
