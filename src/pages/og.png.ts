@@ -5,11 +5,8 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { createElement as h } from 'react';
 import { SITE } from '@/lib/utils';
+import { OG_FONTS } from '@/lib/og-fonts';
 
-// Static Geist TTFs (fontsource latin subset): satori can't read the woff2 the
-// Fonts API emits, and the card should match the site's identity font.
-const geistRegular  = readFileSync(resolve('src/assets/fonts/Geist-Regular.ttf'));
-const geistSemiBold = readFileSync(resolve('src/assets/fonts/Geist-SemiBold.ttf'));
 const avatarData    = `data:image/jpeg;base64,${readFileSync(resolve('public/assets/img/avatar.jpg')).toString('base64')}`;
 
 // Distributed node-graph as a pre-built SVG data URI (satori can't render SVG children)
@@ -103,10 +100,7 @@ export const GET: APIRoute = async () => {
   const svg = await satori(element, {
     width: 1200,
     height: 630,
-    fonts: [
-      { name: 'Geist', data: geistRegular,  weight: 400, style: 'normal' },
-      { name: 'Geist', data: geistSemiBold, weight: 600, style: 'normal' },
-    ],
+    fonts: OG_FONTS,
   });
 
   const png = new Uint8Array(new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } }).render().asPng());
