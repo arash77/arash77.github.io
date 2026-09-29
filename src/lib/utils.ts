@@ -1,5 +1,11 @@
 import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+// Custom @theme shadow tokens (global.css) must be registered, or tailwind-merge
+// reads shadow-tinted as a shadow *color* and drops it next to shadow-<color>.
+const twMerge = extendTailwindMerge({
+  extend: { theme: { shadow: ['tinted', 'tinted-lg'] } },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

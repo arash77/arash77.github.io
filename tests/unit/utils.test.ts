@@ -7,6 +7,12 @@ describe('cn()', () => {
     expect(cn('text-sm font-bold', 'text-lg')).toBe('font-bold text-lg');
   });
 
+  it('treats the custom tinted shadows as shadow sizes', () => {
+    expect(cn('shadow-sm', 'shadow-tinted')).toBe('shadow-tinted');
+    expect(cn('shadow-tinted', 'shadow-tinted-lg')).toBe('shadow-tinted-lg');
+    expect(cn('shadow-tinted', 'shadow-primary/20')).toBe('shadow-tinted shadow-primary/20');
+  });
+
   it('handles falsy values', () => {
     expect(cn('base', false && 'not-included')).toBe('base');
     expect(cn('base', null, undefined, '')).toBe('base');
