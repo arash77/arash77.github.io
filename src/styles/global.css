@@ -50,8 +50,8 @@
 
   --color-rose: hsl(var(--rose));
   --color-rose-foreground: hsl(var(--rose-foreground));
-  --color-sky: hsl(var(--sky));
-  --color-sky-foreground: hsl(var(--sky-foreground));
+  --color-blue: hsl(var(--blue));
+  --color-blue-foreground: hsl(var(--blue-foreground));
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -201,8 +201,8 @@
     --amber-foreground: 40 40% 98%;
     --rose: 350 65% 40%;
     --rose-foreground: 350 40% 98%;
-    --sky: 199 80% 30%;
-    --sky-foreground: 199 40% 98%;
+    --blue: 217 72% 44%;              /* oklch hue 260, kept well clear of teal */
+    --blue-foreground: 217 40% 98%;
     --muted: 186 25% 88%;
     --muted-foreground: 186 22% 28%;
     --accent: 186 25% 88%;
@@ -235,8 +235,8 @@
     --amber-foreground: 35 65% 8%;
     --rose: 350 60% 62%;
     --rose-foreground: 350 65% 8%;
-    --sky: 199 75% 62%;
-    --sky-foreground: 199 65% 8%;
+    --blue: 217 95% 71%;
+    --blue-foreground: 217 65% 8%;
     --muted: 186 38% 14%;
     --muted-foreground: 186 16% 72%;
     --accent: 186 38% 14%;
