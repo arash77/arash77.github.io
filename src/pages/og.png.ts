@@ -6,8 +6,10 @@ import { resolve } from 'path';
 import { createElement as h } from 'react';
 import { SITE } from '@/lib/utils';
 
-const interRegular  = readFileSync(resolve('src/assets/fonts/Inter-Regular.otf'));
-const interSemiBold = readFileSync(resolve('src/assets/fonts/Inter-SemiBold.otf'));
+// Static Geist TTFs (fontsource latin subset): satori can't read the woff2 the
+// Fonts API emits, and the card should match the site's identity font.
+const geistRegular  = readFileSync(resolve('src/assets/fonts/Geist-Regular.ttf'));
+const geistSemiBold = readFileSync(resolve('src/assets/fonts/Geist-SemiBold.ttf'));
 const avatarData    = `data:image/jpeg;base64,${readFileSync(resolve('public/assets/img/avatar.jpg')).toString('base64')}`;
 
 // Distributed node-graph as a pre-built SVG data URI (satori can't render SVG children)
@@ -44,7 +46,7 @@ export const GET: APIRoute = async () => {
     style: {
       width: '1200px', height: '630px', background: '#041618',
       display: 'flex', flexDirection: 'column', justifyContent: 'center',
-      padding: '72px 80px', fontFamily: 'Inter', position: 'relative', overflow: 'hidden',
+      padding: '72px 80px', fontFamily: 'Geist', position: 'relative', overflow: 'hidden',
     },
   },
     // Teal glow top-left
@@ -102,8 +104,8 @@ export const GET: APIRoute = async () => {
     width: 1200,
     height: 630,
     fonts: [
-      { name: 'Inter', data: interRegular,  weight: 400, style: 'normal' },
-      { name: 'Inter', data: interSemiBold, weight: 600, style: 'normal' },
+      { name: 'Geist', data: geistRegular,  weight: 400, style: 'normal' },
+      { name: 'Geist', data: geistSemiBold, weight: 600, style: 'normal' },
     ],
   });
 
