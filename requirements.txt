@@ -1,2 +1,2 @@
 PyGithub==2.10.0
-openai==3.19.2
+openai==3.20.0
