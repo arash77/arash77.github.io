@@ -300,6 +300,160 @@
 .animate-delay-2 { animation-delay: 0.2s; }
 .animate-delay-3 { animation-delay: 0.35s; }
 
+/* ------------------------------------------------------------------------
+   Scroll thread (home page only; src/components/SiteThread.astro).
+   Everything here is gated on `html.thread-on`, which only the thread's
+   script adds, so the page without JavaScript is unchanged.
+
+   Layering: section backgrounds and the hero blobs < thread < all content.
+   The thread layer is z-index 1 in the root stacking context (main is
+   positioned but has no z-index, so it creates no stacking context), and the
+   section containers and the scroll hint are lifted to z-index 2.
+   ------------------------------------------------------------------------ */
+@property --thread-sew {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.site-thread {
+  display: none;
+}
+
+html.thread-on #main-content {
+  position: relative;
+}
+
+html.thread-on .site-thread {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: clip;
+  pointer-events: none;
+}
+
+.site-thread__svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  overflow: hidden;
+}
+
+html.thread-on [data-thread-section] > .container {
+  position: relative;
+  z-index: 2;
+}
+
+html.thread-on [data-thread-hint] {
+  z-index: 2;
+}
+
+/* The thread becomes the timeline spine. */
+html.thread-on [data-thread-line] {
+  opacity: 0;
+}
+
+/* Measuring: read layout boxes without the GSAP reveal transforms. */
+html.thread-measuring .gsap-reveal {
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  rotate: none !important;
+}
+
+.site-thread__stop-from {
+  stop-color: hsl(var(--primary));
+}
+.site-thread__stop-to {
+  stop-color: hsl(var(--secondary));
+}
+.site-thread__knot {
+  fill: hsl(var(--primary));
+  transition: opacity 0.3s ease;
+}
+.site-thread__end {
+  fill: hsl(var(--secondary));
+  transition: opacity 0.3s ease;
+}
+.site-thread__glow {
+  fill: hsl(var(--secondary) / 0.18);
+  transition: opacity 0.25s ease;
+}
+.site-thread__pen {
+  fill: hsl(var(--background));
+  stroke: hsl(var(--secondary));
+  transition: opacity 0.25s ease;
+}
+.site-thread__knot,
+.site-thread__end,
+.site-thread__glow,
+.site-thread__pen {
+  opacity: 0;
+}
+
+/* Timeline nodes light up as the pen passes. */
+html.thread-on [data-thread-node] {
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+}
+html.thread-on [data-thread-node][data-thread-done] {
+  background-color: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+/* Ink: an underline sweeps in under marked words when the pen passes. */
+html.thread-on [data-thread-ink] {
+  background-image: linear-gradient(hsl(var(--primary)), hsl(var(--primary)));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: background-size 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+html.thread-on [data-thread-ink][data-thread-done] {
+  background-size: 100% 2px;
+}
+
+/* Stitch: a running stitch inside each contact card's border, sewn in when the
+   pen passes (a conic sweep of the colour, masked to a dashed rounded rect). */
+html.thread-on [data-thread-stitch] {
+  position: relative;
+}
+html.thread-on [data-thread-stitch]::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 6px;
+  pointer-events: none;
+  --thread-sew: 0deg;
+  background: conic-gradient(from 270deg, hsl(var(--primary) / 0.6) var(--thread-sew), transparent 0);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' rx='6' fill='none' stroke='%23000' stroke-width='3' stroke-dasharray='4 4'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' rx='6' fill='none' stroke='%23000' stroke-width='3' stroke-dasharray='4 4'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  transition: --thread-sew 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+html.thread-on [data-thread-stitch]:nth-child(even)::after {
+  transition-delay: 0.15s;
+}
+html.thread-on [data-thread-stitch][data-thread-done]::after {
+  --thread-sew: 360deg;
+}
+
+/* Reduced motion: the thread is a static drawing; no sweeps, no staggered delays. */
+@media (prefers-reduced-motion: reduce) {
+  html.thread-on [data-thread-node],
+  html.thread-on [data-thread-ink],
+  html.thread-on [data-thread-stitch]::after,
+  .site-thread__knot,
+  .site-thread__end,
+  .site-thread__glow,
+  .site-thread__pen {
+    transition: none !important;
+  }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,

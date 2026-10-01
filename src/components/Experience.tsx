@@ -32,24 +32,25 @@ export default function Experience() {
   }, { scope: sectionRef });
 
   return (
-    <section id="experience" ref={sectionRef} className="py-12 bg-muted/30">
+    <section id="experience" ref={sectionRef} data-thread-section className="py-12 bg-muted/30">
       <div className="container mx-auto px-4 max-w-5xl">
         <div ref={headingRef} className="gsap-reveal text-center mb-8">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             My journey
           </p>
           <h2 className="text-4xl font-bold mb-4">Experience</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
+          <div data-thread-bar className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
         <div className="relative">
-          <div className="absolute left-6 top-0 bottom-0 w-px bg-border hidden sm:block" aria-hidden="true" />
+          <div data-thread-line className="absolute left-6 top-0 bottom-0 w-px bg-border hidden sm:block" aria-hidden="true" />
 
           <div className="space-y-8">
             {experiences.map((exp) => (
               <div key={`${exp.company}-${exp.role}-${exp.dateStart}`} className="gsap-reveal timeline-card relative flex gap-6">
                 <div className="hidden sm:flex flex-col items-center shrink-0">
                   <div
+                    data-thread-node
                     className={`w-12 h-12 rounded-full border-2 flex items-center justify-center z-10 ${
                       exp.current
                         ? 'bg-primary border-primary text-primary-foreground'
@@ -64,7 +65,7 @@ export default function Experience() {
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
                     <div>
                       <h3 className="text-lg font-semibold">{exp.role}</h3>
-                      <p className="text-primary font-medium">{exp.company}</p>
+                      <p className="text-primary font-medium"><span data-thread-ink>{exp.company}</span></p>
                       <p className="text-sm text-muted-foreground">{exp.location}</p>
                     </div>
                     <div className="flex items-center gap-1.5 text-sm text-muted-foreground bg-muted rounded-full px-3 py-1 whitespace-nowrap">

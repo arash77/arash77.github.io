@@ -32,14 +32,14 @@ export default function Education() {
   }, { scope: sectionRef });
 
   return (
-    <section id="education" ref={sectionRef} className="py-12">
+    <section id="education" ref={sectionRef} data-thread-section className="py-12">
       <div className="container mx-auto px-4 max-w-4xl">
         <div ref={headingRef} className="gsap-reveal text-center mb-8">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             Academic background
           </p>
           <h2 className="text-4xl font-bold mb-4">Education</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
+          <div data-thread-bar className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid sm:grid-cols-2 gap-8">

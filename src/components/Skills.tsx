@@ -67,14 +67,14 @@ export default function Skills() {
   }, { scope: sectionRef });
 
   return (
-    <section id="skills" ref={sectionRef} className="py-12">
+    <section id="skills" ref={sectionRef} data-thread-section className="py-12">
       <div className="container mx-auto px-4 max-w-6xl">
         <div ref={headingRef} className="gsap-reveal text-center mb-8">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             What I work with
           </p>
           <h2 className="text-4xl font-bold mb-4">Skills</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
+          <div data-thread-bar className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid sm:grid-cols-2 gap-6">

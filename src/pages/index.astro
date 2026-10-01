@@ -6,12 +6,14 @@ import Skills from '../components/Skills';
 import Experience from '../components/Experience';
 import Education from '../components/Education';
 import Contact from '../components/Contact';
+import SiteThread from '../components/SiteThread.astro';
 ---
 
 <Layout
   title="Arash Kadkhodaei – Software Engineer"
   description="Software Engineer at Freiburg University, specializing in Python, backend development, and Galaxy Project bioinformatics tooling."
 >
+  <SiteThread />
   <Hero client:load />
   <About client:visible />
   <Skills client:visible />

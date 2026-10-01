@@ -32,14 +32,14 @@ export default function About() {
   }, { scope: sectionRef });
 
   return (
-    <section id="about" ref={sectionRef} className="py-12 bg-muted/30">
+    <section id="about" ref={sectionRef} data-thread-section className="py-12 bg-muted/30">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="gsap-reveal about-content text-center mb-8">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             Get to know me
           </p>
           <h2 className="text-4xl font-bold mb-4">About Me</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
+          <div data-thread-bar className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full" />
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -47,8 +47,8 @@ export default function About() {
             <p className="text-lg text-muted-foreground leading-relaxed">
               I'm a Software Engineer with expertise in Python, backend development, and a strong
               background in Mechatronics and embedded systems. Currently working at{' '}
-              <strong className="text-foreground">Freiburg University</strong> on the{' '}
-              <strong className="text-foreground">Galaxy Project</strong>, a leading scientific
+              <strong data-thread-ink className="text-foreground">Freiburg University</strong> on the{' '}
+              <strong data-thread-ink className="text-foreground">Galaxy Project</strong>, a leading scientific
               workflow platform.
             </p>
             <p className="text-lg text-muted-foreground leading-relaxed">

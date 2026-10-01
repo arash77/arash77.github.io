@@ -65,14 +65,14 @@ export default function Contact() {
   }, { scope: sectionRef });
 
   return (
-    <section id="contact" ref={sectionRef} className="py-24">
+    <section id="contact" ref={sectionRef} data-thread-section className="py-24">
       <div className="container mx-auto px-4 max-w-5xl">
         <div ref={headingRef} className="gsap-reveal text-center mb-16">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             Let's connect
           </p>
           <h2 className="text-4xl font-bold mb-4">Contact</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
+          <div data-thread-bar className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             I'm always open to interesting conversations, collaboration opportunities, or just saying hi!
           </p>
@@ -85,6 +85,7 @@ export default function Contact() {
               href={href}
               target={href.startsWith('http') ? '_blank' : undefined}
               rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+              data-thread-stitch
               className="gsap-reveal contact-item group flex items-center gap-4 p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150 cursor-pointer"
             >
               <div className={`p-3 rounded-lg bg-muted transition-colors ${color}`}>
