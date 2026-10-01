@@ -3,7 +3,7 @@
   "extends": ["config:best-practices"],
   "schedule": ["on the first day of the month"],
   "timezone": "Europe/Berlin",
-  "prCreation": "not-pending",
+  "prCreation": "immediate",
   "prHourlyLimit": 0,
   "prConcurrentLimit": 10,
   "labels": ["dependencies"],
