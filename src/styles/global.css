@@ -295,11 +295,6 @@
               radial-gradient(at 0% 100%, hsla(155, 62%, 40%, 0.06) 0px, transparent 50%);
 }
 
-/* Typography improvements */
-.prose a {
-  @apply text-primary hover:text-primary/80 underline underline-offset-4 transition-colors;
-}
-
 /* Animation Utilities */
 .animate-delay-1 { animation-delay: 0.05s; }
 .animate-delay-2 { animation-delay: 0.2s; }

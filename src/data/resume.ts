@@ -171,7 +171,7 @@ export const resumeSkillTiers: SkillTier[] = [
 
 // ─────────────────────────────────────────────────────────────
 
-export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 export interface Language {
   name: string;
@@ -189,7 +189,7 @@ export const languages: Language[] = [
 
 import conferencesData from './conferences.json';
 
-export interface Doi {
+interface Doi {
   label: string;
   href: string;
 }
