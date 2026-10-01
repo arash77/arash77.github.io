@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Set up pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
@@ -30,7 +32,10 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '24'
-          cache: 'pnpm'
+          # A pull_request run can read main's cache but only write its own PR
+          # scope, so a PR cannot poison what later runs restore; and this job
+          # only publishes pr-N preview branches, never production.
+          cache: 'pnpm' # zizmor: ignore[cache-poisoning]
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -54,7 +59,7 @@ jobs:
           command: pages deploy dist/ --project-name=kadkhodaei --branch=pr-${{ github.event.pull_request.number }}
 
       - name: Comment preview URL on PR
-        uses: marocchino/sticky-pull-request-comment@v3
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         with:
           header: cloudflare-preview
           message: |

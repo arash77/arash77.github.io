@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
+      # Keeps the persisted token: create-pull-request commits and pushes from
+      # this checkout, and this is the one job whose breakage only shows monthly.
+      - name: Checkout repository # zizmor: ignore[artipacked]
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       
       - name: Set up Python
@@ -126,6 +128,10 @@ jobs:
           # a deprecation warning for the latter).
           client-id: ${{ vars.PORTFOLIO_APP_CLIENT_ID }}
           private-key: ${{ secrets.PORTFOLIO_APP_PRIVATE_KEY }}
+          # Only what create-pull-request needs (push the branch, open the PR),
+          # instead of every permission the App installation holds.
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Create Pull Request
         if: steps.check_changes.outputs.has_changes == 'true'
