@@ -375,9 +375,11 @@ html.thread-measuring .timeline-body {
   fill: hsl(var(--primary));
   transition: opacity 0.3s ease;
 }
+/* The end knot fades in when the route completes, but goes at once when the
+   line retracts (a transition takes the destination state's value). */
 .site-thread__end {
   fill: hsl(var(--secondary));
-  transition: opacity 0.3s ease;
+  transition: none;
 }
 .site-thread__glow {
   fill: hsl(var(--secondary) / 0.18);
@@ -394,15 +396,28 @@ html.thread-measuring .timeline-body {
 .site-thread__pen {
   opacity: 0;
 }
+.site-thread__end[data-on] {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
 
-/* Timeline nodes light up as the pen passes. */
+/* Timeline nodes light up as the pen passes. The fill and the icon change in
+   opposite directions (light to dark, dark to light), so a cross-fade would
+   pass through a moment where both have the same tone and the icon vanishes.
+   The icon colour switches in one step instead, at the point of the fill's
+   transition where both icon colours read best (each direction, both themes). */
 html.thread-on [data-thread-node] {
-  transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0s linear 0.11s;
 }
 html.thread-on [data-thread-node][data-thread-done] {
-  background-color: hsl(var(--primary));
-  border-color: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0s linear 0.13s;
+}
+@media screen {
+  html.thread-on [data-thread-node][data-thread-done] {
+    background-color: hsl(var(--primary));
+    border-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
 }
 
 /* Ink: an underline sweeps in under marked words when the pen passes. */
@@ -418,8 +433,10 @@ html.thread-on [data-thread-ink] {
   box-decoration-break: clone;
   transition: background-size 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-html.thread-on [data-thread-ink][data-thread-done] {
-  background-size: 100% 2px;
+@media screen {
+  html.thread-on [data-thread-ink][data-thread-done] {
+    background-size: 100% 2px;
+  }
 }
 
 /* Stitch: a running stitch inside each contact card's border, sewn in when the
@@ -442,8 +459,23 @@ html.thread-on [data-thread-stitch]::after {
 html.thread-on [data-thread-stitch]:nth-child(even)::after {
   transition-delay: 0.15s;
 }
-html.thread-on [data-thread-stitch][data-thread-done]::after {
-  --thread-sew: 360deg;
+@media screen {
+  html.thread-on [data-thread-stitch][data-thread-done]::after {
+    --thread-sew: 360deg;
+  }
+}
+
+/* Print: the route is laid out for the screen, not for the paper width, so
+   it would run through the reflowed text. Print the page as it is without the
+   thread, timeline line included (node fill, ink and stitches are screen-only
+   above). */
+@media print {
+  html.thread-on .site-thread {
+    display: none;
+  }
+  html.thread-on.thread-drawing [data-thread-line] {
+    opacity: 1;
+  }
 }
 
 /* Reduced motion: the thread is a static drawing; no sweeps, no staggered delays. */

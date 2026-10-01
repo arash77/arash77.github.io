@@ -10,7 +10,7 @@
  * Everything visual is opt-in through `html.thread-on`, which only this script
  * adds, so without JavaScript the page renders exactly as before.
  */
-import { buildRoute, carryOver, computeRails, lengthAtY, pointAt, type LayoutSnapshot, type Rect, type Route, type SectionLayout } from './route';
+import { buildRoute, carryOver, computeRails, lengthAtY, loopReach, LOOP_FILLET, pointAt, type LayoutSnapshot, type Rect, type Route, type SectionLayout } from './route';
 
 const SPRING_K = 40;
 const READ_LINE = 0.62;
@@ -29,6 +29,16 @@ const GLOW_R = 11;
 const SNAP_FOLLOW_S = 1.5;
 /** Pen radius plus half its stroke: the glow never gets smaller than the pen. */
 const PEN_EXTENT = 5.5;
+/** A section heading or timeline card counts as revealed from this computed opacity on. */
+const REVEAL_OPACITY = 0.9;
+/** A reveal gate in view opens after this long anyway (an island that never hydrates must not hold the line). */
+const GATE_CAP_S = 2.5;
+/** Fallback poll while the hero intro has not visibly played (hidden tab, stalled main thread). */
+const FALLBACK_POLL_MS = 250;
+/** Plucks only move straight stretches; the swing eases out over this distance before a corner or loop. */
+const PLUCK_EASE = 36;
+/** Once the page bottom was reached, scrolling up this little (or a mobile URL bar returning) keeps the route complete. */
+const END_LATCH_PX = 64;
 
 interface Anchor {
   el: Element;
@@ -36,10 +46,33 @@ interface Anchor {
   done: boolean;
 }
 
+/**
+ * A point on the route the pen may only pass once `el` (a section heading or a
+ * timeline card) has revealed: the line is never drawn over, or looped around,
+ * content that is still invisible (sections are client:visible islands that
+ * hydrate and fade in after the thread has started).
+ */
+interface Gate {
+  el: Element;
+  /** Route length the pen stops at while the gate is closed. */
+  len: number;
+  /** Vertical extent of `el` (layer coordinates): the gate only applies while it is in view. */
+  top: number;
+  bottom: number;
+}
+
 interface Pluck {
   i: number;
   t0: number;
   a: number;
+}
+
+interface GateSpec {
+  el: Element;
+  /** y (layer coordinates) the pen must not pass: a bar row, or the top of a node loop. */
+  y: number;
+  kind: 'bar' | 'node';
+  box: Rect;
 }
 
 const now = () => performance.now() / 1000;
@@ -94,6 +127,20 @@ export function initThread(): () => void {
   let rebuiltThisFrame = false;
   /** Until this time (s) the drawn length tracks the target exactly (no spring), see start(). */
   let snapUntil = 0;
+  /** The line rests at its target (no spring motion in flight), as of the last frame. */
+  let settled = true;
+  /** A closed reveal gate held the target back in the last targetLen(). */
+  let capActive = false;
+  let gates: Gate[] = [];
+  /** Per-sample pluck weight: 1 on straight stretches, easing to 0 at corners and loops. */
+  let straight: Float32Array = new Float32Array(0);
+  /** scrollY at which the page bottom was last reached (see targetLen). */
+  let endLatch: number | null = null;
+  // Reveal state outlives rebuilds: GSAP reveals play once.
+  const opened = new WeakSet<Element>();
+  /** Gates the drawn line has gone past (never retract for them). */
+  const passed = new WeakSet<Element>();
+  const firstSeen = new WeakMap<Element, number>();
 
   html.classList.add('thread-on');
 
@@ -104,7 +151,7 @@ export function initThread(): () => void {
    * reveal elements are neutralised for the duration of this synchronous read
    * (`html.thread-measuring`, see global.css). Nothing is painted in between.
    */
-  function measure(): { snap: LayoutSnapshot; height: number } | null {
+  function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[] } | null {
     html.classList.add('thread-measuring');
     try {
       const m = main!.getBoundingClientRect();
@@ -136,12 +183,25 @@ export function initThread(): () => void {
         : null;
 
       const sections: SectionLayout[] = [];
+      const gateSpecs: GateSpec[] = [];
       for (const el of main!.querySelectorAll('[data-thread-section]')) {
         if (el === heroEl) continue;
         const box = rel(el);
-        const bar = rel(el.querySelector('[data-thread-bar]'));
+        const barEl = el.querySelector('[data-thread-bar]');
+        const bar = rel(barEl);
         if (!box || !bar) continue;
-        const nodeRects = [...el.querySelectorAll('[data-thread-node]')].map(rel).filter((r): r is Rect => !!r);
+        const heading = barEl?.closest('.gsap-reveal');
+        const headRect = heading ? rel(heading) : null;
+        if (heading && headRect) gateSpecs.push({ el: heading, y: bar.y + bar.h / 2, kind: 'bar', box: headRect });
+        const nodeRects: Rect[] = [];
+        for (const nodeEl of el.querySelectorAll('[data-thread-node]')) {
+          const r = rel(nodeEl);
+          if (!r) continue;
+          nodeRects.push(r);
+          const card = nodeEl.closest('.gsap-reveal');
+          const cardRect = card ? rel(card) : null;
+          if (card && cardRect) gateSpecs.push({ el: card, y: r.y + r.h / 2 - loopReach(r.w / 2 + 9, LOOP_FILLET), kind: 'node', box: cardRect });
+        }
         const cardRects = [...el.querySelectorAll('[data-thread-stitch]')].map(rel);
         sections.push({ top: box.y, bottom: box.y + box.h, bar, nodes: nodeRects, cards: union(cardRects) });
       }
@@ -162,12 +222,14 @@ export function initThread(): () => void {
 
       return {
         height: m.height,
+        gateSpecs,
         snap: {
           width,
           rails: computeRails(width, cLeft, cRight),
-          // Same test as Tailwind's `sm` breakpoint (the window width, scrollbar
-          // included), so the route agrees with the layout it is drawn over.
-          phone: !window.matchMedia('(min-width: 640px)').matches,
+          // Exactly Tailwind's `sm` breakpoint (a 40rem media query: the window
+          // width, scrollbar included, in the browser's own rem), so the route
+          // agrees with the layout it is drawn over at any default font size.
+          phone: !window.matchMedia('(min-width: 40rem)').matches,
           hero: { top: heroRect.y, bottom: heroRect.y + heroRect.h, tags: oneRow ? union(pills) : null, avatar: rel(heroEl.querySelector('[data-thread-avatar]')), scrollHint: hint },
           sections,
         },
@@ -177,17 +239,74 @@ export function initThread(): () => void {
     }
   }
 
-  function targetLen(): number {
+  /** Drawn length the reading position asks for. */
+  function scrollTarget(): number {
     if (!route || !started) return 0;
     if (reduced) return route.total;
     const vh = window.innerHeight;
-    if (window.scrollY + vh >= html.scrollHeight - 4) return route.total;
-    const y = window.scrollY + vh * READ_LINE - mainTop;
+    const y0 = window.scrollY;
+    // The whole route once the bottom is reached, and it stays complete while
+    // the reader stays there: a mobile URL bar coming back shrinks the
+    // viewport without scrolling, which would otherwise unwind the end.
+    if (y0 + vh >= html.scrollHeight - 4) {
+      endLatch = y0;
+      return route.total;
+    }
+    if (endLatch !== null && y0 >= endLatch - Math.min(END_LATCH_PX, vh * 0.1)) return route.total;
+    endLatch = null;
+    const y = y0 + vh * READ_LINE - mainTop;
     return Math.max(route.minLen, lengthAtY(route, y));
+  }
+
+  /**
+   * Shortest route length a closed reveal gate in view allows (Infinity when
+   * none binds). Gates above or below the viewport are ignored: islands out of
+   * view do not hydrate, and what the reader cannot see cannot look wrong. A
+   * gate the line has already gone past never pulls it back. That is tracked
+   * per element, not by comparing lengths: a rebuild remaps the drawn length,
+   * and a remap that lands a hair past a closed gate must not slip through it.
+   */
+  function revealCap(want: number): number {
+    const t = now();
+    const top = window.scrollY - mainTop;
+    const bottom = top + window.innerHeight;
+    for (const g of gates) {
+      if (g.len >= want) break; // sorted by len
+      if (opened.has(g.el) || passed.has(g.el)) continue;
+      // A little slack: the reveal's own offset (y: 20-40px) can keep the
+      // content on screen while its layout box has just left.
+      if (g.bottom + 48 <= top || g.top - 48 >= bottom) continue;
+      if (parseFloat(getComputedStyle(g.el).opacity) >= REVEAL_OPACITY) {
+        opened.add(g.el);
+        continue;
+      }
+      const seen = firstSeen.get(g.el);
+      if (seen === undefined) firstSeen.set(g.el, t);
+      else if (t - seen > GATE_CAP_S) {
+        opened.add(g.el);
+        continue;
+      }
+      return g.len;
+    }
+    return Infinity;
+  }
+
+  function targetLen(): number {
+    const want = scrollTarget();
+    capActive = false;
+    if (!route || !started || reduced) return want;
+    const cap = revealCap(want);
+    if (cap < want) {
+      capActive = true;
+      return cap;
+    }
+    return want;
   }
 
   function rebuild() {
     window.clearTimeout(rebuildTimer);
+    // Decided before the new geometry exists: was the line resting at its target?
+    const wasSettled = settled && vel === 0;
     const measured = measure();
     const next = measured ? buildRoute(measured.snap) : null;
     if (!measured || !next) {
@@ -200,6 +319,8 @@ export function initThread(): () => void {
     if (started) html.classList.add('thread-drawing');
     const prev = route;
     const prevShown = shown;
+    const widthChanged = !!prev && measured.snap.width !== viewW;
+    if (widthChanged) endLatch = null;
     route = next;
     viewW = measured.snap.width;
 
@@ -223,12 +344,33 @@ export function initThread(): () => void {
       if (list) list.push(i);
       else hash.set(k, [i]);
     }
+    straight = straightness(next);
 
-    // Rebuild in place: carry the drawn progress over to the same place on the
-    // new route and let the spring carry on from there (velocity kept), rather
-    // than replaying from the top or jumping to the target.
+    const R = next.radius;
+    gates = measured.gateSpecs
+      .map((g) => ({ el: g.el, len: lengthAtY(next, g.kind === 'bar' ? g.y - R - 1 : g.y - 2), top: g.box.y, bottom: g.box.y + g.box.h }))
+      .filter((g) => g.len > next.minLen)
+      .sort((a, b) => a.len - b.len);
+
+    // Rebuild in place. A line at rest stays at the reading position on the
+    // new geometry (a rotation or window snap keeps scrollY, not the content,
+    // so the old drawn length can map to somewhere off screen). A line in
+    // motion carries its progress over to the same place in the content and
+    // the spring goes on from there, unless a width change lands it off screen
+    // or far from where it is heading (it would sweep or rewind across the
+    // viewport). At the same width the content mapping is exact: keep it.
     if (!started) shown = 0;
-    else if (prev) shown = Math.min(next.total, Math.max(0, carryOver(prev, next, prevShown)));
+    else {
+      shown = prev ? Math.min(next.total, Math.max(0, carryOver(prev, next, prevShown))) : 0;
+      const target = targetLen();
+      const head = pointAt(next, shown)[1] + mainTop;
+      const off = head < window.scrollY || head > window.scrollY + window.innerHeight;
+      const far = Math.abs(target - shown) > Math.max(200, window.innerHeight / 4);
+      if (reduced || !prev || wasSettled || (widthChanged && (off || far))) {
+        shown = target;
+        vel = 0;
+      }
+    }
     plucks = [];
     render(now());
     schedule();
@@ -260,6 +402,12 @@ export function initThread(): () => void {
     return !el || parseFloat(getComputedStyle(el).opacity) > 0.99;
   }
 
+  /** Every element of the hero intro has finished revealing (the intro has visibly played). */
+  function introPlayed(): boolean {
+    const els = main!.querySelectorAll('[data-thread-section="hero"] .gsap-reveal');
+    return [...els].every((el) => parseFloat(getComputedStyle(el).opacity) > 0.99);
+  }
+
   function setGeometry() {
     if (!route) return;
     path!.setAttribute('d', route.d);
@@ -268,7 +416,32 @@ export function initThread(): () => void {
     polyMode = false;
   }
 
+  /**
+   * Pluck weight per sample: 0 on curves (corners, loops, fillets), easing up
+   * to 1 over PLUCK_EASE along straight stretches. Offsetting a curve along
+   * its normal would change its radius (a loop squashing onto its node) and
+   * fold its fillets into cusps; a straight stretch just bows.
+   */
+  function straightness(r: Route): Float32Array {
+    const P = r.points, n = r.count;
+    const dist = new Float32Array(n).fill(1e9);
+    for (let i = 1; i < n - 1; i++) {
+      const ax = P[i * 2] - P[i * 2 - 2], ay = P[i * 2 + 1] - P[i * 2 - 1];
+      const bx = P[i * 2 + 2] - P[i * 2], by = P[i * 2 + 3] - P[i * 2 + 1];
+      const turn = Math.abs(Math.atan2(ax * by - ay * bx, ax * bx + ay * by));
+      if (turn > 0.01) dist[i] = 0;
+    }
+    dist[0] = dist[n - 1] = 0; // the ends do not swing either
+    for (let i = 1; i < n; i++) dist[i] = Math.min(dist[i], dist[i - 1] + 1);
+    for (let i = n - 2; i >= 0; i--) dist[i] = Math.min(dist[i], dist[i + 1] + 1);
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i++) out[i] = Math.sin((Math.PI / 2) * Math.min(1, (dist[i] * r.step) / PLUCK_EASE)) ** 2;
+    return out;
+  }
+
   function offsetAt(i: number, t: number): number {
+    const k = straight[i] ?? 0;
+    if (k === 0) return 0;
     let o = 0;
     for (const pk of plucks) {
       const ds = Math.abs(i - pk.i) * route!.step;
@@ -277,7 +450,7 @@ export function initThread(): () => void {
       const w = Math.cos((Math.PI / 2) * (ds / PLUCK_REACH)) ** 2;
       o += pk.a * Math.exp(-3.2 * tau) * Math.sin(2 * Math.PI * 7 * tau) * w;
     }
-    return o;
+    return o * k;
   }
 
   function setDone(list: Anchor[], reached: number, lead: number) {
@@ -341,8 +514,13 @@ export function initThread(): () => void {
     const glowR = Math.max(PEN_EXTENT, Math.min(GLOW_R, Math.min(head[0], viewW - head[0]) - 0.5)).toFixed(2);
     if (glow!.getAttribute('r') !== glowR) glow!.setAttribute('r', glowR);
     knot!.style.opacity = started ? '1' : '0';
-    endKnot!.style.opacity = arrived ? '1' : '0';
+    // Fades in, but goes at once: the line retracting must not leave it behind.
+    endKnot!.toggleAttribute('data-on', arrived);
 
+    for (const g of gates) {
+      if (g.len >= L - 1) break;
+      passed.add(g.el);
+    }
     const reached = !started ? -Infinity : arrived ? Infinity : r.maxY[Math.min(r.count - 1, Math.floor(L / r.step))];
     setDone(nodes, reached, 4);
     setDone(inks, reached, 6);
@@ -351,10 +529,18 @@ export function initThread(): () => void {
 
   function tick(ts: number) {
     raf = 0;
+    // Never step a frame on geometry for another width (the resize event and
+    // the ResizeObserver can land after this frame's callbacks).
+    if (route && html.clientWidth !== viewW) rebuildInFrame();
+    if (!route) return;
     const t = ts / 1000;
     const dt = lastT ? Math.min(0.05, Math.max(0, t - lastT)) : 1 / 60;
     lastT = t;
     const target = targetLen();
+    // A reveal gate held the line during an in-place start: from here on the
+    // spring draws it in behind the content as each part reveals (exact
+    // tracking would make it jump the moment a gate opens).
+    if (capActive) snapUntil = 0;
     if (reduced || t < snapUntil) {
       shown = target;
       vel = 0;
@@ -368,7 +554,9 @@ export function initThread(): () => void {
       }
     }
     render(now());
-    if (shown !== target || vel !== 0 || plucks.length) raf = requestAnimationFrame(tick);
+    settled = shown === target && vel === 0;
+    // A closed gate keeps the loop polling until its content reveals.
+    if (!raf && (!settled || plucks.length || capActive)) raf = requestAnimationFrame(tick);
     else lastT = 0;
   }
 
@@ -388,6 +576,7 @@ export function initThread(): () => void {
     window.clearTimeout(fallbackTimer);
     window.clearTimeout(capTimer);
     html.classList.add('thread-drawing');
+    settled = false;
     if (snap || heroGone()) {
       shown = targetLen();
       vel = 0;
@@ -414,7 +603,7 @@ export function initThread(): () => void {
     const reach = Math.ceil(PLUCK_REACH / r.step);
     let cap = Infinity;
     for (let j = Math.max(1, best - reach); j <= Math.min(r.count - 2, best + reach); j++) {
-      const w = Math.cos((Math.PI / 2) * ((Math.abs(j - best) * r.step) / PLUCK_REACH)) ** 2;
+      const w = Math.cos((Math.PI / 2) * ((Math.abs(j - best) * r.step) / PLUCK_REACH)) ** 2 * (straight[j] ?? 0);
       const dx = P[(j + 1) * 2] - P[(j - 1) * 2], dy = P[(j + 1) * 2 + 1] - P[(j - 1) * 2 + 1];
       const nx = Math.abs(dy) / (Math.hypot(dx, dy) || 1);
       if (nx * w < 0.05) continue;
@@ -459,6 +648,8 @@ export function initThread(): () => void {
         }
       }
     }
+    // A sweep across a loop or a corner plucks nothing (only straight stretches swing).
+    if (best >= 0 && (straight[best] ?? 0) < 0.3) return;
     if (best < 0 || plucks.some((pk) => Math.abs(pk.i - best) * r.step < 60 && t - pk.t0 < 0.25)) return;
     const a = Math.max(0, best - 1), b = Math.min(r.count - 1, best + 1);
     const nx = -(r.points[b * 2 + 1] - r.points[a * 2 + 1]), ny = r.points[b * 2] - r.points[a * 2];
@@ -487,15 +678,30 @@ export function initThread(): () => void {
   else {
     window.addEventListener('hero:revealed', () => start(), { once: true, signal });
     // The fallback counts from the start of the hero intro (the island may
-    // hydrate late on a slow connection), never from this script's boot.
+    // hydrate late on a slow connection), never from this script's boot. It is
+    // wall-clock time while the intro runs on animation frames: in a hidden tab
+    // (or behind a long task) the timer fires before the intro has played, so
+    // it only starts once the intro has visibly played, polling until then.
+    let armedAt = 0;
+    const visible = () => document.visibilityState !== 'hidden';
+    const tryStart = () => {
+      if (started) return;
+      if (visible() && (introPlayed() || performance.now() - armedAt > BOOT_CAP_MS)) start();
+      else fallbackTimer = window.setTimeout(tryStart, FALLBACK_POLL_MS);
+    };
     const armFallback = () => {
       window.clearTimeout(fallbackTimer);
-      fallbackTimer = window.setTimeout(() => start(), INTRO_FALLBACK_MS);
+      armedAt = performance.now();
+      fallbackTimer = window.setTimeout(tryStart, INTRO_FALLBACK_MS);
     };
     if ('heroIntro' in html.dataset) armFallback();
     else window.addEventListener('hero:intro-start', armFallback, { once: true, signal });
+    // Back from a background tab, the intro replays: give it its full time again.
+    document.addEventListener('visibilitychange', () => {
+      if (!started && visible() && 'heroIntro' in html.dataset) armFallback();
+    }, { signal });
     capTimer = window.setTimeout(() => {
-      if (!('heroIntro' in html.dataset) && beadsVisible()) start();
+      if (!('heroIntro' in html.dataset) && visible() && beadsVisible()) start();
     }, BOOT_CAP_MS);
   }
 

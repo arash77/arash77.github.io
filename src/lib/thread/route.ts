@@ -65,7 +65,7 @@ export interface LayoutSnapshot {
   /** Viewport (client) width: the route must stay inside [0, width]. */
   width: number;
   rails: Rails;
-  /** < 640px: start beside the avatar instead of through the tags. */
+  /** Below Tailwind's `sm` (40rem): start beside the avatar instead of through the tags. */
   phone: boolean;
   hero: HeroLayout;
   sections: SectionLayout[];

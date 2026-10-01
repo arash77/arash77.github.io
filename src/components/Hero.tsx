@@ -52,7 +52,7 @@ export default function Hero() {
     <section
       ref={containerRef}
       data-thread-section="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-clip gradient-mesh pt-16"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden supports-[overflow:clip]:overflow-clip gradient-mesh pt-16"
     >
       {/* Decorative blobs */}
       <div

@@ -19,14 +19,15 @@ export default function Experience() {
       opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
       scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
     });
-    // Cards fade in; only their text slides. The node column stays put, so the
-    // scroll thread's loop around each node is concentric with it from the
-    // first frame (the thread may reach a node while its card is still in).
-    gsap.set('.timeline-body', { x: -40 });
+    // Cards fade in; only their text moves, and only vertically. The node
+    // column stays put, so the scroll thread's loop around each node is
+    // concentric with it from the first frame, and no text ever slides
+    // sideways into the loop (or past the viewport edge on phones).
+    gsap.set('.timeline-body', { y: 20 });
     const reveal = { duration: 0.7, stagger: 0.2, ease: 'power3.out' };
     gsap.timeline({ scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' } })
       .to('.timeline-card', { opacity: 1, visibility: 'inherit', ...reveal }, 0)
-      .to('.timeline-body', { x: 0, ...reveal }, 0);
+      .to('.timeline-body', { y: 0, ...reveal }, 0);
   }, { scope: sectionRef });
 
   return (
