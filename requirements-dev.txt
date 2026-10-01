@@ -3,4 +3,4 @@
 # are silently never updated.
 -r requirements.txt
 pytest==9.1.1
-ruff==0.14.2
+ruff==0.16.9
