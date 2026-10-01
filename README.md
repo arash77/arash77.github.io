@@ -1,42 +1,26 @@
 # kadkhodaei.de
 
-Personal portfolio website for [Arash Kadkhodaei](https://kadkhodaei.de).
+Source of the personal website of [Arash Kadkhodaei](https://kadkhodaei.de): a static site built with [Astro](https://astro.build).
 
-Built with **Astro 5**, **Tailwind CSS**, **shadcn/ui**, and **GSAP** animations. Hosted on **Cloudflare Pages**.
-
-## Stack
-
-| Layer | Tech |
-|-------|------|
-| Framework | Astro 5 (static output) |
-| Styling | Tailwind CSS v3 + shadcn/ui |
-| Animations | GSAP + ScrollTrigger |
-| React Islands | `@astrojs/react` (Navbar, Hero, sections) |
-| Content | Astro Content Collections (JSON) |
-| Hosting | Cloudflare Pages via Actions |
+The full stack and current versions are in [`package.json`](package.json); this README deliberately avoids repeating them.
 
 ## Development
 
 ```bash
 pnpm install
-pnpm dev          # http://localhost:4321
-pnpm build        # Static output to dist/
-pnpm preview      # Preview dist/ locally
+pnpm dev      # local dev server
+pnpm build    # static output in dist/
+pnpm test     # unit and end-to-end tests
 ```
 
-## Adding a Project
+All available commands are the `scripts` in [`package.json`](package.json).
 
-Create a JSON file in `src/content/projects/`:
+## Content
 
-```json
-{
-  "title": "My Project",
-  "description": "What it does.",
-  "category": "Python Projects",
-  "links": [{ "label": "Repository", "url": "https://github.com/..." }],
-  "tags": ["Python"],
-  "featured": false
-}
-```
+Projects are JSON files in [`src/content/projects/`](src/content/projects/). Their fields and allowed categories are defined by the schema in [`src/content.config.ts`](src/content.config.ts); copy an existing file as a starting point.
 
-Valid categories: `Bioinformatics`, `Python Projects`, `Galaxy Core`, `Galaxy Training`, `UseGalaxy.eu`, `Python Libraries`, `Crypto`.
+## Deployment
+
+- Every push to `main` is built, deployed to Cloudflare Pages and smoke-tested by [`deploy.yml`](.github/workflows/deploy.yml).
+- Every pull request gets its own preview deployment, linked in a PR comment by [`preview.yml`](.github/workflows/preview.yml).
+- Dependencies are updated automatically by Renovate, configured in [`renovate.json`](renovate.json).
