@@ -41,7 +41,7 @@ jobs:
       build-id: ${{ steps.build-id.outputs.value }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
@@ -109,7 +109,7 @@ jobs:
       # because the action installs with `npm i wrangler@<version>` there, and
       # npm reconciles every dependency of a package.json it finds in the cwd.
       - name: Check out package.json
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           path: source
           sparse-checkout: package.json
