@@ -1,0 +1,12 @@
+{
+  "title": "ArcFS Fsspec Connector",
+  "description": "The contributor enhanced the ArcFS filesystem provider for fsspec by resolving critical caching, error handling, and pagination issues. They corrected GitLab API error resolution for missing references, optimized directory listing performance by properly leveraging fsspec's DirCache, and aligned pagination logic with backend requirements. These improvements significantly increased the reliability and efficiency of file operations within the NFDI4Plants ecosystem.",
+  "category": "Other",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/nfdi4plants/arcfs-fsspec" },
+    { "label": "PRs (3)", "url": "https://github.com/nfdi4plants/arcfs-fsspec/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Python", "Fsspec", "GitLab API", "Caching", "FileSystems"],
+  "featured": false,
+  "order": 99
+}

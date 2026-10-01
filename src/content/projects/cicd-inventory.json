@@ -1,0 +1,12 @@
+{
+  "title": "Galaxy CI/CD Inventory",
+  "description": "Improved the resilience of the CI/CD workflow extractor by handling complex runner group structures and gracefully skipping unparseable workflow definitions. Modernized dependency automation by migrating Dependabot to the uv ecosystem to keep lockfiles synchronized across frozen deployment pipelines. These changes restored daily build reliability and ensured uninterrupted tracking of workflow inventory.",
+  "category": "UseGalaxy.eu",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/usegalaxy-eu/cicd-inventory" },
+    { "label": "PRs (2)", "url": "https://github.com/usegalaxy-eu/cicd-inventory/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Python", "CI/CD", "GitHub Actions", "Pydantic", "Automation"],
+  "featured": false,
+  "order": 99
+}
