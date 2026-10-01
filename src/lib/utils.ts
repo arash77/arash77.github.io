@@ -37,8 +37,6 @@ export const LEGAL_LANGS = {
   EN: 'en',
 } as const;
 
-export type LegalLang = (typeof LEGAL_LANGS)[keyof typeof LEGAL_LANGS];
-
 export const STORAGE_KEYS = {
   LEGAL_LANG: 'legal-lang',
 } as const;
