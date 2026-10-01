@@ -44,6 +44,11 @@
       "minimumReleaseAge": "14 days"
     },
     {
+      "description": "TypeScript 7 is the native (Go) compiler and does not yet ship the programmatic API that `astro check` -- the Typecheck step of the CI Gate -- relies on; the check aborts with 'does not expose the programmatic API'. Hold TypeScript below 7 so it cannot block the majors group, and delete this rule once @astrojs/language-server supports TypeScript 7.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "description": "Actions a green CI Gate does not actually exercise, so automerging them would ship them untested and they would first fail at the moment they are needed. Three distinct reasons: (1) create-github-app-token and create-pull-request run only in update-contributions.yml, which triggers on schedule/workflow_dispatch, so no PR ever runs them and a break first appears on the monthly job; (2) wrangler-action and sticky-pull-request-comment run in preview.yml, whose paths filter skips .github/** -- so a PR bumping just those actions does not trigger the very workflow that would test them, and a break silently kills previews for every later PR; wrangler-action also publishes production from deploy.yml, which no PR runs either; (3) in test.yml upload-artifact is only reached under `if: failure()` (deploy.yml uses it only on main), so a green PR run never touches it and a break surfaces exactly when a Playwright report is needed to debug something else. Deploy-only actions (download-artifact, github-script) are deliberately left automerging: they run on every push to main, so they fail loudly right after merge instead of lying in wait. Given its own group rather than an automerge exception inside the 29-package non-major group, so that group keeps one unambiguous automerge setting.",
       "matchManagers": ["github-actions"],
       "matchPackageNames": [
