@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
+import { revealTiming } from '../lib/reveal';
 import { GraduationCap, Calendar } from 'lucide-react';
 import { education } from '../data/resume';
 
@@ -16,7 +17,7 @@ export default function Education() {
 
     gsap.set(headingRef.current, { y: 24 });
     gsap.to(headingRef.current, {
-      opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
+      opacity: 1, visibility: 'inherit', y: 0, ...revealTiming(sectionRef.current, 0.6), ease: 'power3.out',
       scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
     });
     gsap.set('.edu-card', { y: 30 });
@@ -24,8 +25,7 @@ export default function Education() {
       opacity: 1,
       visibility: 'inherit',
       y: 0,
-      duration: 0.7,
-      stagger: 0.2,
+      ...revealTiming(sectionRef.current, 0.7, 0.2),
       ease: 'power3.out',
       scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' },
     });

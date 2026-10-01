@@ -135,6 +135,51 @@ function paintOrder(page: Page) {
   });
 }
 
+/** Vertical distance from each hero tag pill's centre to the route where it crosses that pill's centre x. */
+function beadOffsets(page: Page) {
+  return page.evaluate(() => {
+    const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+    const path = svg.querySelector<SVGPathElement>('[data-thread-path]')!;
+    const s = svg.getBoundingClientRect();
+    const pills = [...document.querySelector('[data-thread-beads]')!.children].map((el) => el.getBoundingClientRect());
+    const total = path.getTotalLength();
+    return pills.map((r) => {
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      let best = Infinity;
+      for (let l = 0; l < Math.min(total, 1500); l += 1) {
+        const p = path.getPointAtLength(l);
+        if (Math.abs(s.left + p.x - cx) < 1) best = Math.min(best, Math.abs(s.top + p.y - cy));
+      }
+      return best;
+    });
+  });
+}
+
+/**
+ * Records, for every change of the route geometry (the path's `d` outside a
+ * pluck), the vertical translation of the element `sel` at that moment: was
+ * the geometry measured while that element was transformed?
+ */
+function recordRebuilds(page: Page, sel: string) {
+  return page.evaluate((sel) => {
+    const w = window as unknown as { __rebuilds: number[] };
+    w.__rebuilds = [];
+    const p = document.querySelector('[data-thread-path]')!;
+    const el = document.querySelector(sel)!;
+    new MutationObserver(() => {
+      if (!p.hasAttribute('pathLength')) return; // a pluck's polyline
+      const t = getComputedStyle(el).transform;
+      w.__rebuilds.push(t === 'none' ? 0 : new DOMMatrixReadOnly(t).m42);
+    }).observe(p, { attributes: true, attributeFilter: ['d'] });
+  }, sel);
+}
+const rebuilds = (page: Page) => page.evaluate(() => (window as unknown as { __rebuilds: number[] }).__rebuilds);
+const translateY = (page: Page, sel: string) =>
+  page.evaluate((sel) => {
+    const t = getComputedStyle(document.querySelector(sel)!).transform;
+    return t === 'none' ? 0 : new DOMMatrixReadOnly(t).m42;
+  }, sel);
+
 const dashLength = (page: Page) =>
   page.locator('[data-thread-path]').evaluate((p) => parseFloat((p.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]));
 
@@ -375,6 +420,10 @@ test.describe('scroll thread, normal motion', () => {
 
   test('scrolling down then up reverses ink, stitches and nodes', async ({ page }) => {
     const sels = ['[data-thread-node]', '[data-thread-ink]', '[data-thread-stitch]'];
+    // Every node starts unlit, the current job's too (only the pen lights it).
+    const nodeFills = () => page.locator('[data-thread-node]').evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor));
+    const unlit = await nodeFills();
+    expect(new Set(unlit).size, unlit.join(' | ')).toBe(1);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     for (const sel of sels) {
       const all = await page.locator(sel).count();
@@ -387,6 +436,45 @@ test.describe('scroll thread, normal motion', () => {
       await expect(page.locator(`${sel}[data-thread-done]`), sel).toHaveCount(0, { timeout: 8000 });
     }
     await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '0');
+    await expect.poll(nodeFills, { timeout: 2000 }).toEqual(unlit);
+  });
+
+  test('stitches and ink go as soon as the line retracts past them', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const stitches = page.locator('[data-thread-stitch]');
+    const all = await stitches.count();
+    await expect(page.locator('[data-thread-stitch][data-thread-done]')).toHaveCount(all, { timeout: 8000 });
+    await page.waitForTimeout(1600); // fully sewn
+    const sew = () => stitches.evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el, '::after').getPropertyValue('--thread-sew'))));
+    expect(Math.min(...(await sew()))).toBeGreaterThan(350);
+    await page.evaluate(() => window.scrollBy(0, -500));
+    await expect(page.locator('[data-thread-stitch][data-thread-done]')).toHaveCount(0, { timeout: 3000 });
+    // The line has left the cards: within a moment nothing of the stitches is left either.
+    await page.waitForTimeout(450);
+    expect(Math.max(...(await sew()))).toBeLessThan(10);
+  });
+
+  test('the end knot appears as the pen arrives, without a crawling tail', async ({ page }) => {
+    await page.evaluate(() => {
+      const w = window as unknown as { __end: { t30: number; on: number } };
+      w.__end = { t30: 0, on: 0 };
+      const p = document.querySelector('[data-thread-path]')!;
+      const end = document.querySelector('[data-thread-end]')!;
+      const tick = (ts: number) => {
+        const total = parseFloat(p.getAttribute('pathLength') ?? '0');
+        const dash = parseFloat((p.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+        if (!w.__end.t30 && total > 0 && total - dash < 30) w.__end.t30 = ts;
+        if (end.hasAttribute('data-on')) w.__end.on = ts;
+        else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+      window.scrollTo(0, document.documentElement.scrollHeight);
+    });
+    await expect(page.locator('[data-thread-end]')).toHaveAttribute('data-on', '', { timeout: 8000 });
+    const end = await page.evaluate(() => (window as unknown as { __end: { t30: number; on: number } }).__end);
+    expect(end.t30).toBeGreaterThan(0);
+    // A critically damped spring alone takes ~0.7s over its last 30px.
+    expect(end.on - end.t30).toBeLessThan(350);
   });
 
   test('a resize keeps the drawn progress instead of replaying from the top', async ({ page }) => {
@@ -452,26 +540,40 @@ test.describe('scroll thread, normal motion', () => {
     }
   });
 
-  test('loops are concentric with the nodes and the beads run through the pills, even when rebuilt mid-reveal', async ({ page }) => {
-    // Beads: the boot / font rebuilds ran during the hero intro (tags at y +15px).
-    const beads = await page.evaluate(() => {
+  test('a rebuild while a heading is still transformed by its reveal measures where it will rest', async ({ page }) => {
+    await page.evaluate(() => document.fonts.ready);
+    // Skills in view, but short of its reveal trigger (top 80%): the island has
+    // hydrated and set the heading's start offset (y: 24px), and it holds there.
+    await page.locator('#skills').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.9));
+    const head = '#skills .gsap-reveal';
+    await expect.poll(() => translateY(page, head), { timeout: 4000 }).toBeGreaterThan(10);
+    await recordRebuilds(page, head);
+    await page.setViewportSize({ width: 1180, height: 800 });
+    await expect.poll(() => rebuilds(page)).not.toEqual([]);
+    await page.waitForTimeout(500);
+    // Now let it reveal (scrolling rebuilds nothing), and compare with where it rests.
+    await page.locator('#skills').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.5));
+    await expect.poll(() => translateY(page, head), { timeout: 4000 }).toBe(0);
+    await page.waitForTimeout(300);
+    const log = await rebuilds(page);
+    expect(log[log.length - 1], `the last rebuild ran mid-reveal: ${log.join(', ')}`).toBeGreaterThan(5);
+    const off = await page.evaluate(() => {
       const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
       const path = svg.querySelector<SVGPathElement>('[data-thread-path]')!;
       const s = svg.getBoundingClientRect();
-      const pills = [...document.querySelector('[data-thread-beads]')!.children].map((el) => el.getBoundingClientRect());
-      const total = path.getTotalLength();
-      return pills.map((r) => {
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-        let best = Infinity;
-        for (let l = 0; l < Math.min(total, 1500); l += 1) {
-          const p = path.getPointAtLength(l);
-          if (Math.abs(s.left + p.x - cx) < 1) best = Math.min(best, Math.abs(s.top + p.y - cy));
-        }
-        return best;
-      });
+      const bar = document.querySelector('#skills [data-thread-bar]')!.getBoundingClientRect();
+      const cy = bar.top + bar.height / 2;
+      let best = Infinity;
+      for (let l = 0, total = path.getTotalLength(); l <= total; l += 1) {
+        const p = path.getPointAtLength(l);
+        if (s.left + p.x > bar.left && s.left + p.x < bar.right) best = Math.min(best, Math.abs(s.top + p.y - cy));
+      }
+      return best;
     });
-    for (const d of beads) expect(d).toBeLessThan(1.5);
+    expect(off, 'the crossing runs through the bar').toBeLessThan(1);
+  });
 
+  test('loops are concentric with the nodes, also after a rebuild while the timeline text slides in', async ({ page }) => {
     // Nodes: rebuild while the timeline cards are still sliding in.
     const vh = 800;
     await page.locator('#experience').evaluate((el, vh) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - vh * 0.7), vh);
@@ -696,20 +798,68 @@ test.describe('scroll thread, normal motion', () => {
     }
   });
 
-  test('a fast pointer sweep plucks the line', async ({ page }) => {
-    await expect.poll(() => dashLength(page)).toBeGreaterThan(200);
-    const target = await page.evaluate(() => {
+  test('a fast pointer sweep plucks a rail, and the swinging line still runs straight into the pen', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 1250));
+    await page.waitForTimeout(2500); // the pen comes to rest on the right rail
+    const pen = await page.evaluate(() => {
       const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
-      const knot = svg.querySelector('[data-thread-knot]')!;
+      const path = svg.querySelector<SVGPathElement>('[data-thread-path]')!;
+      const c = svg.querySelector('[data-thread-pen]')!;
       const s = svg.getBoundingClientRect();
-      return { x: s.left + parseFloat(knot.getAttribute('cx')!) + 60, y: s.top + parseFloat(knot.getAttribute('cy')!) };
+      const dash = parseFloat((path.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+      const a = path.getPointAtLength(dash - 40), b = path.getPointAtLength(dash);
+      return { x: s.left + parseFloat(c.getAttribute('cx')!), y: s.top + parseFloat(c.getAttribute('cy')!), vertical: Math.abs(a.x - b.x) < 0.5 && b.y - a.y > 39 };
     });
-    await page.mouse.move(target.x, target.y - 60);
-    await page.mouse.move(target.x, target.y + 60, { steps: 2 });
-    // While vibrating, the drawn part is rendered as a displaced polyline.
-    await expect.poll(() => page.locator('[data-thread-path]').getAttribute('pathLength'), { timeout: 1000 }).toBeNull();
+    expect(pen.vertical, 'the pen rests on a rail').toBe(true);
+    await page.evaluate(() => {
+      const w = window as unknown as { __pk: { frames: number; jog: number; swing: number } };
+      w.__pk = { frames: 0, jog: 0, swing: 0 };
+      const p = document.querySelector('[data-thread-path]')!;
+      const t0 = performance.now();
+      const tick = () => {
+        if (!p.hasAttribute('pathLength')) {
+          const pts = [...(p.getAttribute('d') ?? '').matchAll(/[ML](-?[\d.]+),(-?[\d.]+)/g)].map((m) => [parseFloat(m[1]), parseFloat(m[2])]);
+          const head = pts[pts.length - 1], prev = pts[pts.length - 2];
+          w.__pk.frames++;
+          // The rail is vertical: any sideways step into the head is a jog.
+          w.__pk.jog = Math.max(w.__pk.jog, Math.abs(prev[0] - head[0]));
+          for (const q of pts) if (head[1] - q[1] < 160) w.__pk.swing = Math.max(w.__pk.swing, Math.abs(q[0] - head[0]));
+        }
+        if (performance.now() - t0 < 1800) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await page.mouse.move(pen.x + 60, pen.y - 30);
+    await page.mouse.move(pen.x - 60, pen.y - 30, { steps: 2 });
+    await page.waitForTimeout(1900);
+    const pk = await page.evaluate(() => (window as unknown as { __pk: { frames: number; jog: number; swing: number } }).__pk);
+    expect(pk.frames, 'the sweep plucked the rail').toBeGreaterThan(0);
+    expect(pk.swing).toBeGreaterThan(2);
+    expect(pk.jog).toBeLessThan(1);
     // ...and it settles back to the exact geometry.
     await expect.poll(() => page.locator('[data-thread-path]').getAttribute('pathLength'), { timeout: 4000 }).not.toBeNull();
+  });
+
+  test('the beads row does not swing (the pills stay strung on it)', async ({ page }) => {
+    await expect.poll(() => dashLength(page)).toBeGreaterThan(200);
+    const target = await page.evaluate(() => {
+      const pills = [...document.querySelector('[data-thread-beads]')!.children].map((el) => el.getBoundingClientRect());
+      const [a, b] = pills;
+      return { x: (a.right + b.left) / 2, y: a.top + a.height / 2 };
+    });
+    await page.evaluate(() => {
+      const w = window as unknown as { __plucked: boolean };
+      w.__plucked = false;
+      const p = document.querySelector('[data-thread-path]')!;
+      new MutationObserver(() => {
+        if (!p.hasAttribute('pathLength')) w.__plucked = true;
+      }).observe(p, { attributes: true, attributeFilter: ['pathLength'] });
+    });
+    await page.mouse.move(target.x + 30, target.y - 60);
+    await page.mouse.move(target.x - 30, target.y + 60, { steps: 3 });
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => (window as unknown as { __plucked: boolean }).__plucked)).toBe(false);
   });
 });
 
@@ -744,18 +894,23 @@ interface RevealRec {
   minLen: number;
   reachedNodes: boolean;
   restoredY: number;
+  /** Frames where the line shows on a viewport whose content has not started to reveal. */
+  blank: string[];
 }
 
 /**
- * Init script: records every frame for 4s after navigation and lists the
- * frames where the drawn line has gone past a timeline node (or lit it) whose
- * card is still mostly transparent, or past a heading bar whose heading is,
- * while that content is on screen.
+ * Init script: records every frame for `ms` (default 4s) after navigation and
+ * lists the frames where the drawn line has gone past a timeline node (or lit
+ * it) whose card is still mostly transparent, or past a heading bar whose
+ * heading is, while that content is on screen. Each frame is read after it has
+ * been rendered (a task queued from the frame's callbacks), so the reading is
+ * what was painted, whatever the order of the page's own frame callbacks.
  */
-function revealRecorder() {
-  const rec: RevealRec = { done: false, frames: 0, violations: [], violationY: [], slid: [], noLine: [], firstDash: 0, minLen: 0, reachedNodes: false, restoredY: 0 };
+function revealRecorder(ms = 4000) {
+  const rec: RevealRec = { done: false, frames: 0, violations: [], violationY: [], slid: [], noLine: [], firstDash: 0, minLen: 0, reachedNodes: false, restoredY: 0, blank: [] };
   (window as unknown as { __rec: RevealRec }).__rec = rec;
   const t0 = performance.now();
+  const next = () => requestAnimationFrame(() => setTimeout(tick, 0));
   const tick = () => {
     const t = Math.round(performance.now() - t0);
     const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]');
@@ -803,11 +958,19 @@ function revealRecorder() {
         const op = parseFloat(getComputedStyle(heading).opacity);
         if (headY > r.top - 2 && op < 0.85) violate(`${t}ms bar of #${bar.closest('section')?.id} at opacity ${op.toFixed(2)} (scrollY ${Math.round(window.scrollY)}, head ${Math.round(headY)}, bar ${Math.round(r.top)})`);
       });
+      // The line on screen beside content that has not started to reveal at all.
+      if (headY > 0) {
+        const blocks = [...document.querySelectorAll('[data-thread-section]:not([data-thread-section="hero"]) .gsap-reveal')].filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.height > 0 && r.bottom > 0 && r.top < vh;
+        });
+        if (blocks.length && blocks.every((el) => parseFloat(getComputedStyle(el).opacity) < 0.05)) rec.blank.push(`${t}ms (scrollY ${Math.round(window.scrollY)}, head ${Math.round(headY)})`);
+      }
     }
-    if (t < 4000) requestAnimationFrame(tick);
+    if (t < ms) next();
     else rec.done = true;
   };
-  requestAnimationFrame(tick);
+  next();
 }
 
 test.describe('scroll thread, start', () => {
@@ -896,8 +1059,127 @@ test.describe('scroll thread, start', () => {
     // showed no page script calling scrollTo or setting scrollTop): content
     // scrolled past during that is not what this test is about.
     expect(rec.violations.filter((_, i) => Math.abs(rec.violationY[i] - 2000) <= 40)).toEqual([]);
+    expect(rec.blank, 'no line beside a viewport that has not started to reveal').toEqual([]);
     expect(rec.firstDash).toBeGreaterThan(rec.minLen + 200);
     expect(rec.reachedNodes).toBe(true);
+  });
+
+  test('after a reload at the page bottom, scrolling up never shows the line past content that has not revealed', async ({ page }) => {
+    // The sections above hydrate only as they come back into view, after the
+    // whole route was drawn at the bottom (also what a scrollbar jump does).
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto('/');
+    await page.addStyleTag({ content: 'html { scroll-behavior: auto !important; }' });
+    await expect(page.locator('[data-thread-knot]')).toHaveCSS('opacity', '1', { timeout: 6000 });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(1500);
+    await page.addInitScript(revealRecorder, 9000);
+    await page.reload({ waitUntil: 'commit' });
+    await page.waitForTimeout(2500);
+    const bottom = await page.evaluate(() => window.scrollY);
+    expect(bottom).toBeGreaterThan(2000);
+    await page.mouse.move(683, 384);
+    for (let i = 0; i < 40 && (await page.evaluate(() => window.scrollY)) > bottom - 2600; i++) {
+      await page.mouse.wheel(0, -100);
+      await page.waitForTimeout(70);
+    }
+    await page.waitForFunction(() => (window as unknown as { __rec?: { done: boolean } }).__rec?.done, null, { timeout: 12000 });
+    const rec = await page.evaluate(() => (window as unknown as { __rec: RevealRec }).__rec);
+    expect(rec.reachedNodes, 'scrolled back up through the timeline').toBe(true);
+    expect(rec.violations).toEqual([]);
+  });
+
+  test('an island that hydrates late holds the line until its content reveals, however long it takes', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.addStyleTag({ content: 'html { scroll-behavior: auto !important; }' });
+    await expect(page.locator('[data-thread-knot]')).toHaveCSS('opacity', '1', { timeout: 6000 });
+    // The Experience heading in view, above the reading line.
+    await page.locator('#experience').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 300));
+    await page.waitForTimeout(1500);
+    // A slow connection: the island's chunk arrives long after the section is in view.
+    await page.route(/\/_astro\/Experience\.[^/]*\.js$/, async (route) => {
+      await new Promise((r) => setTimeout(r, 4500));
+      await route.continue();
+    });
+    await page.addInitScript(revealRecorder, 7000);
+    await page.reload({ waitUntil: 'commit' });
+    await page.waitForTimeout(3500);
+    // Past the line's 2.5s cap for content that never reveals, and not hydrated yet.
+    expect(await page.locator('#experience').evaluate((el) => el.closest('astro-island')?.hasAttribute('ssr'))).toBe(true);
+    await page.waitForFunction(() => (window as unknown as { __rec?: { done: boolean } }).__rec?.done, null, { timeout: 12000 });
+    const rec = await page.evaluate(() => (window as unknown as { __rec: RevealRec }).__rec);
+    expect(rec.violations).toEqual([]);
+    expect(rec.reachedNodes, 'the line does go on once the content is there').toBe(true);
+  });
+
+  test('scrolling away during the hero intro and back: nothing is drawn in the hero until the intro completes', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.addInitScript(() => {
+      const w = window as unknown as { __hero: { v: string[]; drawingAway: boolean; back: number } };
+      w.__hero = { v: [], drawingAway: false, back: 0 };
+      const t0 = performance.now();
+      const check = () => {
+        const html = document.documentElement;
+        const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]');
+        const tags = document.querySelector('[data-thread-beads]');
+        if (svg && tags && !('heroRevealed' in html.dataset)) {
+          const t = Math.round(performance.now() - t0);
+          const drawing = html.classList.contains('thread-drawing');
+          const r = tags.getBoundingClientRect();
+          const inView = r.bottom > 0 && r.top < window.innerHeight;
+          if (drawing && !inView) w.__hero.drawingAway = true;
+          if (drawing && inView) {
+            w.__hero.back++;
+            const path = svg.querySelector<SVGPathElement>('[data-thread-path]')!;
+            const dash = parseFloat((path.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]) || 0;
+            if (path.style.opacity === '1' && dash > 0.5) w.__hero.v.push(`${t}ms line drawn (${Math.round(dash)}) over tags at opacity ${getComputedStyle(tags).opacity}`);
+            for (const sel of ['[data-thread-knot]', '[data-thread-pen]']) {
+              const op = parseFloat(getComputedStyle(svg.querySelector(sel)!).opacity);
+              if (op > 0.03) w.__hero.v.push(`${t}ms ${sel} at opacity ${op.toFixed(2)}`);
+            }
+          }
+        }
+        requestAnimationFrame(() => setTimeout(check, 0));
+      };
+      requestAnimationFrame(() => setTimeout(check, 0));
+    });
+    await page.goto('/');
+    await page.waitForFunction(() => 'heroIntro' in document.documentElement.dataset);
+    await page.mouse.move(720, 450);
+    await page.waitForTimeout(200);
+    for (let i = 0; i < 5; i++) {
+      await page.mouse.wheel(0, 200);
+      await page.waitForTimeout(40);
+    }
+    await page.waitForTimeout(250);
+    for (let i = 0; i < 6; i++) {
+      await page.mouse.wheel(0, -200);
+      await page.waitForTimeout(40);
+    }
+    await page.waitForFunction(() => 'heroRevealed' in document.documentElement.dataset, null, { timeout: 8000 });
+    const hero = await page.evaluate(() => (window as unknown as { __hero: { v: string[]; drawingAway: boolean; back: number } }).__hero);
+    expect(hero.drawingAway, 'the line started in place while the hero was out of view').toBe(true);
+    expect(hero.back, 'and the reader was back at the hero before the intro completed').toBeGreaterThan(5);
+    expect(hero.v).toEqual([]);
+    // Then the beads draw as usual.
+    await expect.poll(() => dashLength(page), { timeout: 4000 }).toBeGreaterThan(200);
+  });
+
+  test('a rebuild during the hero intro measures the tags where they will rest', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await ready(page); // the font rebuild is done
+    const tags = '[data-thread-beads]';
+    await expect.poll(() => translateY(page, tags), { timeout: 4000 }).toBeGreaterThan(5);
+    await recordRebuilds(page, tags);
+    await page.setViewportSize({ width: 1180, height: 800 });
+    await page.waitForFunction(() => 'heroRevealed' in document.documentElement.dataset, null, { timeout: 8000 });
+    await page.waitForTimeout(400);
+    const log = await rebuilds(page);
+    expect(log.length).toBeGreaterThan(0);
+    expect(log[log.length - 1], `the last rebuild ran mid-intro: ${log.join(', ')}`).toBeGreaterThan(5);
+    for (const d of await beadOffsets(page)) expect(d).toBeLessThan(1.5);
   });
 
   test('in a background tab the thread waits until the intro has actually played', async ({ page }) => {

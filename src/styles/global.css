@@ -418,6 +418,13 @@ html.thread-on [data-thread-node][data-thread-done] {
     border-color: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
   }
+  /* Every node starts unlit, the current job's too (it is filled without the
+     thread; the pulsing dot by its dates still marks it as current). */
+  html.thread-on [data-thread-node]:not([data-thread-done]) {
+    background-color: hsl(var(--card));
+    border-color: hsl(var(--border));
+    color: hsl(var(--muted-foreground));
+  }
 }
 
 /* Ink: an underline sweeps in under marked words when the pen passes. */
@@ -431,11 +438,13 @@ html.thread-on [data-thread-ink] {
   padding-bottom: 3px;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
-  transition: background-size 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Wiped out quickly as the line retracts past it; swept in slowly (below). */
+  transition: background-size 0.3s ease-out;
 }
 @media screen {
   html.thread-on [data-thread-ink][data-thread-done] {
     background-size: 100% 2px;
+    transition: background-size 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
   }
 }
 
@@ -454,14 +463,17 @@ html.thread-on [data-thread-stitch]::after {
   background: conic-gradient(from 270deg, hsl(var(--primary) / 0.6) var(--thread-sew), transparent 0);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' rx='6' fill='none' stroke='%23000' stroke-width='3' stroke-dasharray='4 4'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' rx='6' fill='none' stroke='%23000' stroke-width='3' stroke-dasharray='4 4'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
-  transition: --thread-sew 1.1s cubic-bezier(0.4, 0, 0.2, 1);
-}
-html.thread-on [data-thread-stitch]:nth-child(even)::after {
-  transition-delay: 0.15s;
+  /* Unsewn quickly, as the line retracts past the cards (a transition takes
+     the destination state's timing); sewn in slowly, staggered (below). */
+  transition: --thread-sew 0.3s ease-out;
 }
 @media screen {
   html.thread-on [data-thread-stitch][data-thread-done]::after {
     --thread-sew: 360deg;
+    transition: --thread-sew 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  html.thread-on [data-thread-stitch][data-thread-done]:nth-child(even)::after {
+    transition-delay: 0.15s;
   }
 }
 

@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
+import { revealTiming } from '../lib/reveal';
 import { Badge } from './ui/badge';
 import type { IconType } from 'react-icons';
 import {
@@ -51,7 +52,7 @@ export default function Skills() {
 
     gsap.set(headingRef.current, { y: 24 });
     gsap.to(headingRef.current, {
-      opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
+      opacity: 1, visibility: 'inherit', y: 0, ...revealTiming(sectionRef.current, 0.6), ease: 'power3.out',
       scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
     });
     gsap.set('.skill-card', { y: 30 });
@@ -59,8 +60,7 @@ export default function Skills() {
       opacity: 1,
       visibility: 'inherit',
       y: 0,
-      duration: 0.6,
-      stagger: 0.12,
+      ...revealTiming(sectionRef.current, 0.6, 0.12),
       ease: 'power3.out',
       scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' },
     });
