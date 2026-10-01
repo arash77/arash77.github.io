@@ -24,7 +24,9 @@ jobs:
     name: Regenerate baselines
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      # Keeps the persisted token: the last step pushes the regenerated baselines
+      # back to the branch with it.
+      - name: Checkout repository # zizmor: ignore[artipacked]
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.branch }}
