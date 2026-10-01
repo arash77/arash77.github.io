@@ -42,6 +42,11 @@
       "minimumReleaseAge": "14 days"
     },
     {
+      "description": "TypeScript 7 is the native (Go) compiler and does not yet ship the programmatic API that `astro check` -- the Typecheck step of the CI Gate -- relies on; the check aborts with 'does not expose the programmatic API'. Hold TypeScript below 7 so it cannot block the majors group, and delete this rule once @astrojs/language-server supports TypeScript 7.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "description": "Astro core and integrations must move in lockstep on a major (astro v7 requires @astrojs/mdx v7). Widens the built-in monorepo group to any @astrojs/* package, including ones published outside withastro/astro.",
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["major"],
