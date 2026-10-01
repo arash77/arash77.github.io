@@ -350,13 +350,15 @@ html.thread-on [data-thread-hint] {
   z-index: 2;
 }
 
-/* The thread becomes the timeline spine. */
-html.thread-on [data-thread-line] {
+/* The thread becomes the timeline spine once it is drawing (not before: a
+   reader landing mid-page must never see the timeline without a spine). */
+html.thread-on.thread-drawing [data-thread-line] {
   opacity: 0;
 }
 
 /* Measuring: read layout boxes without the GSAP reveal transforms. */
-html.thread-measuring .gsap-reveal {
+html.thread-measuring .gsap-reveal,
+html.thread-measuring .timeline-body {
   transform: none !important;
   translate: none !important;
   scale: none !important;
@@ -409,6 +411,9 @@ html.thread-on [data-thread-ink] {
   background-repeat: no-repeat;
   background-position: 0 100%;
   background-size: 0% 2px;
+  /* Inline padding paints below the glyphs without moving the line box: the
+     underline sits clear of the descenders (g, y) instead of through them. */
+  padding-bottom: 3px;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
   transition: background-size 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);

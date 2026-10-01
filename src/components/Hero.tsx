@@ -18,8 +18,12 @@ export default function Hero() {
   const tagsRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    // The scroll thread (SiteThread) starts drawing once the intro has settled.
-    // The flag covers a listener that attaches after the event has fired.
+    // The scroll thread (SiteThread) starts drawing once the intro has settled,
+    // and arms its start fallback from the intro's start (not from page load),
+    // so a late-hydrating hero still gets its intro first. The data flags cover
+    // a listener that attaches after an event has fired.
+    document.documentElement.dataset.heroIntro = '';
+    window.dispatchEvent(new Event('hero:intro-start'));
     const revealed = () => {
       document.documentElement.dataset.heroRevealed = '';
       window.dispatchEvent(new Event('hero:revealed'));
@@ -48,7 +52,7 @@ export default function Hero() {
     <section
       ref={containerRef}
       data-thread-section="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-mesh pt-16"
+      className="relative min-h-screen flex items-center justify-center overflow-clip gradient-mesh pt-16"
     >
       {/* Decorative blobs */}
       <div

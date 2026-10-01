@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildRoute,
+  carryOver,
   computeRails,
   lengthAtY,
   pointAt,
@@ -231,11 +232,40 @@ function checkTimeline(fx: Fixture, route: Route, runs: ReturnType<typeof horizo
       expect(Math.abs(x - spine)).toBeLessThanOrEqual(rn + 0.5);
     }
   }
-  // One loop per node, alternating sides.
-  const arcs = route.segments.filter((s) => s.k === 'A');
-  expect(arcs).toHaveLength(sec.nodes!.length);
-  arcs.forEach((a, i) => expect(a.k === 'A' && a.sweep).toBe(i % 2 === 0 ? 1 : 0));
+  // One loop per node, concentric with it, alternating sides (first one on the left).
+  const loops = route.segments.filter((s) => s.k === 'A' && Math.abs(s.r - rn) < 0.01);
+  expect(loops).toHaveLength(sec.nodes!.length);
+  loops.forEach((a, i) => {
+    if (a.k !== 'A') return;
+    const n = sec.nodes![i];
+    expect(a.cx).toBeCloseTo(n.x + n.w / 2, 6);
+    expect(a.cy).toBeCloseTo(n.y + n.h / 2, 6);
+    expect(Math.sign(a.da)).toBe(i % 2 === 0 ? -1 : 1);
+  });
   expect(route.nodes.map((n) => n.y)).toEqual(sec.nodes!.map((n) => n.y + n.h / 2));
+  // The corner from the bar row into the spine keeps the full corner radius.
+  const corner = route.segments.find((s) => s.k === 'Q' && Math.abs(s.c[0] - spine) < 0.01 && Math.abs(s.c[1] - row) < 0.01);
+  expect(corner, 'corner into the spine').toBeTruthy();
+  if (corner?.k === 'Q') expect(Math.hypot(corner.b[0] - corner.c[0], corner.b[1] - corner.c[1])).toBeCloseTo(route.radius, 3);
+}
+
+/**
+ * No kinks anywhere: the direction of the sampled polyline never turns by more
+ * than a rounded corner would between two samples (a hard 90 degree join, like
+ * a spine meeting a half circle, turns in one step).
+ */
+function maxTurn(route: Route): { deg: number; at: [number, number] } {
+  const P = route.points;
+  let worst = { deg: 0, at: [0, 0] as [number, number] };
+  for (let i = 1; i < route.count - 1; i++) {
+    const ax = P[i * 2] - P[i * 2 - 2], ay = P[i * 2 + 1] - P[i * 2 - 1];
+    const bx = P[i * 2 + 2] - P[i * 2], by = P[i * 2 + 3] - P[i * 2 + 1];
+    const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+    if (la < 0.5 || lb < 0.5) continue;
+    const deg = (Math.acos(Math.max(-1, Math.min(1, (ax * bx + ay * by) / (la * lb)))) * 180) / Math.PI;
+    if (deg > worst.deg) worst = { deg, at: [P[i * 2], P[i * 2 + 1]] };
+  }
+  return worst;
 }
 
 describe('computeRails', () => {
@@ -258,6 +288,12 @@ describe.each([1440, 1280, 1024, 900, 768])('route at %ipx', (width) => {
   it('enters the timeline from the right and runs down the spine', () => {
     const { route, runs } = checkInvariants(fx);
     checkTimeline(fx, route, runs);
+  });
+
+  it('is smooth everywhere: rounded corners, no kinks where the spine meets a loop', () => {
+    const route = buildRoute(fx.snap)!;
+    const t = maxTurn(route);
+    expect(t.deg, `turn at (${t.at[0].toFixed(1)}, ${t.at[1].toFixed(1)})`).toBeLessThan(40);
   });
 
   it('threads the tags like beads, starting left of them', () => {
@@ -299,6 +335,7 @@ describe.each([414, 390, 360])('phone route at %ipx', (width) => {
     expect(route.minLen).toBe(0);
     expect(route.nodes).toHaveLength(0);
     expect(route.segments.some((s) => s.k === 'A')).toBe(false);
+    expect(maxTurn(route).deg).toBeLessThan(40);
   });
 });
 
@@ -358,5 +395,54 @@ describe('sampling helpers', () => {
     const [x, y] = tail.replace(/^L/, '').split(',').map(Number);
     expect(x).toBeCloseTo(route.end[0], 1);
     expect(y).toBeCloseTo(route.end[1], 1);
+  });
+});
+
+describe('carryOver (rebuild in place)', () => {
+  const a = buildRoute(makeLayout(1440).snap)!;
+
+  it('is the identity when the layout did not change', () => {
+    for (let len = 0; len <= a.total; len += 37) {
+      expect(Math.abs(carryOver(a, a, len) - len)).toBeLessThanOrEqual(a.step + 0.01);
+    }
+    expect(carryOver(a, a, a.total)).toBe(a.total);
+  });
+
+  it('keeps the pen at the same place in the content after a reflow, continuously', () => {
+    // The hero grows by 56px (a mobile URL bar collapsing with a vh-tall hero):
+    // everything below moves down; the pen must follow, not jump.
+    const fx = makeLayout(1440);
+    const shift = (r: Rect): Rect => ({ ...r, y: r.y + 56 });
+    const snap = structuredClone(fx.snap);
+    snap.hero.bottom += 56;
+    snap.sections = snap.sections.map((sec) => ({
+      ...sec,
+      top: sec.top + 56,
+      bottom: sec.bottom + 56,
+      bar: shift(sec.bar),
+      nodes: sec.nodes?.map(shift),
+      cards: sec.cards ? shift(sec.cards) : sec.cards,
+    }));
+    const b = buildRoute(snap)!;
+    let prev = 0;
+    for (let len = a.minLen + 1; len < a.total; len += 11) {
+      const n = carryOver(a, b, len);
+      expect(n).toBeGreaterThanOrEqual(prev - 0.01);
+      // Same height in the content, give or take a sample and the corner rounding.
+      const pa = pointAt(a, len), pb = pointAt(b, n);
+      if (pa[1] > fx.snap.hero.bottom) expect(Math.abs(pb[1] - (pa[1] + 56))).toBeLessThan(a.radius + 4);
+      prev = n;
+    }
+  });
+
+  it('maps between widths section by section', () => {
+    const wide = buildRoute(makeLayout(1440).snap)!;
+    const narrow = buildRoute(makeLayout(900).snap)!;
+    wide.barRows.forEach((y, k) => {
+      const len = lengthAtY(wide, y + 1);
+      const n = carryOver(wide, narrow, len);
+      const ny = pointAt(narrow, n)[1];
+      expect(Math.abs(ny - narrow.barRows[k])).toBeLessThan(narrow.radius + 4);
+    });
   });
 });

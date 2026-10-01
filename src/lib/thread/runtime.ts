@@ -10,16 +10,25 @@
  * Everything visual is opt-in through `html.thread-on`, which only this script
  * adds, so without JavaScript the page renders exactly as before.
  */
-import { buildRoute, computeRails, lengthAtY, pointAt, type LayoutSnapshot, type Rect, type Route, type SectionLayout } from './route';
+import { buildRoute, carryOver, computeRails, lengthAtY, pointAt, type LayoutSnapshot, type Rect, type Route, type SectionLayout } from './route';
 
 const SPRING_K = 40;
 const READ_LINE = 0.62;
-const START_FALLBACK_MS = 2600;
-const REBUILD_DEBOUNCE_MS = 120;
+/** Hero intro (~2.2s) plus slack: start anyway if `hero:revealed` never comes. Counted from the intro's start. */
+const INTRO_FALLBACK_MS = 2600;
+/** If the hero island never even starts its intro, start once the tags are visible anyway. */
+const BOOT_CAP_MS = 8000;
+/** Only for font swaps; layout changes rebuild in the same frame (see the ResizeObserver). */
+const FONT_DEBOUNCE_MS = 120;
 const PLUCK_LIFE = 1.4;
 const PLUCK_REACH = 160;
 const PLUCK_MIN_SPEED = 400; // px/s: a deliberate sweep, not a stroll
 const HASH_CELL = 40;
+const GLOW_R = 11;
+/** After a start with the hero out of view, how long the line tracks the reading position exactly. */
+const SNAP_FOLLOW_S = 1.5;
+/** Pen radius plus half its stroke: the glow never gets smaller than the pen. */
+const PEN_EXTENT = 5.5;
 
 interface Anchor {
   el: Element;
@@ -80,6 +89,11 @@ export function initThread(): () => void {
   let cards: Anchor[] = [];
   let rebuildTimer = 0;
   let fallbackTimer = 0;
+  let capTimer = 0;
+  let viewW = 0;
+  let rebuiltThisFrame = false;
+  /** Until this time (s) the drawn length tracks the target exactly (no spring), see start(). */
+  let snapUntil = 0;
 
   html.classList.add('thread-on');
 
@@ -133,22 +147,27 @@ export function initThread(): () => void {
       }
       if (!sections.length) return null;
 
-      const anchor = (sel: string, at: (r: Rect) => number, prev: Anchor[]): Anchor[] =>
+      const anchor = (sel: string, at: (r: Rect) => number): Anchor[] =>
         [...main!.querySelectorAll(sel)].flatMap((el) => {
           const r = rel(el);
           if (!r) return [];
-          return [{ el, y: at(r), done: prev.find((a) => a.el === el)?.done ?? false }];
+          // Seed from the DOM, not from the previous list: an element that was
+          // hidden (display: none at another width) keeps its attribute while it
+          // is out of the list, and must be re-synced when it comes back.
+          return [{ el, y: at(r), done: el.hasAttribute('data-thread-done') }];
         });
-      nodes = anchor('[data-thread-node]', (r) => r.y + r.h / 2, nodes);
-      inks = anchor('[data-thread-ink]', (r) => r.y + r.h, inks);
-      cards = anchor('[data-thread-stitch]', (r) => r.y + Math.min(24, r.h / 3), cards);
+      nodes = anchor('[data-thread-node]', (r) => r.y + r.h / 2);
+      inks = anchor('[data-thread-ink]', (r) => r.y + r.h);
+      cards = anchor('[data-thread-stitch]', (r) => r.y + Math.min(24, r.h / 3));
 
       return {
         height: m.height,
         snap: {
           width,
           rails: computeRails(width, cLeft, cRight),
-          phone: width < 640,
+          // Same test as Tailwind's `sm` breakpoint (the window width, scrollbar
+          // included), so the route agrees with the layout it is drawn over.
+          phone: !window.matchMedia('(min-width: 640px)').matches,
           hero: { top: heroRect.y, bottom: heroRect.y + heroRect.h, tags: oneRow ? union(pills) : null, avatar: rel(heroEl.querySelector('[data-thread-avatar]')), scrollHint: hint },
           sections,
         },
@@ -174,13 +193,15 @@ export function initThread(): () => void {
     if (!measured || !next) {
       // Layout not recognised: step aside and leave the page as it is without JS.
       route = null;
-      html.classList.remove('thread-on');
+      html.classList.remove('thread-on', 'thread-drawing');
       return;
     }
     html.classList.add('thread-on');
+    if (started) html.classList.add('thread-drawing');
     const prev = route;
     const prevShown = shown;
     route = next;
+    viewW = measured.snap.width;
 
     const w = measured.snap.width;
     const h = Math.max(1, Math.round(measured.height));
@@ -203,23 +224,40 @@ export function initThread(): () => void {
       else hash.set(k, [i]);
     }
 
-    // Rebuild in place: keep the drawn progress instead of replaying from the top.
-    if (prev && started) {
-      if (prev.minLen > 0 && prevShown < prev.minLen) shown = (prevShown / prev.minLen) * next.minLen;
-      else shown = targetLen();
-      shown = Math.min(next.total, Math.max(0, shown));
-      vel = 0;
-    } else if (!started) {
-      shown = 0;
-    }
+    // Rebuild in place: carry the drawn progress over to the same place on the
+    // new route and let the spring carry on from there (velocity kept), rather
+    // than replaying from the top or jumping to the target.
+    if (!started) shown = 0;
+    else if (prev) shown = Math.min(next.total, Math.max(0, carryOver(prev, next, prevShown)));
     plucks = [];
     render(now());
     schedule();
   }
 
+  /** Rebuild now unless a rebuild already ran in this frame (layout cannot have changed since). */
+  function rebuildInFrame() {
+    if (rebuiltThisFrame) return;
+    rebuiltThisFrame = true;
+    requestAnimationFrame(() => {
+      rebuiltThisFrame = false;
+    });
+    rebuild();
+  }
+
   function scheduleRebuild() {
     window.clearTimeout(rebuildTimer);
-    rebuildTimer = window.setTimeout(rebuild, REBUILD_DEBOUNCE_MS);
+    rebuildTimer = window.setTimeout(rebuild, FONT_DEBOUNCE_MS);
+  }
+
+  /** The start knot's row has scrolled above the viewport: the hero intro plays unseen. */
+  function heroGone(): boolean {
+    return !!route && route.start[1] + mainTop < window.scrollY;
+  }
+
+  /** The hero tags (the beads) have finished their reveal. */
+  function beadsVisible(): boolean {
+    const el = main!.querySelector('[data-thread-beads]');
+    return !el || parseFloat(getComputedStyle(el).opacity) > 0.99;
   }
 
   function setGeometry() {
@@ -275,7 +313,9 @@ export function initThread(): () => void {
           nx = -dy / l;
           ny = dx / l;
         }
-        d += (i ? 'L' : 'M') + (P[i * 2] + nx * o).toFixed(1) + ',' + (P[i * 2 + 1] + ny * o).toFixed(1);
+        // Hard guard: a vibrating rail never leaves the viewport.
+        const px = Math.max(r.strokeWidth / 2, Math.min(viewW - r.strokeWidth / 2, P[i * 2] + nx * o));
+        d += (i ? 'L' : 'M') + px.toFixed(1) + ',' + (P[i * 2 + 1] + ny * o).toFixed(1);
       }
       const head = pointAt(r, L);
       d += `L${head[0].toFixed(1)},${head[1].toFixed(1)}`;
@@ -297,6 +337,9 @@ export function initThread(): () => void {
       c.setAttribute('cy', head[1].toFixed(2));
       c.style.opacity = showPen ? '1' : '0';
     }
+    // The glow shrinks near the viewport edges (rails 7px in) so it is never cut off flat.
+    const glowR = Math.max(PEN_EXTENT, Math.min(GLOW_R, Math.min(head[0], viewW - head[0]) - 0.5)).toFixed(2);
+    if (glow!.getAttribute('r') !== glowR) glow!.setAttribute('r', glowR);
     knot!.style.opacity = started ? '1' : '0';
     endKnot!.style.opacity = arrived ? '1' : '0';
 
@@ -312,7 +355,7 @@ export function initThread(): () => void {
     const dt = lastT ? Math.min(0.05, Math.max(0, t - lastT)) : 1 / 60;
     lastT = t;
     const target = targetLen();
-    if (reduced) {
+    if (reduced || t < snapUntil) {
       shown = target;
       vel = 0;
     } else {
@@ -333,11 +376,27 @@ export function initThread(): () => void {
     if (!raf && route) raf = requestAnimationFrame(tick);
   }
 
-  function start() {
+  /**
+   * Start drawing. When the hero is already out of view (deep link, reload or
+   * back navigation into the middle of the page, or a quick scroll during the
+   * intro) the line appears in place at the reading position instead of
+   * sweeping in from the hero.
+   */
+  function start(snap = false) {
     if (started) return;
     started = true;
     window.clearTimeout(fallbackTimer);
+    window.clearTimeout(capTimer);
+    html.classList.add('thread-drawing');
+    if (snap || heroGone()) {
+      shown = targetLen();
+      vel = 0;
+      // A hash link smooth-scrolls on after this: keep the line in place for
+      // the rest of that scroll instead of letting the spring trail behind it.
+      snapUntil = now() + SNAP_FOLLOW_S;
+    }
     lastT = 0;
+    render(now());
     schedule();
   }
 
@@ -345,28 +404,54 @@ export function initThread(): () => void {
     svg!.setAttribute('data-thread-ready', 'true');
   }
 
+  /**
+   * Largest pluck amplitude that keeps the stretch around sample `best` inside
+   * the viewport: a rail 7px from the edge only has a few px of room outwards
+   * (and the swing is symmetric, so it stays out of the content gutter too).
+   */
+  function pluckRoom(r: Route, best: number): number {
+    const P = r.points;
+    const reach = Math.ceil(PLUCK_REACH / r.step);
+    let cap = Infinity;
+    for (let j = Math.max(1, best - reach); j <= Math.min(r.count - 2, best + reach); j++) {
+      const w = Math.cos((Math.PI / 2) * ((Math.abs(j - best) * r.step) / PLUCK_REACH)) ** 2;
+      const dx = P[(j + 1) * 2] - P[(j - 1) * 2], dy = P[(j + 1) * 2 + 1] - P[(j - 1) * 2 + 1];
+      const nx = Math.abs(dy) / (Math.hypot(dx, dy) || 1);
+      if (nx * w < 0.05) continue;
+      const room = Math.min(P[j * 2], viewW - P[j * 2]) - r.strokeWidth / 2 - 1;
+      cap = Math.min(cap, Math.max(0, room) / (nx * w));
+    }
+    return cap;
+  }
+
   function onPointerMove(e: PointerEvent) {
     if (reduced || !route || !started || e.pointerType === 'touch') return;
-    const x = e.pageX - mainLeft, y = e.pageY - mainTop, t = now();
+    // Track the pointer in viewport coordinates: page coordinates would count
+    // the scroll between two events as pointer motion (a wheel step plus a 1px
+    // jitter would read as a fast vertical sweep).
+    const t = now();
     const prev = ptr;
-    ptr = { x, y, t };
+    ptr = { x: e.clientX, y: e.clientY, t };
     if (!prev || t - prev.t > 0.12) return;
-    const speed = Math.hypot(x - prev.x, y - prev.y) / Math.max(0.008, t - prev.t);
+    const speed = Math.hypot(e.clientX - prev.x, e.clientY - prev.y) / Math.max(0.008, t - prev.t);
     if (speed < PLUCK_MIN_SPEED) return;
+    // Both ends in the thread layer's space, with the current scroll.
+    const ox = window.scrollX - mainLeft, oy = window.scrollY - mainTop;
+    const x0 = prev.x + ox, y0 = prev.y + oy, x = e.clientX + ox, y = e.clientY + oy;
     // Test the whole movement since the last event: a fast sweep jumps right over the line.
     const r = route;
     const drawn = shown / r.step;
-    const vx = x - prev.x, vy = y - prev.y, vl = vx * vx + vy * vy || 1;
+    const vx = x - x0, vy = y - y0, vl = vx * vx + vy * vy || 1;
     let best = -1, bd = 10;
-    const cx0 = Math.floor((Math.min(prev.x, x) - 12) / HASH_CELL), cx1 = Math.floor((Math.max(prev.x, x) + 12) / HASH_CELL);
-    const cy0 = Math.floor((Math.min(prev.y, y) - 12) / HASH_CELL), cy1 = Math.floor((Math.max(prev.y, y) + 12) / HASH_CELL);
+    const cx0 = Math.floor((Math.min(x0, x) - 12) / HASH_CELL), cx1 = Math.floor((Math.max(x0, x) + 12) / HASH_CELL);
+    const cy0 = Math.floor((Math.min(y0, y) - 12) / HASH_CELL), cy1 = Math.floor((Math.max(y0, y) + 12) / HASH_CELL);
     for (let cx = cx0; cx <= cx1; cx++) {
       for (let cy = cy0; cy <= cy1; cy++) {
         for (const i of hash.get(cx * 100000 + cy) ?? []) {
           if (i > drawn) continue;
           const qx = r.points[i * 2], qy = r.points[i * 2 + 1];
-          const u = Math.max(0, Math.min(1, ((qx - prev.x) * vx + (qy - prev.y) * vy) / vl));
-          const dd = Math.hypot(prev.x + vx * u - qx, prev.y + vy * u - qy);
+          const u = Math.max(0, Math.min(1, ((qx - x0) * vx + (qy - y0) * vy) / vl));
+          const dd = Math.hypot(x0 + vx * u - qx, y0 + vy * u - qy);
           if (dd < bd) {
             bd = dd;
             best = i;
@@ -378,7 +463,9 @@ export function initThread(): () => void {
     const a = Math.max(0, best - 1), b = Math.min(r.count - 1, best + 1);
     const nx = -(r.points[b * 2 + 1] - r.points[a * 2 + 1]), ny = r.points[b * 2] - r.points[a * 2];
     const side = Math.sign(vx * nx + vy * ny) || 1;
-    plucks.push({ i: best, t0: t, a: side * Math.min(13, 4 + speed / 160) });
+    const amp = Math.min(13, 4 + speed / 160, pluckRoom(r, best));
+    if (amp < 1.5) return;
+    plucks.push({ i: best, t0: t, a: side * amp });
     schedule();
   }
 
@@ -392,16 +479,40 @@ export function initThread(): () => void {
     // drawing is in place at this point).
     rebuild();
     if (route) markReady();
+    if (!started && heroGone()) start(true);
   });
 
   if (reduced || 'heroRevealed' in html.dataset) start();
+  else if (heroGone()) start(true);
   else {
-    window.addEventListener('hero:revealed', start, { once: true, signal });
-    fallbackTimer = window.setTimeout(start, START_FALLBACK_MS);
+    window.addEventListener('hero:revealed', () => start(), { once: true, signal });
+    // The fallback counts from the start of the hero intro (the island may
+    // hydrate late on a slow connection), never from this script's boot.
+    const armFallback = () => {
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = window.setTimeout(() => start(), INTRO_FALLBACK_MS);
+    };
+    if ('heroIntro' in html.dataset) armFallback();
+    else window.addEventListener('hero:intro-start', armFallback, { once: true, signal });
+    capTimer = window.setTimeout(() => {
+      if (!('heroIntro' in html.dataset) && beadsVisible()) start();
+    }, BOOT_CAP_MS);
   }
 
-  window.addEventListener('scroll', schedule, { passive: true, signal });
-  window.addEventListener('resize', () => { schedule(); scheduleRebuild(); }, { passive: true, signal });
+  window.addEventListener('scroll', () => {
+    // A deep link or restored scroll position can land after boot.
+    if (!started && heroGone()) start(true);
+    schedule();
+  }, { passive: true, signal });
+  window.addEventListener('resize', () => {
+    // A height-only resize (a mobile URL bar showing or hiding) moves the
+    // reading line, not the route: no rebuild. Width changes rebuild before the
+    // next paint (the ResizeObserver usually gets there first in the same frame).
+    schedule();
+    if (route && html.clientWidth !== viewW) requestAnimationFrame(() => {
+      if (html.clientWidth !== viewW) rebuildInFrame();
+    });
+  }, { passive: true, signal });
   window.addEventListener('pointermove', onPointerMove, { passive: true, signal });
   document.fonts?.addEventListener?.('loadingdone', scheduleRebuild, { signal });
   reduceQuery.addEventListener('change', () => {
@@ -410,7 +521,11 @@ export function initThread(): () => void {
     if (reduced) start();
     schedule();
   }, { signal });
-  const ro = new ResizeObserver(scheduleRebuild);
+  // Layout changes (resize drags, rotation, reflow): the callback runs after
+  // layout and before paint, so rebuilding here means no frame ever shows the
+  // old geometry over the new layout. Our own writes (the absolutely
+  // positioned, clipped SVG) cannot resize the observed elements.
+  const ro = new ResizeObserver(() => rebuildInFrame());
   ro.observe(main);
   for (const el of main.querySelectorAll('[data-thread-section]')) ro.observe(el);
 
@@ -419,7 +534,8 @@ export function initThread(): () => void {
     ro.disconnect();
     window.clearTimeout(rebuildTimer);
     window.clearTimeout(fallbackTimer);
+    window.clearTimeout(capTimer);
     if (raf) cancelAnimationFrame(raf);
-    html.classList.remove('thread-on');
+    html.classList.remove('thread-on', 'thread-drawing');
   };
 }

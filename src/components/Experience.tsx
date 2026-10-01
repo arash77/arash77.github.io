@@ -19,16 +19,14 @@ export default function Experience() {
       opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
       scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
     });
-    gsap.set('.timeline-card', { x: -40 });
-    gsap.to('.timeline-card', {
-      opacity: 1,
-      visibility: 'inherit',
-      x: 0,
-      duration: 0.7,
-      stagger: 0.2,
-      ease: 'power3.out',
-      scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' },
-    });
+    // Cards fade in; only their text slides. The node column stays put, so the
+    // scroll thread's loop around each node is concentric with it from the
+    // first frame (the thread may reach a node while its card is still in).
+    gsap.set('.timeline-body', { x: -40 });
+    const reveal = { duration: 0.7, stagger: 0.2, ease: 'power3.out' };
+    gsap.timeline({ scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' } })
+      .to('.timeline-card', { opacity: 1, visibility: 'inherit', ...reveal }, 0)
+      .to('.timeline-body', { x: 0, ...reveal }, 0);
   }, { scope: sectionRef });
 
   return (
@@ -61,7 +59,7 @@ export default function Experience() {
                   </div>
                 </div>
 
-                <div className="flex-1 pb-2 pt-1">
+                <div className="timeline-body flex-1 pb-2 pt-1">
                   <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
                     <div>
                       <h3 className="text-lg font-semibold">{exp.role}</h3>

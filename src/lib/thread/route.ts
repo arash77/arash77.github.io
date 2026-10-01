@@ -74,7 +74,8 @@ export interface LayoutSnapshot {
 export type Segment =
   | { k: 'L'; a: Pt; b: Pt }
   | { k: 'Q'; a: Pt; c: Pt; b: Pt }
-  | { k: 'A'; a: Pt; b: Pt; cx: number; cy: number; r: number; sweep: 0 | 1 };
+  /** Circular arc around (cx, cy) from angle a0 through da radians (screen angles: +y is down, so da > 0 is clockwise). */
+  | { k: 'A'; a: Pt; b: Pt; cx: number; cy: number; r: number; a0: number; da: number };
 
 export interface NodeAnchor {
   x: number;
@@ -98,6 +99,8 @@ export interface Route {
   nodes: NodeAnchor[];
   /** Length of the hero "beads" run, drawn as soon as the hero intro finishes. */
   minLen: number;
+  /** Rails hug the viewport edges (no side margin). */
+  narrow: boolean;
   strokeWidth: number;
   radius: number;
   /** y of the crossing row of each section bar, in order. */
@@ -111,6 +114,8 @@ export const RAIL_MIN_MARGIN = 40;
 /** Distance of the rails from the container edge (wide) or the viewport edge (narrow). */
 export const RAIL_OFFSET = 14;
 export const RAIL_EDGE = 7;
+/** Radius of the fillets where the timeline spine meets a node loop. */
+export const LOOP_FILLET = 9;
 
 export function computeRails(width: number, containerLeft: number, containerRight: number): Rails {
   if (containerLeft >= RAIL_MIN_MARGIN && width - containerRight >= RAIL_MIN_MARGIN) {
@@ -153,7 +158,12 @@ class PathBuilder {
     b.push(p);
   }
 
-  flush() {
+  /**
+   * Emit the buffered polyline with rounded corners. A corner may use at most
+   * half of each adjacent leg (the neighbouring corner needs the other half),
+   * except the final leg when `intoCurve` says a curve, not a corner, follows.
+   */
+  flush(intoCurve = false) {
     const b = this.buf;
     let cur = b[0];
     for (let i = 1; i < b.length; i++) {
@@ -168,7 +178,7 @@ class PathBuilder {
       const v1x = p[0] - prev[0], v1y = p[1] - prev[1];
       const v2x = next[0] - p[0], v2y = next[1] - p[1];
       const l1 = Math.hypot(v1x, v1y) || 1, l2 = Math.hypot(v2x, v2y) || 1;
-      const r = Math.min(this.R, l1 / 2, l2 / 2);
+      const r = Math.min(this.R, l1 / 2, intoCurve && i === b.length - 2 ? l2 : l2 / 2);
       const inPt: Pt = [p[0] - (v1x / l1) * r, p[1] - (v1y / l1) * r];
       const outPt: Pt = [p[0] + (v2x / l2) * r, p[1] + (v2y / l2) * r];
       if (!near(cur, inPt)) this.segments.push({ k: 'L', a: cur, b: inPt });
@@ -178,14 +188,50 @@ class PathBuilder {
     this.buf = [cur];
   }
 
-  /** Half circle from the current point (its top) to the point 2r below it. */
-  halfLoop(r: number, sweep: 0 | 1) {
-    this.flush();
+  /** Arc of the circle around (cx, cy) from the current point (which must lie on it) through `da` radians. */
+  arc(cx: number, cy: number, r: number, da: number) {
     const a = this.current;
-    const b: Pt = [a[0], a[1] + 2 * r];
-    this.segments.push({ k: 'A', a, b, cx: a[0], cy: a[1] + r, r, sweep });
+    const a0 = Math.atan2(a[1] - cy, a[0] - cx);
+    const b: Pt = [cx + r * Math.cos(a0 + da), cy + r * Math.sin(a0 + da)];
+    this.segments.push({ k: 'A', a, b, cx, cy, r, a0, da });
     this.buf = [b];
   }
+
+  /**
+   * Loop around a timeline node centred on the spine (the current x). The
+   * line leaves the spine tangentially through a small fillet of radius `rf`,
+   * follows the node's circle (radius `rn`) on side `dir` (-1 left, 1 right)
+   * and returns to the spine through a mirrored fillet, so there is no kink
+   * where the spine meets the loop. Starts at the fillet top `cy - loopReach`.
+   */
+  nodeLoop(cy: number, rn: number, rf: number, dir: -1 | 1) {
+    this.flush(true);
+    const s = this.current[0];
+    const h = loopReach(rn, rf);
+    const fx = s + dir * rf;
+    // Tangency points between the fillets and the loop circle lie on the lines
+    // joining their centres, at distance rn from the node centre.
+    const k = rn / (rn + rf);
+    const tx = s + dir * rf * k;
+    const topY = cy - h * k, botY = cy + h * k;
+    const ang = (px: number, py: number, cx: number, cy2: number) => Math.atan2(py - cy2, px - cx);
+    const signed = (da: number, sign: number) => (sign > 0 && da < 0 ? da + 2 * Math.PI : sign < 0 && da > 0 ? da - 2 * Math.PI : da);
+    // Screen angles (+y down): da > 0 turns clockwise. A right loop bends out
+    // anticlockwise, goes round clockwise and bends back anticlockwise.
+    this.arc(fx, cy - h, rf, signed(ang(tx, topY, fx, cy - h) - ang(s, cy - h, fx, cy - h), -dir));
+    this.arc(s, cy, rn, signed(ang(tx, botY, s, cy) - ang(tx, topY, s, cy), dir));
+    this.arc(fx, cy + h, rf, signed(ang(s, cy + h, fx, cy + h) - ang(tx, botY, fx, cy + h), -dir));
+    // Land exactly on the spine (no float drift).
+    const end: Pt = [s, cy + h];
+    const last = this.segments[this.segments.length - 1];
+    if (last.k === 'A') last.b = end;
+    this.buf = [end];
+  }
+}
+
+/** How far above / below the node centre a fillet loop leaves / rejoins the spine. */
+export function loopReach(rn: number, rf: number): number {
+  return Math.sqrt(rn * rn + 2 * rn * rf);
 }
 
 const f = (v: number) => (Math.round(v * 100) / 100).toString();
@@ -195,7 +241,7 @@ export function segmentsToD(start: Pt, segments: Segment[]): string {
   for (const s of segments) {
     if (s.k === 'L') d += ` L${f(s.b[0])},${f(s.b[1])}`;
     else if (s.k === 'Q') d += ` Q${f(s.c[0])},${f(s.c[1])} ${f(s.b[0])},${f(s.b[1])}`;
-    else d += ` A${f(s.r)},${f(s.r)} 0 0 ${s.sweep} ${f(s.b[0])},${f(s.b[1])}`;
+    else d += ` A${f(s.r)},${f(s.r)} 0 ${Math.abs(s.da) > Math.PI ? 1 : 0} ${s.da > 0 ? 1 : 0} ${f(s.b[0])},${f(s.b[1])}`;
   }
   return d;
 }
@@ -213,10 +259,9 @@ function flatten(start: Pt, segments: Segment[]): number[] {
         out.push(u * u * s.a[0] + 2 * u * t * s.c[0] + t * t * s.b[0], u * u * s.a[1] + 2 * u * t * s.c[1] + t * t * s.b[1]);
       }
     } else {
-      const n = 48;
-      const dir = s.sweep === 1 ? 1 : -1;
+      const n = Math.max(4, Math.ceil((Math.abs(s.da) * s.r) / 2));
       for (let i = 1; i <= n; i++) {
-        const th = -Math.PI / 2 + dir * Math.PI * (i / n);
+        const th = s.a0 + s.da * (i / n);
         out.push(s.cx + s.r * Math.cos(th), s.cy + s.r * Math.sin(th));
       }
     }
@@ -335,13 +380,22 @@ export function buildRoute(s: LayoutSnapshot, step = 3): Route | null {
       const list = sec.nodes!;
       const spine = list[0].x + list[0].w / 2;
       const rn = list[0].w / 2 + 9;
+      // Fillet radius: as round as the corners allow, but small enough that the
+      // corner from the bar row into the spine keeps the full radius R.
+      const room = list[0].y + list[0].h / 2 - y - R;
+      const rf = Math.max(3, Math.min(R, LOOP_FILLET, (room * room - rn * rn) / (2 * rn)));
+      const reach = loopReach(rn, rf);
       pb.to([curX, y]);
       pb.to([spine, y]);
-      list.forEach((n, i) => {
+      let loops = 0;
+      list.forEach((n) => {
         const cy = n.y + n.h / 2;
-        if (pb.current[1] < cy - rn) pb.to([spine, cy - rn]);
-        else if (pb.current[1] > cy - rn) return; // overlapping nodes: skip the loop
-        pb.halfLoop(rn, i % 2 === 0 ? 1 : 0);
+        if (pb.current[1] > cy - reach + 0.01) return; // overlapping nodes: skip the loop
+        pb.to([spine, cy - reach]);
+        // Alternate sides, starting on the left: the bar row comes in from the
+        // right, so the first loop continues the turn as an S, not a hook.
+        pb.nodeLoop(cy, rn, rf, loops % 2 === 0 ? -1 : 1);
+        loops++;
         nodes.push({ x: spine, y: cy, r: rn });
       });
       side = 'L';
@@ -381,6 +435,7 @@ export function buildRoute(s: LayoutSnapshot, step = 3): Route | null {
     end,
     nodes,
     minLen: Math.min(minLen, total),
+    narrow,
     strokeWidth: narrow ? 1.75 : 2.25,
     radius: R,
     barRows,
@@ -410,4 +465,39 @@ export function pointAt(route: Route, len: number): Pt {
   const span = i === count - 2 ? Math.max(1e-6, total - i * step) : step;
   const t = Math.min(1, (l - i * step) / span);
   return [points[i * 2] + (points[i * 2 + 2] - points[i * 2]) * t, points[i * 2 + 1] + (points[i * 2 + 3] - points[i * 2 + 1]) * t];
+}
+
+/** Piecewise-linear map of a y between two monotonic anchor lists of the same length. */
+function remapY(y: number, from: number[], to: number[]): number {
+  if (from.length !== to.length || from.length < 2) return y;
+  if (y <= from[0]) return to[0] + (y - from[0]);
+  for (let j = 0; j < from.length - 1; j++) {
+    if (y <= from[j + 1]) {
+      const span = from[j + 1] - from[j];
+      const t = span > 0 ? (y - from[j]) / span : 0;
+      return to[j] + t * (to[j + 1] - to[j]);
+    }
+  }
+  return to[to.length - 1] + (y - from[from.length - 1]);
+}
+
+/**
+ * Where drawn length `len` on `prev` lands on `next` (the same page after a
+ * resize or reflow): the same place in the content, not the same number. The
+ * reading height is mapped section by section through the bar rows, and a
+ * position part-way along a horizontal run keeps its fraction of that run.
+ */
+export function carryOver(prev: Route, next: Route, len: number): number {
+  if (len <= 0) return 0;
+  if (len >= prev.total - 0.5) return next.total;
+  if (prev.minLen > 0 && len < prev.minLen) return (len / prev.minLen) * next.minLen;
+  const i = Math.min(prev.count - 1, Math.floor(len / prev.step));
+  const y = prev.maxY[i];
+  const p0 = lengthAtY(prev, y - 0.25), p1 = lengthAtY(prev, y + 0.25);
+  const frac = p1 - p0 > 2 * prev.step ? Math.max(0, Math.min(1, (len - p0) / (p1 - p0))) : 0;
+  const anchors = (r: Route) => [r.start[1], ...r.barRows, r.end[1]];
+  const ny = remapY(y, anchors(prev), anchors(next));
+  const n0 = lengthAtY(next, ny - 0.25), n1 = lengthAtY(next, ny + 0.25);
+  const n = n1 - n0 > 2 * next.step ? n0 + frac * (n1 - n0) : n0;
+  return Math.max(next.minLen, Math.min(next.total, n));
 }
