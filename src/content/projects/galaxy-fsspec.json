@@ -1,0 +1,12 @@
+{
+  "title": "Galaxy Fsspec Integration",
+  "description": "Enhanced the Galaxy fsspec filesystem interface by resolving critical data read discrepancies, directory listing edge cases, and API key leakage during redirects. Implemented configurable network request timeouts to prevent indefinite hangs during Galaxy API calls and corrected navigation across nested collections and histories. Additionally maintained package versioning to guarantee dependable PyPI distribution and stability.",
+  "category": "Other",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/bgruening/galaxy-fsspec" },
+    { "label": "PRs (3)", "url": "https://github.com/bgruening/galaxy-fsspec/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Python", "Galaxy", "API", "Filesystems", "Security"],
+  "featured": false,
+  "order": 99
+}
