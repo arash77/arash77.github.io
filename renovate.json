@@ -36,8 +36,10 @@
       "minimumReleaseAge": "3 days"
     },
     {
-      "description": "Majors automerge too, but stay in their own PRs so one bad major cannot hold back everything else. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because CI Gate (typecheck, build, unit, e2e, visual regression, Python scripts) is the required status check on main -- automerge waits on required checks only, so if CI Gate is ever dropped from branch protection this silently becomes merge-without-testing. Note the Cloudflare preview job is deliberately NOT required: preview.yml has a paths filter that skips .github/**, and a workflow skipped by a paths filter never reports a status, so requiring it would deadlock every actions-only PR forever. Actions it alone exercises are handled by the last rule instead.",
+      "description": "Majors automerge too, all in one PR of their own: the repo is rarely tended, so a month's updates should arrive as two PRs, not one per major. Kept apart from the non-major group so a major that breaks the build holds back only the other majors, never the routine updates. One group also keeps majors that must move in lockstep (astro with @astrojs/*, react with @types/react) together without per-monorepo rules. The 14-day age is the real safety mechanism: it means this repo is never the first to hit a broken release. Safe only because CI Gate (typecheck, build, unit, e2e, visual regression, Python scripts) is the required status check on main -- automerge waits on required checks only, so if CI Gate is ever dropped from branch protection this silently becomes merge-without-testing. Note the Cloudflare preview job is deliberately NOT required: preview.yml has a paths filter that skips .github/**, and a workflow skipped by a paths filter never reports a status, so requiring it would deadlock every actions-only PR forever. Actions it alone exercises are handled by the last rule instead.",
       "matchUpdateTypes": ["major"],
+      "groupName": "all major dependencies",
+      "groupSlug": "all-major",
       "automerge": true,
       "minimumReleaseAge": "14 days"
     },
@@ -45,25 +47,6 @@
       "description": "TypeScript 7 is the native (Go) compiler and does not yet ship the programmatic API that `astro check` -- the Typecheck step of the CI Gate -- relies on; the check aborts with 'does not expose the programmatic API'. Hold TypeScript below 7 so it cannot block the majors group, and delete this rule once @astrojs/language-server supports TypeScript 7.",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<7"
-    },
-    {
-      "description": "Astro core and integrations must move in lockstep on a major (astro v7 requires @astrojs/mdx v7). Widens the built-in monorepo group to any @astrojs/* package, including ones published outside withastro/astro.",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["major"],
-      "matchPackageNames": ["astro", "@astrojs/**"],
-      "groupName": "astro monorepo"
-    },
-    {
-      "description": "React runtime and its DefinitelyTyped types live in separate repos, so the built-in monorepo group misses @types/react. Keep them in one major PR.",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["major"],
-      "matchPackageNames": [
-        "react",
-        "react-dom",
-        "@types/react",
-        "@types/react-dom"
-      ],
-      "groupName": "react monorepo"
     },
     {
       "description": "Actions a green CI Gate does not actually exercise, so automerging them would ship them untested and they would first fail at the moment they are needed. Three distinct reasons: (1) create-github-app-token and create-pull-request run only in update-contributions.yml, which triggers on schedule/workflow_dispatch, so no PR ever runs them and a break first appears on the monthly job; (2) wrangler-action and sticky-pull-request-comment run in preview.yml, whose paths filter skips .github/** -- so a PR bumping just those actions does not trigger the very workflow that would test them, and a break silently kills previews for every later PR; wrangler-action also publishes production from deploy.yml, which no PR runs either; (3) in test.yml upload-artifact is only reached under `if: failure()` (deploy.yml uses it only on main), so a green PR run never touches it and a break surfaces exactly when a Playwright report is needed to debug something else. Deploy-only actions (download-artifact, github-script) are deliberately left automerging: they run on every push to main, so they fail loudly right after merge instead of lying in wait. Given its own group rather than an automerge exception inside the 29-package non-major group, so that group keeps one unambiguous automerge setting.",
