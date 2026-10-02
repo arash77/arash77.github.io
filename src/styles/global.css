@@ -508,10 +508,13 @@ html.thread-on [data-thread-ink] {
 }
 
 /* Room under the chip network at the end of the line for its ground symbol
-   (py-24 otherwise). Screen only: the board does not print. */
+   (py-24 otherwise). The board reaches a fixed 141px below the cards (route.ts
+   END_GAP and its drop to the ground), so with the grid's mb-10 the room never
+   falls below 152px, also at a small browser font. Screen only: the board does
+   not print. */
 @media screen {
   html.thread-on #contact {
-    padding-bottom: 7rem;
+    padding-bottom: max(7rem, 152px - 2.5rem);
   }
 }
 

@@ -535,6 +535,29 @@ test.describe('scroll thread, reduced motion', () => {
     expect(knotY).toBeLessThan(tags.bottom);
   });
 
+  test('at a small browser font size the ground symbol still fits under the chip, inside the page', async ({ page }) => {
+    // The board hangs a fixed distance in px below the cards; the thread layer
+    // is clipped at the bottom of Contact.
+    const cdp = await page.context().newCDPSession(page);
+    for (const standard of [12, 14]) {
+      await cdp.send('Page.setFontSizes', { fontSizes: { standard } });
+      for (const width of [390, 1280]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto('/');
+        await ready(page);
+        expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(`${standard}px`);
+        const board = page.locator('[data-thread-board]');
+        await expect(board.locator('.site-thread__chip')).toHaveCount(1);
+        const { bottom, clip } = await board.evaluate((g) => {
+          const b = (g as SVGGElement).getBBox();
+          const stroke = parseFloat(getComputedStyle(g.querySelector('.site-thread__wire')!).strokeWidth);
+          return { bottom: b.y + b.height + stroke / 2, clip: +g.closest('svg')!.getAttribute('height')! };
+        });
+        expect(bottom, `bottom of the ground symbol at ${standard}px, ${width}px wide`).toBeLessThanOrEqual(clip);
+      }
+    }
+  });
+
   test('the ink underline sits below the descenders', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
