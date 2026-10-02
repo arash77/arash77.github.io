@@ -533,19 +533,25 @@ test.describe('scroll thread, reduced motion', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
     await ready(page);
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await page.locator('[data-thread-reset]').click();
-    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 3000 }).toBe(0);
-    await page.keyboard.press('Tab');
-    expect(await page.evaluate(() => document.activeElement!.getBoundingClientRect().top)).toBeLessThan(800);
-    // Later, a click on plain text in Contact, then Tab: on to the next link
-    // there, not back to the first one in the page (<main> took the click).
-    await page.locator('#contact p.text-lg').first().click({ position: { x: 4, y: 8 } });
-    expect(await page.evaluate(() => document.activeElement?.id)).not.toBe('main-content');
-    const y = await page.evaluate(() => window.scrollY);
-    await page.keyboard.press('Tab');
-    expect(await page.evaluate(() => !!document.activeElement?.closest('#contact'))).toBe(true);
-    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(y - 80);
+    const reset = page.locator('[data-thread-reset]');
+    // Straight after the reset (<main> still holds its focus), and after a Tab has moved on from it.
+    for (const tabFirst of [false, true]) {
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await reset.click();
+      await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 3000 }).toBe(0);
+      if (tabFirst) {
+        await page.keyboard.press('Tab');
+        expect(await page.evaluate(() => document.activeElement!.getBoundingClientRect().top)).toBeLessThan(800);
+      }
+      // Later, a click on plain text in Contact, then Tab: on to the next link
+      // there, not back to the first one in the page (<main> took the click).
+      await page.locator('#contact p.text-lg').first().click({ position: { x: 4, y: 8 } });
+      expect(await page.evaluate(() => document.activeElement?.id), `Tab first: ${tabFirst}`).not.toBe('main-content');
+      const y = await page.evaluate(() => window.scrollY);
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => !!document.activeElement?.closest('#contact')), `Tab first: ${tabFirst}`).toBe(true);
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(y - 80);
+    }
   });
 
   for (const width of WIDTHS) {

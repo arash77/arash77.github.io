@@ -931,12 +931,19 @@ export function initThread(): () => void {
     }
     // Keyboard users continue from the top of the content, not from the footer.
     // Focusable only for that: left so, <main> would take a later click on its
-    // text, and the next Tab would go back to its first link.
+    // text, and the next Tab would go back to its first link. It goes with that
+    // focus, or with the reader's next click into the page (a click on text
+    // keeps focus on a focused <main>, so no blur comes).
     if (!main!.hasAttribute('tabindex')) {
       main!.setAttribute('tabindex', '-1');
-      main!.addEventListener('blur', () => main!.removeAttribute('tabindex'), { once: true, signal });
+      main!.addEventListener('blur', unfocusable, { once: true, signal });
+      main!.addEventListener('pointerdown', unfocusable, { once: true, signal });
     }
     main!.focus({ preventScroll: true });
+  }
+
+  function unfocusable() {
+    main!.removeAttribute('tabindex');
   }
 
   function setDone(list: Anchor[], reached: number, lead: number) {
