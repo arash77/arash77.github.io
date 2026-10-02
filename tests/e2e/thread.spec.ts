@@ -499,11 +499,15 @@ test.describe('scroll thread, reduced motion', () => {
     await page.goto('/');
     await ready(page);
     await expect(page.locator('[data-thread-node][data-thread-done]')).not.toHaveCount(0);
+    // On screen Contact makes room under the board for its ground symbol (py-24 otherwise).
+    await expect(page.locator('#contact')).toHaveCSS('padding-bottom', '112px');
     await page.emulateMedia({ media: 'print' });
     // The route is laid out for the screen, not the paper: it must not print.
     await expect(page.locator('.site-thread')).toBeHidden();
     await expect(page.locator('[data-thread-line]')).toHaveCSS('opacity', '1');
     await expect(page.locator('[data-thread-reset]')).toBeHidden();
+    // ...nor the room for it: Contact prints with its own py-24.
+    await expect(page.locator('#contact')).toHaveCSS('padding-bottom', '96px');
     // Lit nodes, ink and the cards' marks and lighting print as the page without the thread.
     await expect(page.locator('[data-thread-node]').last()).toHaveCSS('background-color', await themeColor(page, 'hsl(var(--card))'));
     await expect(page.locator('[data-thread-ink]').first()).toHaveCSS('background-size', '0% 2px');

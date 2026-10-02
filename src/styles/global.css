@@ -508,9 +508,11 @@ html.thread-on [data-thread-ink] {
 }
 
 /* Room under the chip network at the end of the line for its ground symbol
-   (py-24 otherwise). */
-html.thread-on #contact {
-  padding-bottom: 7rem;
+   (py-24 otherwise). Screen only: the board does not print. */
+@media screen {
+  html.thread-on #contact {
+    padding-bottom: 7rem;
+  }
 }
 
 /* Contact cards: silkscreen corner marks, like a component's footprint on a
