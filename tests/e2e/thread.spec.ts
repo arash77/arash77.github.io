@@ -303,6 +303,26 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('[data-thread-reset]')).toHaveAttribute('aria-label', 'Back to top');
   });
 
+  test('the reset switch focus ring passes clear of its silkscreen label at every width', async ({ page }) => {
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await ready(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const gap = await page.evaluate(() => {
+        const btn = document.querySelector('[data-thread-reset]')!.getBoundingClientRect();
+        const cs = getComputedStyle(document.querySelector('[data-thread-reset]')!);
+        // Ring: outline offset + width outside the (round) button.
+        const ring = btn.width / 2 + 1 + 2;
+        const cx = btn.left + btn.width / 2, cy = btn.top + btn.height / 2;
+        const label = [...document.querySelectorAll<SVGTextElement>('.site-thread__silk')].find((t) => t.textContent === 'SW1 RESET')!.getBoundingClientRect();
+        const dx = Math.max(label.left - cx, 0, cx - label.right), dy = Math.max(label.top - cy, 0, cy - label.bottom);
+        return { gap: Math.hypot(dx, dy) - ring, round: cs.borderRadius };
+      });
+      expect(gap.gap, `${width}px`).toBeGreaterThan(0);
+    }
+  });
+
   test('the reset switch hover label stays on screen at every width', async ({ page }) => {
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 900 });
@@ -340,6 +360,9 @@ test.describe('scroll thread, reduced motion', () => {
     await reset.focus();
     await page.keyboard.press('Enter');
     await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 3000 }).toBe(0);
+    // <main> takes focus programmatically: no focus ring around the whole page.
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('main-content');
+    await expect(page.locator('#main-content')).toHaveCSS('outline-style', 'none');
   });
 
   for (const width of WIDTHS) {
@@ -603,18 +626,66 @@ test.describe('scroll thread, normal motion', () => {
     expect(borders.every((b) => b === lit), borders.join(' | ')).toBe(true);
   });
 
+  test('the signal flows on into pin 1: the stub appears on arrival, the pulse ends in the pin and lights it', async ({ page }) => {
+    // Board shown, line not arrived yet: no stub dangling below the chip.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight - 500));
+    const board = page.locator('[data-thread-board]');
+    await expect(board).toHaveAttribute('data-on', '', { timeout: 8000 });
+    await expect(board).not.toHaveAttribute('data-powered', '');
+    await expect(page.locator('.site-thread__stub')).toHaveCSS('opacity', '0');
+    await page.evaluate(() => {
+      const w = window as unknown as { __arrival: { ends: string[]; flashed: boolean } };
+      w.__arrival = { ends: [], flashed: false };
+      new MutationObserver((list) => {
+        for (const m of list) for (const n of m.addedNodes) {
+          const d = (n as Element).getAttribute?.('d') ?? '';
+          const last = d.match(/[ML](-?[\d.]+),(-?[\d.]+)$/);
+          if (last) w.__arrival.ends.push(`${last[1]},${last[2]}`);
+        }
+      }).observe(document.querySelector('[data-thread-pulses]')!, { childList: true });
+      const pin = document.querySelector('.site-thread__pin--in')!;
+      new MutationObserver(() => {
+        if (pin.hasAttribute('data-flash')) w.__arrival.flashed = true;
+      }).observe(pin, { attributes: true, attributeFilter: ['data-flash'] });
+    });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(board).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    await expect(page.locator('.site-thread__stub')).toHaveCSS('opacity', '1');
+    // The arrival pulse's own path ends at pin 1 (the stub's top), and the pin flashes when it gets there.
+    const pin = await page.locator('.site-thread__pin--in').evaluate((el) => {
+      const r = el as SVGRectElement;
+      return { x: r.x.baseVal.value + r.width.baseVal.value / 2, y: r.y.baseVal.value + r.height.baseVal.value };
+    });
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __arrival: { flashed: boolean } }).__arrival.flashed), { timeout: 3000 }).toBe(true);
+    const ends = await page.evaluate(() => (window as unknown as { __arrival: { ends: string[] } }).__arrival.ends);
+    expect(ends.some((e) => {
+      const [x, y] = e.split(',').map(Number);
+      return Math.abs(x - pin.x) < 0.6 && Math.abs(y - pin.y) < 0.6;
+    }), ends.join(' ')).toBe(true);
+  });
+
   test('the reset switch presses, sends the signal back up the trace and returns to the top', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
     await countPulses(page);
     await page.locator('[data-thread-reset]').hover();
     await expect(page.locator('.site-thread-reset__tip')).toHaveCSS('opacity', '1');
+    await page.evaluate(() => {
+      const k = document.querySelector('[data-thread-knot]')!;
+      const w = window as unknown as { __knotFlash: boolean };
+      w.__knotFlash = false;
+      new MutationObserver(() => {
+        if (k.hasAttribute('data-flash')) w.__knotFlash = true;
+      }).observe(k, { attributes: true, attributeFilter: ['data-flash'] });
+    });
     await page.locator('[data-thread-reset]').click();
     await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-pressed', '');
     expect(await pulsesSeen(page)).toBeGreaterThan(0);
     await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 4000 }).toBe(0);
     await expect(page.locator('[data-thread-board]')).not.toHaveAttribute('data-powered', '', { timeout: 4000 });
     await expect(page.locator('[data-thread-board]')).not.toHaveAttribute('data-pressed', '');
+    // The reset signal arrives at the start pad, which flashes.
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __knotFlash: boolean }).__knotFlash), { timeout: 4000 }).toBe(true);
   });
 
   test('a height-only resize (mobile URL bar) never makes the drawn length jump', async ({ page }) => {
@@ -754,6 +825,53 @@ test.describe('scroll thread, normal motion', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.waitForTimeout(400);
     await expect(page.locator('[data-thread-node][data-thread-done]')).toHaveCount(0);
+  });
+
+  test('resizing at the bottom keeps the chip powered: no replay, no flicker, no stuck pulse', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    await page.waitForTimeout(2500); // power-on sequence finished
+    await countPulses(page);
+    await page.evaluate(() => {
+      const w = window as unknown as { __off: number; __unlit: number };
+      w.__off = 0;
+      w.__unlit = 0;
+      const board = document.querySelector('[data-thread-board]')!;
+      new MutationObserver(() => {
+        if (!board.hasAttribute('data-powered')) w.__off++;
+      }).observe(board, { attributes: true, attributeFilter: ['data-powered'] });
+      for (const c of document.querySelectorAll('[data-thread-card]')) {
+        new MutationObserver(() => {
+          if (!c.hasAttribute('data-thread-lit')) w.__unlit++;
+        }).observe(c, { attributes: true, attributeFilter: ['data-thread-lit'] });
+      }
+    });
+    // A drag, 7px at a time, then a height-only change (the hero is viewport-tall here).
+    for (let w = 1433; w >= 1300; w -= 7) {
+      await page.setViewportSize({ width: w, height: 900 });
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    }
+    await page.setViewportSize({ width: 1300, height: 820 });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(600);
+    const st = await page.evaluate(() => {
+      const w = window as unknown as { __off: number; __unlit: number };
+      return { off: w.__off, unlit: w.__unlit };
+    });
+    expect(st).toEqual({ off: 0, unlit: 0 });
+    expect(await pulsesSeen(page)).toBe(0);
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-settled', '');
+    // The net pulses play nothing again.
+    const anims = await page.locator('.site-thread__net-pulse').evaluateAll((els) => els.map((el) => getComputedStyle(el).animationName));
+    expect(anims.every((a) => a === 'none'), anims.join(',')).toBe(true);
+    // ...but a real power-off and power-on plays the sequence again.
+    await page.evaluate(() => window.scrollBy(0, -600));
+    await expect(page.locator('[data-thread-board]')).not.toHaveAttribute('data-powered', '', { timeout: 3000 });
+    await expect(page.locator('[data-thread-board]')).not.toHaveAttribute('data-settled', '');
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    expect(await pulsesSeen(page)).toBeGreaterThan(0);
   });
 
   test('wheel scrolling with a jittering mouse sends no signal pulse', async ({ page }) => {

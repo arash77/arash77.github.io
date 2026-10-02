@@ -12,7 +12,7 @@
  * Everything visual is opt-in through `html.thread-on`, which only this script
  * adds, so without JavaScript the page renders exactly as before.
  */
-import { buildBoard, type Board } from './board';
+import { buildBoard, SW_PAD_X, SW_PAD_Y, type Board } from './board';
 import { buildRoute, carryOver, computeRails, lengthAtY, loopReach, pointAt, type LayoutSnapshot, type Rect, type Route, type SectionLayout } from './route';
 
 const SPRING_K = 40;
@@ -28,11 +28,14 @@ const SWEEP_MIN_SPEED = 400; // px/s: a deliberate sweep, not a stroll
 const PULSE_LEN = 26;
 const PULSE_SPEED = 950;
 const PULSE_LIFE = 1.2;
-/** The reset pulse runs the whole drawn trace back to the start in at most this long (s). */
-const RESET_PULSE_S = 0.6;
+/** Once the page is back at the top, the reset pulse runs the last stretch into the start pad at this speed. */
+const RESET_RUN_SPEED = 1200;
 const RESET_PRESS_MS = 320;
-/** Card lighting after power-on: the pulses leave the chip after this, one net after another. */
-const NET_DELAY_MS = 260;
+const FLASH_MS = 700;
+/** The arrival pulse starts this far before the end and runs on up the stub into pin 1. */
+const ARRIVAL_RUN = 240;
+/** The nets fire this long after the arrival pulse has reached pin 1. */
+const NET_AFTER_PIN_MS = 60;
 const NET_STAGGER_MS = 140;
 /** ms per px of a net: the speed of the pulse along it (keep in sync with global.css). */
 const NET_MS_PER_PX = 1.4;
@@ -94,12 +97,21 @@ interface Gate {
 
 interface Pulse {
   el: SVGPathElement;
-  /** Route length where it started, its direction and speed (px/s). */
+  /** Length along its path where it started, its direction and speed (px/s). */
   from: number;
   dir: 1 | -1;
   speed: number;
   t0: number;
   life: number;
+  /** Current position along its path. */
+  pos: number;
+  /** Runs along its own path (the arrival into pin 1) instead of the route; ends at `end`. */
+  end?: number;
+  /** The reset pulse: rides the reading position while the page scrolls back up. */
+  ride?: boolean;
+  lastY?: number;
+  /** Ran off its end (not faded out): what it reached. */
+  onEnd?: () => void;
 }
 
 interface GateSpec {
@@ -166,6 +178,10 @@ export function initThread(): () => void {
   let boardCards: Element[] = [];
   let powered = false;
   let resetBtn: HTMLButtonElement | null = null;
+  /** When the nets fire after power-on (ms): once the arrival pulse has reached pin 1. */
+  let netDelay = 0;
+  /** The drawn length the reading position asked for in the last frame. */
+  let lastTarget = 0;
   let ptr: { x: number; y: number; t: number } | null = null;
   let hash = new Map<number, number[]>();
   let nodes: Anchor[] = [];
@@ -475,10 +491,14 @@ export function initThread(): () => void {
     knot!.setAttribute('cy', next.start[1].toFixed(2));
     endKnot!.setAttribute('cx', next.end[0].toFixed(2));
     endKnot!.setAttribute('cy', next.end[1].toFixed(2));
-    setPowered(false);
+    // A rebuild while powered (a resize at the page bottom, a mobile URL bar)
+    // keeps the board lit as it is: no replay of the power-on, no flicker.
+    const wasPowered = powered;
     board = buildBoard(next.end, next.endDir, measured.cardRects, w);
     boardCards = measured.cardEls;
     drawBoard(board);
+    if (wasPowered && board) setPowered(true, true);
+    else setPowered(false);
 
     hash = new Map();
     for (let i = 0; i < next.count; i++) {
@@ -565,14 +585,18 @@ export function initThread(): () => void {
       return;
     }
     const g = boardG!;
+    const pinMs = Math.round(((Math.min(ARRIVAL_RUN, route?.total ?? 0) + (route ? route.end[1] - b.pinBottom : 0)) / PULSE_SPEED) * 1000);
+    netDelay = pinMs + NET_AFTER_PIN_MS;
+    g.style.setProperty('--pin-at', `${pinMs}ms`);
     b.nets.forEach((n, i) => {
       const d = polyline(n.points);
-      const delay = NET_DELAY_MS + i * NET_STAGGER_MS;
+      const delay = netDelay + i * NET_STAGGER_MS;
       const vars = `--i:${i};--len:${n.length.toFixed(1)};--delay:${delay}ms;--lit-at:${Math.round(delay + n.length * NET_MS_PER_PX)}ms`;
       svgEl('path', { d, class: 'site-thread__net', style: vars }, g);
       svgEl('path', { d, class: 'site-thread__net-pulse', style: vars }, g);
     });
-    for (const w of b.wires) svgEl('path', { d: polyline(w), class: 'site-thread__wire' }, g);
+    // The first wire is the stub from the end point up into pin 1: part of the trace, drawn when the line arrives.
+    b.wires.forEach((w, k) => svgEl('path', { d: polyline(w), class: k === 0 ? 'site-thread__wire site-thread__stub' : 'site-thread__wire' }, g));
     for (const [x, y] of b.grounds) {
       [20, 12, 5].forEach((wd, k) => svgEl('path', { d: `M${x - wd / 2},${y + k * 4.5}H${x + wd / 2}`, class: 'site-thread__wire' }, g));
     }
@@ -588,7 +612,7 @@ export function initThread(): () => void {
     // SW1: four pads, the body and the actuator that presses in.
     const [sx, sy] = b.reset;
     const sw = svgEl('g', { class: 'site-thread__switch' }, g);
-    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) svgEl('rect', { x: sx + dx * 9 - 2.5, y: sy + dy * 5.5 - 2, width: 5, height: 4, rx: 0.8, class: 'site-thread__pad' }, sw);
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) svgEl('rect', { x: sx + dx * SW_PAD_X - 2.5, y: sy + dy * SW_PAD_Y - 2, width: 5, height: 4, rx: 0.8, class: 'site-thread__pad' }, sw);
     svgEl('rect', { x: sx - 8, y: sy - 8, width: 16, height: 16, rx: 2, class: 'site-thread__switch-body' }, sw);
     svgEl('circle', { cx: sx, cy: sy, r: 4.6, class: 'site-thread__switch-act' }, sw);
     for (const l of b.labels) svgEl('text', { x: l.x, y: l.y, 'text-anchor': l.anchor, class: 'site-thread__silk' }, g).textContent = l.text;
@@ -617,35 +641,48 @@ export function initThread(): () => void {
     resetBtn.dataset.side = room < 150 ? 'below' : sx > cx ? 'right' : 'left';
   }
 
-  /** Power on the board (the line has arrived): the input pin lights and the nets light the cards one after another (CSS timing). */
-  function setPowered(on: boolean) {
-    if (on === powered) return;
+  /**
+   * Power on the board (the line has arrived): the input pin lights and the
+   * nets light the cards one after another (CSS timing). `instant` re-applies
+   * the powered state after a rebuild without playing it again.
+   */
+  function setPowered(on: boolean, instant = false) {
+    if (on === powered && !instant) return;
     powered = on;
     boardG!.toggleAttribute('data-powered', on);
+    boardG!.toggleAttribute('data-settled', on && instant);
+    if (!on) {
+      for (const el of main!.querySelectorAll('[data-thread-lit]')) el.removeAttribute('data-thread-lit');
+      return;
+    }
     if (!board) return;
     board.nets.forEach((n, i) => {
-      const at = NET_DELAY_MS + i * NET_STAGGER_MS + n.length * NET_MS_PER_PX;
+      const at = netDelay + i * NET_STAGGER_MS + n.length * NET_MS_PER_PX;
       n.cards.forEach((ci, k) => {
         const el = boardCards[ci] as HTMLElement | undefined;
         if (!el) return;
-        el.style.setProperty('--thread-lit-delay', `${Math.round(at + k * NET_STAGGER_MS)}ms`);
-        el.toggleAttribute('data-thread-lit', on);
+        el.style.setProperty('--thread-lit-delay', instant ? '0ms' : `${Math.round(at + k * NET_STAGGER_MS)}ms`);
+        el.setAttribute('data-thread-lit', '');
       });
     });
   }
 
-  function spawnPulse(from: number, dir: 1 | -1, speed = PULSE_SPEED, life = PULSE_LIFE) {
+  /** A pulse along the route (or along `path` / `pathLen`, its own polyline). */
+  function spawnPulse(from: number, dir: 1 | -1, opts: Partial<Pick<Pulse, 'speed' | 'life' | 'end' | 'ride' | 'onEnd'>> & { d?: string } = {}) {
     const r = route;
-    if (!r || reduced) return;
+    if (!r || reduced) return null;
+    const len = opts.end ?? r.total;
     const el = svgEl('path', {
-      d: r.d,
-      pathLength: r.total.toFixed(3),
+      d: opts.d ?? r.d,
+      pathLength: len.toFixed(3),
       class: 'site-thread__pulse',
       'stroke-width': (r.strokeWidth + 1.6).toFixed(2),
-      'stroke-dasharray': `${PULSE_LEN} ${(r.total + PULSE_LEN * 2).toFixed(2)}`,
+      'stroke-dasharray': `${PULSE_LEN} ${(len + PULSE_LEN * 2).toFixed(2)}`,
     }, pulseG!);
-    pulses.push({ el, from, dir, speed, t0: now(), life });
+    const p: Pulse = { el, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, ride: opts.ride, lastY: window.scrollY, onEnd: opts.onEnd };
+    pulses.push(p);
     schedule();
+    return p;
   }
 
   function clearPulses() {
@@ -653,27 +690,79 @@ export function initThread(): () => void {
     pulses = [];
   }
 
-  /** Move the pulses; a pulse never runs past the drawn head. */
-  function updatePulses(t: number, L: number) {
+  /** A short flash where a pulse arrives (the start pad, the pen, pin 1). */
+  function flash(el: Element | null | undefined) {
+    if (!el || reduced) return;
+    el.removeAttribute('data-flash');
+    void el.getBoundingClientRect(); // restart the animation
+    el.setAttribute('data-flash', '');
+    window.setTimeout(() => el.removeAttribute('data-flash'), FLASH_MS);
+  }
+
+  /**
+   * Move the pulses. A pulse on the route never runs past the drawn head:
+   * there it flashes the pen (or pin 1, once the line has arrived); one that
+   * runs back to the start flashes the start pad.
+   */
+  function updatePulses(t: number, L: number, arrived: boolean) {
     pulses = pulses.filter((p) => {
       const age = t - p.t0;
-      const pos = p.from + p.dir * age * p.speed;
-      if (age > p.life || pos < -PULSE_LEN || pos > L) {
+      if (p.ride) {
+        // Scrolling down again cancels the reset.
+        if (window.scrollY > (p.lastY ?? 0) + 2) {
+          p.el.remove();
+          return false;
+        }
+        p.lastY = window.scrollY;
+        p.pos = Math.max(0, Math.min(L, lastTarget));
+        if (window.scrollY <= 1 || (route && p.pos <= route.minLen + 1)) {
+          // Back at the top: run the last stretch into the start pad.
+          p.ride = false;
+          p.from = p.pos;
+          p.t0 = t;
+          p.speed = RESET_RUN_SPEED;
+          p.life = p.pos / RESET_RUN_SPEED + 0.3;
+        }
+      } else p.pos = p.from + p.dir * age * p.speed;
+      const far = p.end ?? L;
+      const offStart = p.dir < 0 && p.pos < 0;
+      const offEnd = p.dir > 0 && p.pos > far;
+      if (offStart || offEnd || (!p.ride && age > p.life)) {
         p.el.remove();
+        if (offStart && p.end === undefined) flash(knot);
+        else if (offEnd) {
+          if (p.onEnd) p.onEnd();
+          else if (arrived && board) flash(boardG!.querySelector('.site-thread__pin--in'));
+          else flash(glow);
+        }
         return false;
       }
-      p.el.setAttribute('stroke-dashoffset', (PULSE_LEN / 2 - pos).toFixed(2));
-      p.el.style.opacity = String(Math.max(0, 1 - (age / p.life) ** 3));
+      p.el.setAttribute('stroke-dashoffset', (PULSE_LEN / 2 - p.pos).toFixed(2));
+      p.el.style.opacity = p.ride ? '1' : String(Math.max(0, 1 - (age / p.life) ** 3));
       return true;
     });
+  }
+
+  /** The arrival pulse: the last stretch of the route, then on up the stub into pin 1. */
+  function arrivalPulse(r: Route) {
+    if (!board) return;
+    const run = Math.min(ARRIVAL_RUN, r.total);
+    const pts: [number, number][] = [];
+    for (let l = r.total - run; l < r.total; l += r.step) pts.push(pointAt(r, l) as [number, number]);
+    pts.push([r.end[0], r.end[1]], [r.end[0], board.pinBottom]);
+    let len = 0;
+    for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    spawnPulse(0, 1, { d: polyline(pts), end: len, life: len / PULSE_SPEED + 0.2, onEnd: () => flash(boardG!.querySelector('.site-thread__pin--in')) });
   }
 
   function resetToTop() {
     boardG!.setAttribute('data-pressed', '');
     window.setTimeout(() => boardG!.removeAttribute('data-pressed'), RESET_PRESS_MS);
-    // The reset signal races back up the drawn trace to the start.
+    // The reset signal goes back up the trace with the reader and into the start pad.
+    for (const p of pulses) if (p.ride) p.el.remove();
+    pulses = pulses.filter((p) => !p.ride);
     const L = Math.max(0, Math.min(route?.total ?? 0, shown));
-    if (L > 0) spawnPulse(L, -1, Math.max(2600, L / RESET_PULSE_S), RESET_PULSE_S + 0.3);
+    if (L > 0) spawnPulse(L, -1, { ride: true, life: Infinity });
     window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
     // Keyboard users continue from the top of the content, not from the footer.
     if (!main!.hasAttribute('tabindex')) main!.setAttribute('tabindex', '-1');
@@ -696,7 +785,7 @@ export function initThread(): () => void {
     const L = Math.max(0, Math.min(r.total, shown));
     const arrived = started && L >= r.total - 1;
     path!.setAttribute('stroke-dasharray', `${L.toFixed(2)} ${(r.total + 10).toFixed(2)}`);
-    updatePulses(t, L);
+    updatePulses(t, L, arrived);
     if (inPlace && !(capActive && capUnseen)) inPlace = false;
     const veiled = inPlace;
     // While veiled the page shows its own timeline line, as before the thread started.
@@ -741,7 +830,7 @@ export function initThread(): () => void {
     const boardOn = !!board && started && !veiled && (arrived || cards.some((c) => c.done));
     boardG!.toggleAttribute('data-on', boardOn);
     if (resetBtn) resetBtn.toggleAttribute('hidden', !boardOn);
-    if (arrived && !powered && board && !reduced && !veiled) spawnPulse(Math.max(0, r.total - 320), 1, PULSE_SPEED, 0.5);
+    if (arrived && !powered && board && !reduced && !veiled) arrivalPulse(r);
     setPowered(arrived && !veiled && !!board);
   }
 
@@ -755,6 +844,7 @@ export function initThread(): () => void {
     const dt = lastT ? Math.min(0.05, Math.max(0, t - lastT)) : 1 / 60;
     lastT = t;
     const target = targetLen();
+    lastTarget = target;
     // After an in-place start the line tracks the target exactly while the
     // page scrolls (a hash link's smooth scroll), so it never trails behind,
     // or sweeps in from a gate the scroll has carried out of view. Once the
@@ -863,7 +953,7 @@ export function initThread(): () => void {
     if (best < 0) return;
     const at = best * r.step;
     // One signal per crossing (a sweep reports several events near the same spot).
-    if (pulses.some((p) => p.speed === PULSE_SPEED && Math.abs(p.from - at) < 60 && t - p.t0 < 0.25)) return;
+    if (pulses.some((p) => p.end === undefined && !p.ride && p.speed === PULSE_SPEED && Math.abs(p.from - at) < 60 && t - p.t0 < 0.25)) return;
     // The signal runs out both ways along the trace from where it was touched.
     spawnPulse(at, 1);
     spawnPulse(at, -1);

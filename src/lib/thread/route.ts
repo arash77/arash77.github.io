@@ -117,7 +117,7 @@ export const RAIL_MIN_MARGIN = 40;
 export const RAIL_OFFSET = 14;
 export const RAIL_EDGE = 7;
 /** Room the end point leaves below the cards for the chip network's wiring (see board.ts). */
-export const END_GAP = 120;
+export const END_GAP = 108;
 
 export function computeRails(width: number, containerLeft: number, containerRight: number): Rails {
   if (containerLeft >= RAIL_MIN_MARGIN && width - containerRight >= RAIL_MIN_MARGIN) {

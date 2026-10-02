@@ -29,8 +29,9 @@ export interface Board {
   pinBottom: number;
   /** The bottom pin the trace feeds (pin 1). */
   inputPin: number;
-  /** Plain wires: input stub, ground wires, reset wires. */
+  /** Plain wires: input stub, ground wire, reset wires, ground bus. */
   wires: Pt[][];
+  /** The one ground symbol (top of its stub), shared by the chip and the switch. */
   grounds: Pt[];
   /** Centre of the reset switch. */
   reset: Pt;
@@ -48,6 +49,11 @@ const PIN_LEN = 9;
 const CHIP_REACH = 58;
 /** Smallest channel between the cards and the chip's top pins that still fits three routing rows. */
 export const MIN_CHANNEL = 36;
+/** The ground bus runs this far below the end point (clear of the switch's pads above it). */
+const GROUND_BUS = 12;
+/** Switch pad centres sit this far from the switch centre (the runtime draws them there). */
+export const SW_PAD_X = 9;
+export const SW_PAD_Y = 5.5;
 /** 45° chamfer of the nets' corners. */
 const NET_CHAMFER = 6;
 
@@ -102,18 +108,25 @@ export function buildBoard(end: Pt, dir: 1 | -1, cards: Rect[], width: number): 
   const grounds: Pt[] = [];
   // Input stub: from the end point up into pin 1.
   wires.push([[ex, ey], [ex, pinBottom]]);
-  // Ground pin straight down to a ground symbol.
-  const gx = botPins[groundPin];
-  wires.push([[gx, pinBottom], [gx, ey + 2]]);
-  grounds.push([gx, ey + 2]);
-  // Reset pin → SW1 → ground, beyond the chip on the far side.
+  // Reset pin → SW1, beyond the chip on the far side. A tactile switch's two
+  // pads on each side are joined inside it; pressing it connects the sides:
+  // the reset wire lands on a near-side pad, the ground leaves from a far-side pad.
   const rx = botPins[resetPin];
   const swX = cx + dir * (CHIP_W / 2 + 22);
-  const swY = ey - 3;
-  wires.push(chamfer([[rx, pinBottom], [rx, swY], [swX - dir * 8, swY]], 4));
-  const g2x = swX + dir * 22;
-  wires.push(chamfer([[swX + dir * 8, swY], [g2x, swY], [g2x, ey + 2]], 4));
-  grounds.push([g2x, ey + 2]);
+  const swY = ey - 1;
+  const padIn = swX - dir * (SW_PAD_X + 2.5), padOut = swX + dir * (SW_PAD_X + 2.5);
+  wires.push(chamfer([[rx, pinBottom], [rx, swY - SW_PAD_Y], [padIn, swY - SW_PAD_Y]], 3));
+  // One ground net: the chip's ground pin and the switch meet on a short
+  // ground bus below them, with a single ground symbol under its middle.
+  const gx = botPins[groundPin];
+  const gEnd = swX + dir * 17;
+  const busY = ey + GROUND_BUS;
+  wires.push([[gx, pinBottom], [gx, busY]]);
+  wires.push(chamfer([[padOut, swY + SW_PAD_Y], [gEnd, swY + SW_PAD_Y], [gEnd, busY]], 3));
+  wires.push([[gx, busY], [gEnd, busY]]);
+  const gMid = (gx + gEnd) / 2;
+  wires.push([[gMid, busY], [gMid, busY + 3]]);
+  grounds.push([gMid, busY + 3]);
 
   // Nets from the four top pins to the cards.
   const nets: BoardNet[] = [];
@@ -149,11 +162,12 @@ export function buildBoard(end: Pt, dir: 1 | -1, cards: Rect[], width: number): 
   const labels: Board['labels'] = [
     { x: cx - dir * (CHIP_W / 2 + 14), y: cy + 3, text: 'U1', anchor: 'middle' },
     // Above the switch, running away from the chip (clear of its pins and the reset wire).
-    { x: swX - dir * 8, y: swY - 13, text: 'SW1 RESET', anchor: dir > 0 ? 'start' : 'end' },
+    // High enough that the button's focus ring (radius ~18) passes below it.
+    { x: swX - dir * 8, y: swY - 25, text: 'SW1 RESET', anchor: dir > 0 ? 'start' : 'end' },
   ];
-  const xsAll = [cx - CHIP_W / 2 - 24, cx + CHIP_W / 2 + 24, swX - 12, swX + 12, swX - dir * 8 + dir * 54, g2x - 11, g2x + 11];
+  const xsAll = [cx - CHIP_W / 2 - 24, cx + CHIP_W / 2 + 24, swX - 12, swX + 12, swX - dir * 8 + dir * 54, gEnd];
   const x0 = Math.min(...xsAll), x1 = Math.max(...xsAll);
-  const box = { x: x0, y: pinTop, w: x1 - x0, h: ey + 12 - pinTop };
+  const box = { x: x0, y: pinTop, w: x1 - x0, h: busY + 3 + 10 - pinTop };
   if (box.x < 2 || box.x + box.w > width - 2) return null;
 
   return {

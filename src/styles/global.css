@@ -481,8 +481,9 @@ html.thread-on [data-thread-card]::after {
 html.thread-on [data-thread-card]::before {
   content: 'J' counter(thread-card);
   position: absolute;
-  top: 9px;
-  right: 14px;
+  top: 8px;
+  /* Left of the corner mark's arm (6px in, 12px long), not under it. */
+  right: 24px;
   font: 9px/1 var(--font-mono);
   letter-spacing: 0.06em;
   color: hsl(var(--primary) / 0.75);
@@ -527,6 +528,13 @@ html.thread-on [data-thread-card]::before {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* The stub into pin 1 continues the trace: hidden until the line arrives (no wire dangling below the chip). */
+.site-thread__stub {
+  opacity: 0;
+}
+.site-thread__board[data-powered] .site-thread__stub {
+  opacity: 1;
+}
 .site-thread__net {
   fill: none;
   stroke: hsl(var(--primary) / 0.35);
@@ -551,6 +559,13 @@ html.thread-on [data-thread-card]::before {
   /* NET_MS_PER_PX in runtime.ts: 1.4ms per px. */
   animation: thread-net-pulse calc(var(--len) * 1.4ms) linear var(--delay) both;
 }
+/* Rebuilt while powered (a resize): stay lit, play nothing again. */
+.site-thread__board[data-settled] .site-thread__net-pulse {
+  animation: none;
+}
+.site-thread__board[data-settled] .site-thread__net {
+  transition: none;
+}
 @keyframes thread-net-pulse {
   0% {
     opacity: 1;
@@ -572,6 +587,40 @@ html.thread-on [data-thread-card]::before {
 }
 .site-thread__board[data-powered] .site-thread__pin--in {
   fill: hsl(var(--secondary));
+  /* Lit when the arrival pulse reaches it (--pin-at, set by the runtime). */
+  transition: fill 0.2s ease var(--pin-at, 0s);
+}
+.site-thread__board[data-settled] .site-thread__pin--in {
+  transition: none;
+}
+/* Where a pulse arrives: the start pad, the pen's glow or pin 1 flash. */
+.site-thread__knot[data-flash],
+.site-thread__pin--in[data-flash] {
+  animation: thread-flash 0.7s ease-out;
+}
+.site-thread__glow[data-flash] {
+  animation: thread-flash-glow 0.7s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes thread-flash {
+  0% {
+    stroke: hsl(var(--secondary));
+    fill: hsl(var(--secondary));
+    filter: drop-shadow(0 0 6px hsl(var(--secondary)));
+  }
+  100% {
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+@keyframes thread-flash-glow {
+  0% {
+    transform: scale(1.8);
+    fill: hsl(var(--secondary) / 0.45);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 .site-thread__chip {
   fill: hsl(186 28% 14%);
@@ -634,8 +683,8 @@ html.thread-on .site-thread-reset {
   display: block;
   position: absolute;
   z-index: 2;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   transform: translate(-50%, -50%);
   border: 0;
   border-radius: 999px;
@@ -648,7 +697,12 @@ html.thread-on .site-thread-reset[hidden] {
 }
 .site-thread-reset:focus-visible {
   outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
+  outline-offset: 1px;
+}
+/* The reset moves focus to <main> (so Tab continues from the top); it is a
+   programmatic target, not a control: no ring around the whole page. */
+html.thread-on #main-content:focus {
+  outline: none;
 }
 .site-thread-reset__tip {
   position: absolute;

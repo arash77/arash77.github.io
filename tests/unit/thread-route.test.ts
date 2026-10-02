@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildBoard, type Board } from '@/lib/thread/board';
+import { buildBoard, SW_PAD_X, SW_PAD_Y, type Board } from '@/lib/thread/board';
 import {
   buildRoute,
   carryOver,
@@ -541,6 +541,21 @@ function checkBoard(fx: Fixture) {
     }
   });
   for (const sa of wireSegs) for (const sb of routeSegs) expect(crosses(sa, sb), 'a wire crosses the trace').toBe(false);
+  // One shared ground symbol, well clear of the input trace and stub (it must not read as "input shorted to ground").
+  expect(board.grounds).toHaveLength(1);
+  const [gx, gy] = board.grounds[0];
+  const nearest = Math.min(
+    ...[...sample([route.end, [route.end[0] - route.endDir * 60, route.end[1]]]), ...sample(board.wires[0])].map(([x, y]) => {
+      const dx = Math.max(0, Math.abs(x - gx) - 10), dy = Math.max(0, gy - y, y - (gy + 9));
+      return Math.hypot(dx, dy);
+    }),
+  );
+  expect(nearest, 'ground symbol clearance from the input').toBeGreaterThanOrEqual(8);
+  // SW1 is wired to its pads: the reset wire ends at a near-side pad's outer edge, the ground leaves from a far-side pad.
+  const [sx, sy] = board.reset;
+  const padEnds = board.wires.flatMap((w) => [w[0], w[w.length - 1]]).filter(([x, y]) => Math.abs(Math.abs(x - sx) - (SW_PAD_X + 2.5)) < 0.01 && Math.abs(Math.abs(y - sy) - SW_PAD_Y) < 0.01);
+  expect(padEnds).toHaveLength(2);
+  expect(Math.sign(padEnds[0][0] - sx)).not.toBe(Math.sign(padEnds[1][0] - sx));
   // Circuit style: only straight and 45° legs.
   for (const n of board.nets) {
     for (const [x0, y0, x1, y1] of segsOf(n.points)) {
