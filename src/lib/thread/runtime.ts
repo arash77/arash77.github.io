@@ -712,6 +712,11 @@ export function initThread(): () => void {
       tip.textContent = 'Back to top';
       resetBtn.append(tip);
       resetBtn.addEventListener('click', resetToTop, { signal });
+      // Escape dismisses the tip where it is shown; the next hover or focus shows it again.
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && resetBtn?.matches(':hover, :focus')) resetBtn.setAttribute('data-tip-off', '');
+      }, { signal });
+      for (const type of ['pointerenter', 'focus'] as const) resetBtn.addEventListener(type, () => resetBtn?.removeAttribute('data-tip-off'), { signal });
     }
     if (resetBtn.parentElement !== main) main!.append(resetBtn);
     resetBtn.style.left = `${sx}px`;

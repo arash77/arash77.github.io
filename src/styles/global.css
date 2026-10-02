@@ -698,7 +698,7 @@ html.thread-on [data-thread-card]::after {
   transition: opacity 0.15s ease;
 }
 /* The switch's hover tip opens where its label is, and takes its place. */
-html:has(.site-thread-reset:not([data-side='below']):is(:hover, :focus-visible)) .site-thread__silk {
+html:has(.site-thread-reset:not([data-side='below'], [data-tip-off]):is(:hover, :focus-visible)) .site-thread__silk {
   opacity: 0;
 }
 .site-thread__pad {
@@ -789,9 +789,19 @@ html.thread-on #main-content:focus {
   left: 50%;
   transform: translateX(-50%);
 }
-.site-thread-reset:hover .site-thread-reset__tip,
-.site-thread-reset:focus-visible .site-thread-reset__tip {
+/* Escape dismisses it (data-tip-off, until the next hover or focus). */
+.site-thread-reset:not([data-tip-off]):is(:hover, :focus-visible) .site-thread-reset__tip {
   opacity: 1;
+}
+/* The pointer can move onto the shown tip: it keeps the switch hovered, and
+   its edge bridges the gap to it. */
+.site-thread-reset:not([data-tip-off]):hover .site-thread-reset__tip {
+  pointer-events: auto;
+}
+.site-thread-reset__tip::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
 }
 
 /* Print: the route is laid out for the screen, not for the paper width, so

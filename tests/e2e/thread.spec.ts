@@ -386,6 +386,49 @@ test.describe('scroll thread, reduced motion', () => {
     }
   });
 
+  test('the reset switch hover label can be hovered, and Escape dismisses it', async ({ page }) => {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await ready(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const reset = page.locator('[data-thread-reset]');
+      const tip = page.locator('.site-thread-reset__tip');
+      const silk = page.locator('.site-thread__silk');
+      // Beside the switch the tip takes the label's place; below it, it covers the ground symbol.
+      const beside = (await reset.getAttribute('data-side')) !== 'below';
+      const hovered = () => reset.evaluate((el) => el.matches(':hover'));
+      // Hoverable: the pointer moves from the switch onto the tip, which stays.
+      await reset.hover();
+      await expect(tip).toHaveCSS('opacity', '1');
+      const t = (await tip.boundingBox())!;
+      await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 10 });
+      expect(await hovered(), `${width}px: on the tip`).toBe(true);
+      await expect(tip).toHaveCSS('opacity', '1');
+      // Dismissible: Escape hides it where the pointer is, and the label comes back.
+      const y = await page.evaluate(() => window.scrollY);
+      await page.keyboard.press('Escape');
+      await expect(tip, `${width}px: hover + Escape`).toHaveCSS('opacity', '0');
+      if (beside) await expect(silk).toHaveCSS('opacity', '1');
+      expect(await page.evaluate(() => window.scrollY)).toBe(y);
+      // Not for good: the next hover shows it again.
+      await page.mouse.move(5, 5);
+      await reset.hover();
+      await expect(tip).toHaveCSS('opacity', '1');
+      await page.mouse.move(5, 5);
+      await expect(tip).toHaveCSS('opacity', '0');
+      // Keyboard: Shift+Tab back from the footer onto the switch, then Escape.
+      await page.locator('footer a').first().focus();
+      await page.keyboard.press('Shift+Tab');
+      await expect(reset).toBeFocused();
+      await expect(tip).toHaveCSS('opacity', '1');
+      await page.keyboard.press('Escape');
+      await expect(tip, `${width}px: focus + Escape`).toHaveCSS('opacity', '0');
+      if (beside) await expect(silk).toHaveCSS('opacity', '1');
+      await expect(reset).toBeFocused();
+    }
+  });
+
   test('the reset switch takes the reader back to the top, also by keyboard', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
