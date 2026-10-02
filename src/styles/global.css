@@ -659,7 +659,8 @@ html.thread-on [data-thread-card]::after {
 }
 @keyframes thread-flash-glow {
   0% {
-    transform: scale(1.8);
+    /* As far as there is room by the viewport edge (--glow-flash, set by the runtime). */
+    transform: scale(var(--glow-flash, 1.8));
     fill: hsl(var(--secondary) / 0.45);
   }
   100% {

@@ -53,6 +53,8 @@ const NET_MS_PER_PX = 1.4;
 const LIT_MS = 600;
 const HASH_CELL = 40;
 const GLOW_R = 11;
+/** How much the glow's flash grows at most, where it has the room (keep in sync with global.css). */
+const GLOW_FLASH = 1.8;
 /** After a start with the hero out of view, how long the line tracks the reading position exactly. */
 const SNAP_FOLLOW_S = 1.5;
 /** Pen radius plus half its stroke: the glow never gets smaller than the pen. */
@@ -964,9 +966,13 @@ export function initThread(): () => void {
       if (c.style.transition !== penNow) c.style.transition = penNow;
       c.style.opacity = showPen ? '1' : '0';
     }
-    // The glow shrinks near the viewport edges (rails 7px in) so it is never cut off flat.
-    const glowR = Math.max(PEN_EXTENT, Math.min(GLOW_R, Math.min(head[0], viewW - head[0]) - 0.5)).toFixed(2);
+    // The glow shrinks near the viewport edges (rails 7px in) so it is never cut off flat,
+    // and its flash grows only as far as there is room.
+    const room = Math.min(head[0], viewW - head[0]) - 0.5;
+    const glowR = Math.max(PEN_EXTENT, Math.min(GLOW_R, room)).toFixed(2);
     if (glow!.getAttribute('r') !== glowR) glow!.setAttribute('r', glowR);
+    const grow = Math.max(1, Math.min(GLOW_FLASH, room / Number(glowR))).toFixed(3);
+    if (glow!.style.getPropertyValue('--glow-flash') !== grow) glow!.style.setProperty('--glow-flash', grow);
     // Both knots fade in, but go at once: a line pulled back (the start knot:
     // the hero intro replaying while it is in view) must not leave them behind.
     const showKnot = started && L > 0.5;

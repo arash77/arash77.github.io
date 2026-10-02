@@ -1331,6 +1331,56 @@ test.describe('scroll thread, normal motion', () => {
     }
   });
 
+  test("on an edge rail the pen glow's flash is never clipped either: it grows only as far as there is room", async ({ page }) => {
+    // The pen's x once it has come to rest (unmoved for a few frames).
+    const penAtRest = () =>
+      page.evaluate(async () => {
+        const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+        const c = svg.querySelector('[data-thread-pen]')!;
+        const at = () => `${c.getAttribute('cx')} ${c.getAttribute('cy')}`;
+        const was = at();
+        for (let i = 0; i < 6; i++) await new Promise(requestAnimationFrame);
+        return at() === was ? svg.getBoundingClientRect().left + parseFloat(c.getAttribute('cx')!) : NaN;
+      });
+    // The glow's flash (a signal pouring into the pen) seeked through its 0.7s: its box every 5ms.
+    const flash = () =>
+      page.evaluate(() => {
+        const g = document.querySelector('[data-thread-glow]')!;
+        g.removeAttribute('data-flash');
+        void getComputedStyle(g).transform;
+        g.setAttribute('data-flash', '');
+        const a = g.getAnimations().find((x) => (x as CSSAnimation).animationName === 'thread-flash-glow')!;
+        a.pause();
+        const boxes: [number, number][] = [];
+        for (let t = 0; t <= 700; t += 5) {
+          a.currentTime = t;
+          const b = g.getBoundingClientRect();
+          boxes.push([b.left, b.right]);
+        }
+        a.cancel();
+        g.removeAttribute('data-flash');
+        return { boxes, cw: document.documentElement.clientWidth };
+      });
+    await page.setViewportSize({ width: 768, height: 900 });
+    // The pen at rest on the left rail, then on the right one (both 7px in).
+    for (const [y, side] of [[900, 'left'], [1300, 'right']] as const) {
+      await page.evaluate((y) => window.scrollTo(0, y), y);
+      if (side === 'left') await expect.poll(penAtRest, { timeout: 8000 }).toBeLessThan(20);
+      else await expect.poll(penAtRest, { timeout: 8000 }).toBeGreaterThan(748);
+      const { boxes, cw } = await flash();
+      boxes.forEach(([l, r], i) => {
+        expect(l, `${side} rail, ${i * 5}ms`).toBeGreaterThanOrEqual(0);
+        expect(r, `${side} rail, ${i * 5}ms`).toBeLessThanOrEqual(cw);
+      });
+    }
+    // With room (the right rail at 1440), it still flashes at 1.8x its size.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 1250));
+    await expect.poll(penAtRest, { timeout: 8000 }).toBeGreaterThan(720);
+    const { boxes } = await flash();
+    expect(boxes[0][1] - boxes[0][0]).toBeCloseTo(2 * 11 * 1.8, 0);
+  });
+
   test('a fast pointer sweep across the drawn trace sends a signal pulse both ways, never past the pen', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => window.scrollTo(0, 1250));
