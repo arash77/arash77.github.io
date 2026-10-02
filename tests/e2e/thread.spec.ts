@@ -796,7 +796,7 @@ test.describe('scroll thread, normal motion', () => {
       expect(e.y, `signal on screen at ${e.pos.toFixed(0)}`).toBeLessThan(vh + 2);
       // It is the line's head: on the drawn part, with the line retracting right behind it.
       expect(e.drawn, 'on the drawn part').toBeGreaterThanOrEqual(e.pos - 0.5);
-      expect(e.drawn, 'line retracts behind it').toBeLessThanOrEqual(Math.max(rest, e.pos + 14));
+      expect(e.drawn, 'line retracts behind it').toBeLessThanOrEqual(Math.max(rest, e.pos + 17));
     }
   });
 
@@ -1157,8 +1157,10 @@ test.describe('scroll thread, normal motion', () => {
       const tick = () => {
         for (const el of g.querySelectorAll('.site-thread__pulse')) {
           const pos = 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0');
+          const lit = parseFloat((el.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
           w.__pl.seen++;
-          w.__pl.max = Math.max(w.__pl.max, pos);
+          // The far end of its light.
+          w.__pl.max = Math.max(w.__pl.max, pos - 13 + lit);
           w.__pl.min = Math.min(w.__pl.min, pos);
           const prev = last.get(el);
           if (prev !== undefined && pos !== prev) w.__pl.dirs.add(Math.sign(pos - prev));
@@ -1177,7 +1179,7 @@ test.describe('scroll thread, normal motion', () => {
     });
     expect(pl.seen, 'the sweep sent a pulse').toBeGreaterThan(0);
     expect(pl.dirs).toEqual([-1, 1]);
-    expect(pl.max).toBeLessThanOrEqual(pen.dash + 1);
+    expect(pl.max, 'the light never runs past the pen').toBeLessThanOrEqual(pen.dash - 2.5);
     // ...and they are gone again.
     await expect(page.locator('.site-thread__pulse')).toHaveCount(0, { timeout: 2000 });
   });
@@ -1398,6 +1400,53 @@ test.describe('scroll thread, normal motion', () => {
     });
     // The glow only ever grows at the start of a flash, from rest.
     for (let i = 1; i < sc.length; i++) if (sc[i] - sc[i - 1] > 0.2) expect(sc[i - 1], `frame ${i}`).toBeLessThan(1.05);
+  });
+
+  test('a signal never shows past the drawn line, also while the line retracts under it', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 1250));
+    await page.waitForTimeout(2500); // the pen comes to rest on the right rail
+    const pen = await page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+      const c = svg.querySelector('[data-thread-pen]')!;
+      const s = svg.getBoundingClientRect();
+      return { x: s.left + parseFloat(c.getAttribute('cx')!), y: s.top + parseFloat(c.getAttribute('cy')!) };
+    });
+    // Every frame: the far end of each signal's light against the drawn length.
+    await page.evaluate(() => {
+      const w = window as unknown as { __over: string[]; __seen: number };
+      w.__over = [];
+      w.__seen = 0;
+      const line = document.querySelector('[data-thread-path]')!;
+      const t0 = performance.now();
+      const f = () => {
+        const drawn = parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+        for (const el of document.querySelectorAll('.site-thread__pulse')) {
+          if ((el.getAttribute('d') ?? '') !== line.getAttribute('d')) continue;
+          const pos = 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0');
+          const lit = parseFloat((el.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+          if (lit <= 0) continue;
+          w.__seen++;
+          if (pos - 13 + lit > drawn - 2.5) w.__over.push(`light to ${(pos - 13 + lit).toFixed(1)}, drawn ${drawn.toFixed(1)}`);
+        }
+        if (performance.now() - t0 < 2500) requestAnimationFrame(f);
+      };
+      requestAnimationFrame(f);
+    });
+    // Sweeps just above the pen (the signal heading down reaches it at once), then the line pulls back under them.
+    for (const dy of [30, 60, 90]) {
+      await page.mouse.move(pen.x + 50, pen.y - dy);
+      await page.mouse.move(pen.x - 50, pen.y - dy, { steps: 2 });
+      await page.waitForTimeout(40);
+    }
+    await page.evaluate(() => window.scrollBy(0, -500));
+    await page.waitForTimeout(2600);
+    const { over, seen } = await page.evaluate(() => {
+      const w = window as unknown as { __over: string[]; __seen: number };
+      return { over: w.__over, seen: w.__seen };
+    });
+    expect(seen, 'signals were sent').toBeGreaterThan(0);
+    expect(over).toEqual([]);
   });
 
   test('a sweep across a part of the trace that is not drawn yet sends nothing', async ({ page }) => {

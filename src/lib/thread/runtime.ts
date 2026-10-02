@@ -28,6 +28,8 @@ const SWEEP_MIN_SPEED = 400; // px/s: a deliberate sweep, not a stroll
 const PULSE_LEN = 26;
 const PULSE_SPEED = 950;
 const PULSE_LIFE = 1.2;
+/** A signal on the trace is lit only up to this far short of the drawn line's head (its round ends stay under the pen). */
+const HEAD_INSET = 3;
 /**
  * The reset signal runs back to the start pad in this long (s per px of
  * drawn line, within bounds), the page following it: steady enough to
@@ -124,8 +126,10 @@ interface Pulse {
   speed: number;
   t0: number;
   life: number;
-  /** Current position along its path. */
+  /** Current position along its path (the middle of its light). */
   pos: number;
+  /** The gap after its dash (longer than its path, so the dash never repeats). */
+  gap: string;
   /** Runs along its own path (the arrival into pin 1) instead of the route; ends at `end`. */
   end?: number;
   /** Placed by the reset each frame (see stepRewind), not by its speed; never fades. */
@@ -745,7 +749,7 @@ export function initThread(): () => void {
     // size of the page is drawn in GPU tiles, with seams (a copy of the light beside it).
     const halos = [11, 5].map((extra, k) => svgEl('path', { ...dash, class: `site-thread__pulse-halo site-thread__pulse-halo--${k}`, 'stroke-width': (sw + extra).toFixed(2) }, pulseG!));
     const el = svgEl('path', { ...dash, class: 'site-thread__pulse', 'stroke-width': (sw + 1.6).toFixed(2) }, pulseG!);
-    const p: Pulse = { el, halos, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, held: opts.held, onEnd: opts.onEnd, fresh: true };
+    const p: Pulse = { el, halos, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, gap: (len + PULSE_LEN * 2).toFixed(2), end: opts.end, held: opts.held, onEnd: opts.onEnd, fresh: true };
     pulses.push(p);
     schedule();
     return p;
@@ -787,13 +791,16 @@ export function initThread(): () => void {
       // A signal through a lit LED makes it blink (it is in series on the trace).
       if (p.end === undefined) for (const led of leds) if (led.done && Math.min(was, p.pos) <= led.exit && Math.max(was, p.pos) >= led.enter && (was < led.enter || was > led.exit || p.fresh)) flash(led.el);
       p.fresh = false;
-      const far = p.end ?? L;
+      // On the trace, the light never runs past the drawn line's head: it pours
+      // into the pen, and goes once none of it is left on the drawn line (also
+      // when the line retracts past it).
+      const lit = p.end === undefined ? Math.min(PULSE_LEN, L - HEAD_INSET - (p.pos - PULSE_LEN / 2)) : PULSE_LEN;
       const offStart = p.dir < 0 && p.pos < 0;
-      const offEnd = p.dir > 0 && p.pos > far;
+      const offEnd = p.end === undefined ? lit < 0.5 : p.dir > 0 && p.pos > p.end;
       if (offStart || offEnd || (!p.held && age > p.life)) {
         dropPulse(p);
         if (offStart && p.end === undefined) flash(knot);
-        else if (offEnd) {
+        else if (offEnd && p.dir > 0) {
           if (p.onEnd) p.onEnd();
           else if (arrived && board) flash(boardG!.querySelector('.site-thread__pin--in'));
           else flash(glow);
@@ -801,9 +808,11 @@ export function initThread(): () => void {
         return false;
       }
       const offset = (PULSE_LEN / 2 - p.pos).toFixed(2);
+      const dash = `${lit.toFixed(2)} ${p.gap}`;
       const opacity = p.held ? '1' : String(Math.max(0, 1 - (age / p.life) ** 3));
       for (const e of [p.el, ...p.halos]) {
         e.setAttribute('stroke-dashoffset', offset);
+        e.setAttribute('stroke-dasharray', dash);
         e.style.opacity = opacity;
       }
       return true;
@@ -857,7 +866,7 @@ export function initThread(): () => void {
     // The line retracts with it, down to what the top of the page shows.
     const vh = window.innerHeight;
     const rest = Math.max(r.minLen, lengthAtY(r, vh * READ_LINE - mainTop));
-    shown = Math.max(rest, Math.min(rw.from, rw.p.pos + PULSE_LEN / 2));
+    shown = Math.max(rest, Math.min(rw.from, rw.p.pos + PULSE_LEN / 2 + HEAD_INSET));
     vel = 0;
     const follow = Math.max(0, Math.min(html.scrollHeight - vh, mainTop + pointAt(r, Math.max(0, rw.p.pos))[1] - vh * READ_LINE));
     // In the last stretch the page settles on the very top (the start pad can sit below the reading line).
