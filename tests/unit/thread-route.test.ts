@@ -30,10 +30,10 @@ interface Fixture {
   cards: Rect[];
 }
 
-const container = (width: number, max: number) => {
+const container = (width: number, max: number, pad: number) => {
   const w = Math.min(width, max);
   const left = (width - w) / 2;
-  return { left, right: left + w, cl: left + 16, cr: left + w - 16 };
+  return { left, right: left + w, cl: left + pad, cr: left + w - pad };
 };
 
 interface SectionSpec {
@@ -49,11 +49,16 @@ const REAL_ORDER: SectionSpec[] = [
   { kind: 'contact', max: 1024 }, // Contact
 ];
 
-function makeLayout(width: number, order: SectionSpec[] = REAL_ORDER): Fixture {
-  const phone = width < 640;
-  const lg = width >= 1024;
+/**
+ * `rem` is the browser's default font size: the breakpoints, the containers
+ * (max width, px-4) and the timeline nodes (w-12, gap-6) follow it.
+ */
+function makeLayout(width: number, order: SectionSpec[] = REAL_ORDER, rem = 16): Fixture {
+  const phone = width < 40 * rem;
+  const lg = width >= 64 * rem;
   const vh = 900;
-  const c6 = container(width, 1152);
+  const box = (max: number) => container(width, (max * rem) / 16, rem);
+  const c6 = box(1152);
   const obstacles: Rect[] = [];
   const circles: Fixture['circles'] = [];
   const contactCards: Rect[] = [];
@@ -90,7 +95,7 @@ function makeLayout(width: number, order: SectionSpec[] = REAL_ORDER): Fixture {
   const sections: SectionLayout[] = [];
   let y = heroBottom;
   for (const spec of order) {
-    const c = container(width, spec.max);
+    const c = box(spec.max);
     const top = y;
     const padTop = spec.kind === 'contact' ? 96 : 48;
     const headTop = top + padTop;
@@ -119,8 +124,8 @@ function makeLayout(width: number, order: SectionSpec[] = REAL_ORDER): Fixture {
       const nodes: Rect[] = [];
       for (let i = 0; i < 4; i++) {
         const itemH = phone ? 220 : 150;
-        if (!phone) nodes.push(rect(c.cl, cy, 48, 48));
-        const textX = phone ? c.cl : c.cl + 72;
+        if (!phone) nodes.push(rect(c.cl, cy, 3 * rem, 3 * rem));
+        const textX = phone ? c.cl : c.cl + 4.5 * rem;
         obstacles.push(rect(textX, cy + 4, c.cr - textX, itemH - 8));
         cy += itemH + 32;
       }
@@ -348,6 +353,41 @@ describe.each([414, 390, 360])('phone route at %ipx', (width) => {
     expect(route.minLen).toBe(0);
     expect(route.nodes).toHaveLength(0);
     expect(maxTurn(route).deg).toBeLessThanOrEqual(45.5);
+  });
+});
+
+describe('route with a small browser default font', () => {
+  // The nodes and the container padding shrink with the font, so the spine
+  // moves towards the viewport edge (Chrome's "Small" is 12px, "Very small"
+  // 9px). The rail and the jogs' least clearance can meet exactly: a hair of
+  // tolerance for the Float32 samples.
+  function edge(fx: Fixture, route: Route) {
+    let minX = Infinity, clear = Infinity;
+    for (let i = 0; i < route.count; i++) {
+      const x = route.points[i * 2], y = route.points[i * 2 + 1];
+      minX = Math.min(minX, x);
+      for (const c of fx.circles) clear = Math.min(clear, Math.hypot(x - c.x, y - c.y) - c.r);
+    }
+    return { minX, clear };
+  }
+
+  it.each([14, 12])('keeps the timeline jogs on the rail at %ipx (768px wide), clear of the nodes: the pen and its glow stay on screen', (rem) => {
+    const fx = makeLayout(768, REAL_ORDER, rem);
+    const route = buildRoute(fx.snap)!;
+    expect(fx.snap.rails.narrow).toBe(true);
+    expect(route.nodes).toHaveLength(4);
+    const { minX, clear } = edge(fx, route);
+    expect(minX, 'leftmost point of the route').toBeGreaterThanOrEqual(fx.snap.rails.left - 0.01);
+    expect(clear, 'clearance from the nodes').toBeGreaterThanOrEqual(4 - 0.01);
+  });
+
+  it('keeps the jogs on screen and clear of the nodes at 9px (560px wide)', () => {
+    const fx = makeLayout(560, REAL_ORDER, 9);
+    const route = buildRoute(fx.snap)!;
+    expect(route.nodes).toHaveLength(4);
+    const { minX, clear } = edge(fx, route);
+    expect(minX, 'leftmost point of the route').toBeGreaterThanOrEqual(route.strokeWidth);
+    expect(clear, 'clearance from the nodes').toBeGreaterThanOrEqual(4 - 0.01);
   });
 });
 

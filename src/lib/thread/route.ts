@@ -215,8 +215,9 @@ class PathBuilder {
 
 /**
  * How far above / below the node centre a jog leaves / rejoins the spine. `rn`
- * is the jog's offset from the spine (the node's radius + 9); the 45° legs
- * then pass 8px clear of the node (their distance from its centre is h / √2).
+ * is the jog's offset from the spine (the node's radius + 9, as little as + 5
+ * by an edge rail); the 45° legs then pass 8px (4px) clear of the node (their
+ * distance from its centre is h / √2).
  */
 export function loopReach(rn: number): number {
   return Math.SQRT2 * (rn - 1);
@@ -347,7 +348,10 @@ export function buildRoute(s: LayoutSnapshot, step = 3): Route | null {
       }
       const list = sec.nodes!;
       const spine = list[0].x + list[0].w / 2;
-      const rn = list[0].w / 2 + 9;
+      // The jogs' outer line keeps to the rail, where the pen and its glow fit
+      // (a small browser font shrinks the node and the padding, not the 9px),
+      // but its legs never pass closer than 4px to the node.
+      const rn = Math.max(list[0].w / 2 + 5, Math.min(list[0].w / 2 + 9, spine - L));
       const reach = loopReach(rn);
       pb.to([curX, y]);
       // Alternate sides, starting on the left. The bar row comes in from the
