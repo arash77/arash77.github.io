@@ -1135,7 +1135,8 @@ test.describe('scroll thread, normal motion', () => {
     const at = rw[second - 1];
     const speed = (a: (typeof rw)[number], b: (typeof rw)[number]) => (a.pos - b.pos) / (b.t - a.t);
     expect(speed(at, near(at.t + 100)), 'px/ms after the second press').toBeGreaterThan(speed(near(at.t - 100), at) / 2);
-    // ...and runs into the start pad in the time of one press (2s, with room for a loaded machine).
+    // ...and runs into the start pad on time. A loose bound, with room for a
+    // loaded machine: the checks above are what catch a run started over.
     expect(knot - presses[0]).toBeLessThan(2000 + 300);
   });
 
