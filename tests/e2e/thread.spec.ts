@@ -1165,6 +1165,7 @@ test.describe('scroll thread, normal motion', () => {
       new MutationObserver((list) => {
         for (const m of list) {
           for (const n of m.addedNodes) {
+            if (!(n as Element).classList.contains('site-thread__pulse')) continue;
             const pos = 13 - parseFloat((n as Element).getAttribute('stroke-dashoffset') ?? 'NaN');
             const p = line.getPointAtLength(pos * scale), c = line.getScreenCTM()!;
             w.__starts.push([c.a * p.x + c.e, c.d * p.y + c.f]);
@@ -1189,6 +1190,11 @@ test.describe('scroll thread, normal motion', () => {
     await page.waitForTimeout(200);
     const got = await starts();
     expect(got).toHaveLength(2);
+    // Their glow is layered strokes, never a CSS filter: GPUs draw a filter over
+    // a path the size of the page in tiles, with seams (a copy of the light below it).
+    const filters = await page.locator('[data-thread-pulses] path').evaluateAll((els) => els.map((el) => getComputedStyle(el).filter));
+    expect(filters.length).toBeGreaterThan(0);
+    expect(filters.every((f) => f === 'none'), filters.join()).toBe(true);
     for (const [sx, sy] of got) {
       expect(Math.abs(sx - mid), `starts at the crossing (${sx.toFixed(1)} vs ${mid.toFixed(1)})`).toBeLessThan(2);
       expect(Math.abs(sy - y)).toBeLessThan(1);

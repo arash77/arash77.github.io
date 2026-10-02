@@ -103,6 +103,8 @@ interface Gate {
 
 interface Pulse {
   el: SVGPathElement;
+  /** Its glow: wider, fainter strokes under it, widest first. */
+  halos: SVGPathElement[];
   /** Length along its path where it started, its direction and speed (px/s). */
   from: number;
   dir: 1 | -1;
@@ -683,23 +685,30 @@ export function initThread(): () => void {
     const r = route;
     if (!r || reduced) return null;
     const len = opts.end ?? r.total;
-    const el = svgEl('path', {
+    const dash = {
       d: opts.d ?? r.d,
       pathLength: len.toFixed(3),
-      class: 'site-thread__pulse',
-      'stroke-width': (r.strokeWidth + 1.6).toFixed(2),
       'stroke-dasharray': `${PULSE_LEN} ${(len + PULSE_LEN * 2).toFixed(2)}`,
       // Where it starts, before its first frame (without it the dash would sit at the path's start).
       'stroke-dashoffset': (PULSE_LEN / 2 - from).toFixed(2),
-    }, pulseG!);
-    const p: Pulse = { el, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, held: opts.held, onEnd: opts.onEnd };
+    };
+    // The glow is layered strokes, not a CSS filter: a filter over a path the
+    // size of the page is drawn in GPU tiles, with seams (a copy of the light beside it).
+    const halos = [11, 5].map((extra, k) => svgEl('path', { ...dash, class: `site-thread__pulse-halo site-thread__pulse-halo--${k}`, 'stroke-width': (r.strokeWidth + extra).toFixed(2) }, pulseG!));
+    const el = svgEl('path', { ...dash, class: 'site-thread__pulse', 'stroke-width': (r.strokeWidth + 1.6).toFixed(2) }, pulseG!);
+    const p: Pulse = { el, halos, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, held: opts.held, onEnd: opts.onEnd };
     pulses.push(p);
     schedule();
     return p;
   }
 
+  function dropPulse(p: Pulse) {
+    p.el.remove();
+    for (const h of p.halos) h.remove();
+  }
+
   function clearPulses() {
-    for (const p of pulses) p.el.remove();
+    for (const p of pulses) dropPulse(p);
     pulses = [];
     rewind = null;
   }
@@ -726,7 +735,7 @@ export function initThread(): () => void {
       const offStart = p.dir < 0 && p.pos < 0;
       const offEnd = p.dir > 0 && p.pos > far;
       if (offStart || offEnd || (!p.held && age > p.life)) {
-        p.el.remove();
+        dropPulse(p);
         if (offStart && p.end === undefined) flash(knot);
         else if (offEnd) {
           if (p.onEnd) p.onEnd();
@@ -735,8 +744,12 @@ export function initThread(): () => void {
         }
         return false;
       }
-      p.el.setAttribute('stroke-dashoffset', (PULSE_LEN / 2 - p.pos).toFixed(2));
-      p.el.style.opacity = p.held ? '1' : String(Math.max(0, 1 - (age / p.life) ** 3));
+      const offset = (PULSE_LEN / 2 - p.pos).toFixed(2);
+      const opacity = p.held ? '1' : String(Math.max(0, 1 - (age / p.life) ** 3));
+      for (const e of [p.el, ...p.halos]) {
+        e.setAttribute('stroke-dashoffset', offset);
+        e.style.opacity = opacity;
+      }
       return true;
     });
   }
@@ -763,7 +776,7 @@ export function initThread(): () => void {
   function stopRewind() {
     if (!rewind) return;
     const { p } = rewind;
-    p.el.remove();
+    dropPulse(p);
     pulses = pulses.filter((q) => q !== p);
     rewind = null;
   }

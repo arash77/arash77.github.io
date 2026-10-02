@@ -58,9 +58,9 @@ const SWITCH_DROP = 5;
  */
 export const SW_PAD_X = PIN_PITCH;
 export const SW_PAD_Y = 5;
-/** The ground symbol's top bar sits this far below the switch's bottom pads; its bars are this far apart. */
-const GROUND_DROP = 6;
-export const GROUND_BAR_GAP = 3.5;
+/** The ground symbol's top bar sits this far below the switch's bottom pads (room to breathe); its bars are this far apart. */
+const GROUND_DROP = 13;
+export const GROUND_BAR_GAP = 4;
 /** The switch's label starts this far beyond its pads; it is at most this wide (8px mono, 5 letters). */
 const LABEL_GAP = 9;
 export const LABEL_W = 32;

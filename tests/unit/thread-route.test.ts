@@ -113,7 +113,8 @@ function makeLayout(width: number, order: SectionSpec[] = REAL_ORDER): Fixture {
       }
       const bottomCard = cards[cards.length - 1];
       sec.cards = rect(c.cl, cy, c.cr - c.cl, bottomCard.y + bottomCard.h - cy);
-      sec.bottom = bottomCard.y + bottomCard.h + 40 + 96;
+      // pb-24, plus the room the thread gives the chip network (html.thread-on #contact).
+      sec.bottom = bottomCard.y + bottomCard.h + 40 + 112;
     } else if (spec.kind === 'timeline') {
       const nodes: Rect[] = [];
       for (let i = 0; i < 4; i++) {
