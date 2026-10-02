@@ -828,6 +828,47 @@ test.describe('scroll thread, normal motion', () => {
     await expect(page.locator('[data-thread-pulses] path')).toHaveCount(0);
   });
 
+  test('a resize during a reset goes on at its pace, its signal leading the line into the start pad', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    // Each painted frame (read after the frame's callbacks): rebuilt yet, the start pad flashed yet, and the reset signal's position.
+    await page.evaluate(() => {
+      const w = window as unknown as { __rw: { t: number; rebuilt: boolean; knot: boolean; pos: number | null }[] };
+      w.__rw = [];
+      const line = document.querySelector('[data-thread-path]')!;
+      let rebuilt = false;
+      new MutationObserver(() => (rebuilt = true)).observe(line, { attributes: true, attributeFilter: ['d'] });
+      const k = document.querySelector('[data-thread-knot]')!;
+      let knot = false;
+      new MutationObserver(() => (knot ||= k.hasAttribute('data-flash'))).observe(k, { attributes: true, attributeFilter: ['data-flash'] });
+      const f = () => {
+        const el = [...document.querySelectorAll('.site-thread__pulse')].find((p) => p.getAttribute('d') === line.getAttribute('d'));
+        w.__rw.push({ t: performance.now(), rebuilt, knot, pos: el ? 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0') : null });
+        if (w.__rw.length < 600) requestAnimationFrame(() => setTimeout(f, 0));
+      };
+      requestAnimationFrame(() => setTimeout(f, 0));
+    });
+    await page.locator('[data-thread-reset]').click();
+    // A third of the way back up, the window narrows (snapped to half the screen).
+    await page.waitForFunction(() => {
+      const line = document.querySelector('[data-thread-path]')!;
+      const el = [...document.querySelectorAll('.site-thread__pulse')].find((p) => p.getAttribute('d') === line.getAttribute('d'));
+      return !!el && 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0') < parseFloat(line.getAttribute('pathLength')!) * 0.67;
+    }, null, { polling: 'raf' });
+    await page.setViewportSize({ width: 768, height: 800 });
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 4000 }).toBe(0);
+    const log = await page.evaluate(() => (window as unknown as { __rw: { t: number; rebuilt: boolean; knot: boolean; pos: number | null }[] }).__rw);
+    const i = log.findIndex((e) => e.rebuilt);
+    // The reset goes on from the same place, its signal leading the line until it runs into the start pad (which flashes)...
+    const run = log.slice(i).filter((e) => !e.knot);
+    expect(run.length, 'frames of the reset after the rebuild').toBeGreaterThan(10);
+    expect(run.filter((e) => e.pos === null).length, 'frames of the reset without its signal').toBe(0);
+    expect(log.some((e) => e.knot), 'the start pad flashed').toBe(true);
+    // ...at the pace it had (started over, it would stall and then run past its end).
+    const speed = (a: (typeof log)[number], b: (typeof log)[number]) => (a.pos! - b.pos!) / (b.t - a.t);
+    expect(speed(log[i], log[i + 3]), 'px/ms after the rebuild').toBeGreaterThan(speed(log[i - 4], log[i - 1]) / 2);
+  });
+
   test('a height-only resize (mobile URL bar) never makes the drawn length jump', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 788 });
     await page.waitForTimeout(600); // settle at phone width first

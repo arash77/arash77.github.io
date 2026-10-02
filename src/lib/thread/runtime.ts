@@ -571,10 +571,18 @@ export function initThread(): () => void {
       }
       holdAt(target);
     }
-    // A reset in flight goes on from the same place in the content.
+    // A reset in flight goes on from the same place in the content, on its own
+    // clock (started over, it would stall and then run past its end): as if it
+    // had set off from wherever puts it there now. It places the line at once,
+    // as the resting rules can leave the head behind the signal, which would go.
     const rw = rewind;
     clearPulses();
-    if (rw && prev && started) beginRewind(carryOver(prev, next, Math.max(0, rw.p.pos)), Math.max(0.3, rw.T - (now() - rw.t0)));
+    if (rw && prev && started) {
+      const t = now();
+      // The part of its run still to go (the ease in stepRewind).
+      const left = Math.max(1e-6, (1 + Math.cos(Math.PI * Math.min(1, (t - rw.t0) / rw.T))) / 2);
+      if (beginRewind((carryOver(prev, next, Math.max(0, rw.p.pos)) + PULSE_LEN) / left - PULSE_LEN, rw.T, rw.t0)) stepRewind(t);
+    }
     render(now());
     schedule();
   }
@@ -838,10 +846,10 @@ export function initThread(): () => void {
     spawnPulse(0, 1, { d: polyline(pts), end: len, life: len / PULSE_SPEED + 0.2, onEnd: () => flash(boardG!.querySelector('.site-thread__pin--in')) });
   }
 
-  function beginRewind(from: number, T: number): boolean {
+  function beginRewind(from: number, T: number, t0 = now()): boolean {
     const p = from > 0 ? spawnPulse(from, -1, { held: true, life: Infinity }) : null;
     if (!p) return false;
-    rewind = { p, from, t0: now(), T, y: window.scrollY };
+    rewind = { p, from, t0, T, y: window.scrollY };
     return true;
   }
 
