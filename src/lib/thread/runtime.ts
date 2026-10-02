@@ -785,6 +785,13 @@ export function initThread(): () => void {
    */
   function updatePulses(t: number, L: number, arrived: boolean) {
     pulses = pulses.filter((p) => {
+      // A signal on the chip's own wires (the arrival, a net) goes with the
+      // power, unfinished: the line pulled back from the chip leaves no light
+      // past its head, and nothing on the unpowered board flashes.
+      if (p.end !== undefined && !arrived) {
+        dropPulse(p);
+        return false;
+      }
       const age = t - p.t0;
       const was = p.pos;
       if (!p.held) p.pos = p.from + p.dir * age * p.speed;

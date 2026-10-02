@@ -1029,6 +1029,112 @@ test.describe('scroll thread, normal motion', () => {
     expect(state).toEqual({ powered: false, lit: 0 });
   });
 
+  test('pulled back from the chip as it arrives, the line takes the arrival signal with it: no light past its head, no flash in pin 1', async ({ page }) => {
+    // Board shown, line not arrived yet.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight - 500));
+    const board = page.locator('[data-thread-board]');
+    await expect(board).toHaveAttribute('data-on', '', { timeout: 8000 });
+    await expect(board).not.toHaveAttribute('data-powered', '');
+    await countPulses(page);
+    await page.evaluate(() => {
+      const w = window as unknown as { __back: { over: string[]; pin: boolean; done: boolean } };
+      w.__back = { over: [], pin: false, done: false };
+      const b = document.querySelector('[data-thread-board]')!;
+      const line = document.querySelector('[data-thread-path]')!;
+      const pin = b.querySelector('.site-thread__pin--in')!;
+      new MutationObserver(() => {
+        if (pin.hasAttribute('data-flash')) w.__back.pin = true;
+      }).observe(pin, { attributes: true, attributeFilter: ['data-flash'] });
+      // The page bounces off its bottom the moment the chip powers on.
+      let up = false, off = 0;
+      new MutationObserver(() => {
+        if (b.hasAttribute('data-powered')) {
+          if (!up) window.scrollBy(0, -400);
+          up = true;
+        } else if (up && !off) off = performance.now();
+      }).observe(b, { attributes: true, attributeFilter: ['data-powered'] });
+      // Every frame: the far end of the arrival signal's light (its own path is
+      // the route's last stretch, then the stub) as a length on the route.
+      const f = () => {
+        const total = parseFloat(line.getAttribute('pathLength')!);
+        const drawn = parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+        for (const el of document.querySelectorAll('.site-thread__pulse')) {
+          const d = el.getAttribute('d') ?? '';
+          if (d === line.getAttribute('d')) continue;
+          const pts = [...d.matchAll(/[ML](-?[\d.]+),(-?[\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+          let run = 0; // up to the route's end (the stub is the last leg)
+          for (let i = 1; i < pts.length - 1; i++) run += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+          const pos = 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0');
+          const lit = parseFloat((el.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+          const front = total - run + pos - 13 + lit;
+          if (drawn < total - 1 && front > drawn + 2.5) w.__back.over.push(`light to ${front.toFixed(1)}, drawn ${drawn.toFixed(1)}`);
+        }
+        if (off && performance.now() - off > 600) w.__back.done = true;
+        else requestAnimationFrame(f);
+      };
+      requestAnimationFrame(f);
+    });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __back: { done: boolean } }).__back.done), { timeout: 10000 }).toBe(true);
+    expect(await pulsesSeen(page), 'the arrival signal set off').toBeGreaterThan(0);
+    const back = await page.evaluate(() => (window as unknown as { __back: { over: string[]; pin: boolean } }).__back);
+    expect(back.over).toEqual([]);
+    // It never reaches pin 1: the line left the chip before it got there.
+    expect(back.pin, 'pin 1 flashed').toBe(false);
+  });
+
+  test('pulled back from the chip, the line takes the signals on its nets with it: no pin or card flashes on an unpowered board', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    // The arrival signal has run into pin 1.
+    await expect(page.locator('[data-thread-pulses] path')).toHaveCount(0, { timeout: 3000 });
+    // The middle of the longest horizontal leg of the first net.
+    const leg = await page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+      const s = svg.getBoundingClientRect();
+      const pts = [...(svg.querySelector('.site-thread__net')!.getAttribute('d') ?? '').matchAll(/[ML](-?[\d.]+),(-?[\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+      let best = { len: 0, x: 0, y: 0 };
+      for (let i = 1; i < pts.length; i++) {
+        const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+        if (Math.abs(ay - by) < 0.01 && Math.abs(bx - ax) > best.len) best = { len: Math.abs(bx - ax), x: s.left + (ax + bx) / 2, y: s.top + ay };
+      }
+      return best;
+    });
+    expect(leg.len).toBeGreaterThan(30);
+    await page.evaluate(() => {
+      const w = window as unknown as { __back: { sent: number; unpowered: string[]; done: boolean } };
+      w.__back = { sent: 0, unpowered: [], done: false };
+      const b = document.querySelector('[data-thread-board]')!;
+      // The page bounces off its bottom the moment the signals set off.
+      new MutationObserver((list) => {
+        for (const m of list) for (const n of m.addedNodes) if ((n as Element).classList.contains('site-thread__pulse') && w.__back.sent++ === 0) window.scrollBy(0, -400);
+      }).observe(document.querySelector('[data-thread-pulses]')!, { childList: true });
+      let off = 0;
+      new MutationObserver(() => {
+        if (!b.hasAttribute('data-powered')) off ||= performance.now();
+      }).observe(b, { attributes: true, attributeFilter: ['data-powered'] });
+      for (const el of document.querySelectorAll('.site-thread__pin, [data-thread-card]')) {
+        new MutationObserver(() => {
+          if (el.hasAttribute('data-flash') && !b.hasAttribute('data-powered')) w.__back.unpowered.push(`${el.matches('[data-thread-card]') ? 'a card' : 'a pin'} flashed`);
+        }).observe(el, { attributes: true, attributeFilter: ['data-flash'] });
+      }
+      // Every frame: no signal left on the board once it is off.
+      const f = () => {
+        if (!b.hasAttribute('data-powered')) for (const el of document.querySelectorAll('.site-thread__pulse')) w.__back.unpowered.push(`signal shown: ${el.getAttribute('d')?.slice(0, 30)}`);
+        if (off && performance.now() - off > 600) w.__back.done = true;
+        else requestAnimationFrame(f);
+      };
+      requestAnimationFrame(f);
+    });
+    await page.mouse.move(leg.x, leg.y - 25);
+    await page.waitForTimeout(300);
+    await page.mouse.move(leg.x, leg.y + 25, { steps: 2 });
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __back: { done: boolean } }).__back.done), { timeout: 5000 }).toBe(true);
+    const back = await page.evaluate(() => (window as unknown as { __back: { sent: number; unpowered: string[] } }).__back);
+    expect(back.sent, 'signals along the net').toBe(2);
+    expect(back.unpowered).toEqual([]);
+  });
+
   test('a lighting node keeps its icon readable through the colour change', async ({ page }) => {
     for (const theme of ['light', 'dark']) {
       await page.evaluate((dark) => document.documentElement.classList.toggle('dark', dark), theme === 'dark');
