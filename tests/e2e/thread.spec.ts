@@ -1571,6 +1571,35 @@ test.describe('scroll thread, normal motion', () => {
     expect(ds.map(norm)).toEqual(expect.arrayContaining([net, [...net].reverse()]));
   });
 
+  test("a flashing pin's outline shrinks away smoothly: no ring that snaps off mid-flash", async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    // A top pin (a net sweep flashes it) and pin 1 (the arrival flashes it): each flash seeked
+    // through its 0.7s, the width of the outline drawn every 5ms (none without a stroke).
+    const widths = await page.evaluate(() =>
+      [document.querySelector('.site-thread__pin:not(.site-thread__pin--in)')!, document.querySelector('.site-thread__pin--in')!].map((el) => {
+        el.removeAttribute('data-flash');
+        void getComputedStyle(el).stroke;
+        el.setAttribute('data-flash', '');
+        const a = el.getAnimations().find((x) => (x as CSSAnimation).animationName === 'thread-flash')!;
+        a.pause();
+        const out: number[] = [];
+        for (let t = 0; t <= 700; t += 5) {
+          a.currentTime = t;
+          const cs = getComputedStyle(el);
+          out.push(cs.stroke === 'none' ? 0 : parseFloat(cs.strokeWidth));
+        }
+        a.cancel();
+        el.removeAttribute('data-flash');
+        return out;
+      }),
+    );
+    for (const w of widths) {
+      expect(w[0], 'it flashes as a ring').toBeGreaterThan(4);
+      for (let i = 1; i < w.length; i++) expect(Math.abs(w[i] - w[i - 1]), `at ${i * 5}ms`).toBeLessThan(0.2);
+    }
+  });
+
   test('a flurry of signals into the pen never makes its glow jump: a flash runs to its end', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => window.scrollTo(0, 1250));

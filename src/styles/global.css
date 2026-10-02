@@ -624,6 +624,9 @@ html.thread-on [data-thread-card]::after {
 }
 .site-thread__pin {
   fill: hsl(var(--muted-foreground) / 0.7);
+  /* No outline at rest, but one its flash can shrink into (`none` snaps off halfway). */
+  stroke: transparent;
+  stroke-width: 0;
 }
 .site-thread__pin--in {
   transition: fill 0.25s ease;
