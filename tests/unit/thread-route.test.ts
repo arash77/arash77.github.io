@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { buildBoard, type Board } from '@/lib/thread/board';
 import {
   buildRoute,
   carryOver,
   computeRails,
   lengthAtY,
+  loopReach,
   pointAt,
   type LayoutSnapshot,
   type Rect,
@@ -24,6 +26,8 @@ interface Fixture {
   /** Round obstacles (timeline nodes are `rounded-full`). */
   circles: { x: number; y: number; r: number }[];
   tags: Rect | null;
+  /** The contact cards, one by one. */
+  cards: Rect[];
 }
 
 const container = (width: number, max: number) => {
@@ -52,6 +56,7 @@ function makeLayout(width: number, order: SectionSpec[] = REAL_ORDER): Fixture {
   const c6 = container(width, 1152);
   const obstacles: Rect[] = [];
   const circles: Fixture['circles'] = [];
+  const contactCards: Rect[] = [];
   const rect = (x: number, y: number, w: number, h: number): Rect => ({ x, y, w, h });
 
   // Hero
@@ -103,6 +108,7 @@ function makeLayout(width: number, order: SectionSpec[] = REAL_ORDER): Fixture {
       for (let i = 0; i < 4; i++) {
         const r = rect(c.cl + (i % cols) * (cw + 16), cy + Math.floor(i / cols) * (82 + 16), cw, 82);
         cards.push(r);
+        contactCards.push(r);
         obstacles.push(r);
       }
       const bottomCard = cards[cards.length - 1];
@@ -135,7 +141,7 @@ function makeLayout(width: number, order: SectionSpec[] = REAL_ORDER): Fixture {
     hero: { top: 0, bottom: heroBottom, tags: phone ? null : tagsRect, avatar, scrollHint },
     sections,
   };
-  return { snap, obstacles, circles, tags: phone ? null : tagsRect };
+  return { snap, obstacles, circles, tags: phone ? null : tagsRect, cards: contactCards };
 }
 
 const inside = (r: Rect, x: number, y: number, pad = 1.5) =>
@@ -195,7 +201,7 @@ function checkInvariants(fx: Fixture) {
     expect(run!.x1).toBeGreaterThanOrEqual(sec.bar.x + sec.bar.w);
   });
 
-  // 5. Ends at the end knot, centred below the cards and above the section end.
+  // 5. Ends at the end point, centred below the cards (with room for the chip network) and above the section end.
   const last = [points[(count - 1) * 2], points[(count - 1) * 2 + 1]];
   expect(last[0]).toBeCloseTo(route.end[0], 3);
   expect(last[1]).toBeCloseTo(route.end[1], 3);
@@ -218,41 +224,47 @@ function checkTimeline(fx: Fixture, route: Route, runs: ReturnType<typeof horizo
   const run = runs.find((r) => Math.abs(r.y - row) < 0.01)!;
   const spine = sec.nodes![0].x + sec.nodes![0].w / 2;
   const rn = sec.nodes![0].w / 2 + 9;
-  // Entered from the right, continuing straight to the spine.
+  const reach = loopReach(rn);
+  // Entered from the right, running straight on to the first jog's outer line (left of the spine).
   expect(run.dir).toBe(-1);
-  // (the corner into the spine may be tighter than the radius when the first node is close)
-  expect(run.x0).toBeGreaterThan(spine);
-  expect(run.x0).toBeLessThanOrEqual(spine + route.radius + 0.01);
-  // Down the spine: every point from the bar row to the last node stays on the spine or its loops.
+  expect(run.x0).toBeGreaterThan(spine - rn);
+  expect(run.x0).toBeLessThanOrEqual(spine - rn + route.radius + 0.01);
+  // Down the spine: every point from the bar row to the last node stays on the spine or its jogs.
   const lastNode = sec.nodes![sec.nodes!.length - 1];
-  const yEnd = lastNode.y + lastNode.h / 2 + rn;
+  const yEnd = lastNode.y + lastNode.h / 2 + reach;
   for (let i = 0; i < route.count; i++) {
     const x = route.points[i * 2], y = route.points[i * 2 + 1];
     if (y > row + route.radius + 1 && y < yEnd) {
       expect(Math.abs(x - spine)).toBeLessThanOrEqual(rn + 0.5);
     }
   }
-  // One loop per node, concentric with it, alternating sides (first one on the left).
-  const loops = route.segments.filter((s) => s.k === 'A' && Math.abs(s.r - rn) < 0.01);
-  expect(loops).toHaveLength(sec.nodes!.length);
-  loops.forEach((a, i) => {
-    if (a.k !== 'A') return;
+  // One jog per node: a vertical run rn beside the spine, level with the node, on alternating sides
+  // (first one on the left). Only within the timeline: at narrow widths a rail elsewhere shares the x.
+  const verticals = route.segments.filter(
+    (s) => Math.abs(s.a[0] - s.b[0]) < 0.01 && Math.abs(Math.abs(s.a[0] - spine) - rn) < 0.01 && Math.min(s.a[1], s.b[1]) >= row - 0.01 && Math.max(s.a[1], s.b[1]) <= yEnd,
+  );
+  expect(verticals).toHaveLength(sec.nodes!.length);
+  verticals.forEach((v, i) => {
     const n = sec.nodes![i];
-    expect(a.cx).toBeCloseTo(n.x + n.w / 2, 6);
-    expect(a.cy).toBeCloseTo(n.y + n.h / 2, 6);
-    expect(Math.sign(a.da)).toBe(i % 2 === 0 ? -1 : 1);
+    const cy = n.y + n.h / 2;
+    expect(Math.sign(v.a[0] - spine)).toBe(i % 2 === 0 ? -1 : 1);
+    expect(Math.min(v.a[1], v.b[1])).toBeLessThan(cy);
+    expect(Math.max(v.a[1], v.b[1])).toBeGreaterThan(cy);
+  });
+  // Every jog lands back on the spine below its node with a 45° leg.
+  sec.nodes!.forEach((n) => {
+    const cy = n.y + n.h / 2;
+    const leg = route.segments.find((s) => Math.abs(s.b[0] - spine) < 0.01 && Math.abs(s.b[1] - (cy + reach)) < 0.01);
+    expect(leg, `jog back onto the spine below the node at ${cy}`).toBeTruthy();
+    expect(Math.abs(leg!.b[0] - leg!.a[0])).toBeCloseTo(Math.abs(leg!.b[1] - leg!.a[1]), 3);
   });
   expect(route.nodes.map((n) => n.y)).toEqual(sec.nodes!.map((n) => n.y + n.h / 2));
-  // The corner from the bar row into the spine keeps the full corner radius.
-  const corner = route.segments.find((s) => s.k === 'Q' && Math.abs(s.c[0] - spine) < 0.01 && Math.abs(s.c[1] - row) < 0.01);
-  expect(corner, 'corner into the spine').toBeTruthy();
-  if (corner?.k === 'Q') expect(Math.hypot(corner.b[0] - corner.c[0], corner.b[1] - corner.c[1])).toBeCloseTo(route.radius, 3);
 }
 
 /**
- * No kinks anywhere: the direction of the sampled polyline never turns by more
- * than a rounded corner would between two samples (a hard 90 degree join, like
- * a spine meeting a half circle, turns in one step).
+ * Sharpest turn of the sampled polyline. A circuit trace only ever turns by
+ * 45° at a time (chamfered corners, 45° jogs): a hard 90° join would show up
+ * as a single turn of 90°.
  */
 function maxTurn(route: Route): { deg: number; at: [number, number] } {
   const P = route.points;
@@ -290,10 +302,10 @@ describe.each([1440, 1280, 1024, 900, 768])('route at %ipx', (width) => {
     checkTimeline(fx, route, runs);
   });
 
-  it('is smooth everywhere: rounded corners, no kinks where the spine meets a loop', () => {
+  it('turns only by 45° at a time: chamfered corners, no 90° joins', () => {
     const route = buildRoute(fx.snap)!;
     const t = maxTurn(route);
-    expect(t.deg, `turn at (${t.at[0].toFixed(1)}, ${t.at[1].toFixed(1)})`).toBeLessThan(40);
+    expect(t.deg, `turn at (${t.at[0].toFixed(1)}, ${t.at[1].toFixed(1)})`).toBeLessThanOrEqual(45.5);
   });
 
   it('threads the tags like beads, starting left of them', () => {
@@ -334,8 +346,7 @@ describe.each([414, 390, 360])('phone route at %ipx', (width) => {
     expect(route.start[1]).toBeCloseTo(av.y + av.h / 2, 3);
     expect(route.minLen).toBe(0);
     expect(route.nodes).toHaveLength(0);
-    expect(route.segments.some((s) => s.k === 'A')).toBe(false);
-    expect(maxTurn(route).deg).toBeLessThan(40);
+    expect(maxTurn(route).deg).toBeLessThanOrEqual(45.5);
   });
 });
 
@@ -389,7 +400,7 @@ describe('sampling helpers', () => {
     expect(end[1]).toBeCloseTo(route.end[1], 1);
   });
 
-  it('emits path data that starts at the knot and ends at the end knot', () => {
+  it('emits path data that starts at the pad and ends at the end point', () => {
     expect(route.d.startsWith(`M${route.start[0]},${route.start[1]}`)).toBe(true);
     const tail = route.d.trim().split(/\s+/).pop()!;
     const [x, y] = tail.replace(/^L/, '').split(',').map(Number);
@@ -444,5 +455,129 @@ describe('carryOver (rebuild in place)', () => {
       const ny = pointAt(narrow, n)[1];
       expect(Math.abs(ny - narrow.barRows[k])).toBeLessThan(narrow.radius + 4);
     });
+  });
+});
+
+/* ---------------------------------------------------------------------------
+   Chip network (board.ts)
+   ------------------------------------------------------------------------- */
+
+type Seg = [number, number, number, number];
+const segsOf = (pts: readonly (readonly [number, number])[]): Seg[] => pts.slice(1).map((p, i) => [pts[i][0], pts[i][1], p[0], p[1]]);
+function crosses(a: Seg, b: Seg): boolean {
+  const o = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) => Math.sign((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
+  return o(a[0], a[1], a[2], a[3], b[0], b[1]) * o(a[0], a[1], a[2], a[3], b[2], b[3]) < 0 && o(b[0], b[1], b[2], b[3], a[0], a[1]) * o(b[0], b[1], b[2], b[3], a[2], a[3]) < 0;
+}
+/** Points every `step` px along a polyline. */
+function sample(pts: readonly (readonly [number, number])[], step = 2): [number, number][] {
+  const out: [number, number][] = [];
+  segsOf(pts).forEach(([x0, y0, x1, y1]) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / step));
+    for (let i = 0; i <= n; i++) out.push([x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n]);
+  });
+  return out;
+}
+
+function boardFor(fx: Fixture): { route: Route; board: Board } {
+  const route = buildRoute(fx.snap)!;
+  const board = buildBoard(route.end, route.endDir, fx.cards, fx.snap.width)!;
+  expect(board, 'a chip network fits').not.toBeNull();
+  return { route, board };
+}
+
+function checkBoard(fx: Fixture) {
+  const { route, board } = boardFor(fx);
+  const contact = fx.snap.sections[fx.snap.sections.length - 1];
+  const cardsBottom = Math.max(...fx.cards.map((c) => c.y + c.h));
+  // Pin 1 sits right above the end point; the stub joins them.
+  expect(board.botPins[board.inputPin]).toBeCloseTo(route.end[0], 6);
+  expect(board.wires[0][0]).toEqual(route.end);
+  // The chip and its parts sit between the cards and the section end, inside the viewport, clear of all content.
+  expect(board.box.y).toBeGreaterThan(cardsBottom + 20);
+  expect(board.box.y + board.box.h).toBeLessThanOrEqual(contact.bottom);
+  expect(board.box.x).toBeGreaterThan(0);
+  expect(board.box.x + board.box.w).toBeLessThan(fx.snap.width);
+  for (const o of fx.obstacles) {
+    const overlap = board.box.x < o.x + o.w && board.box.x + board.box.w > o.x && board.box.y < o.y + o.h && board.box.y + board.box.h > o.y;
+    expect(overlap, `board overlaps ${JSON.stringify(o)}`).toBe(false);
+  }
+  // Every card gets lit by exactly one net, and each net ends just inside its first card's bottom edge.
+  const lit = board.nets.flatMap((n) => n.cards).sort();
+  expect(lit).toEqual(fx.cards.map((_, i) => i));
+  for (const n of board.nets) {
+    if (!n.cards.length) continue;
+    const c = fx.cards[n.cards[0]];
+    const [x, y] = n.points[n.points.length - 1];
+    expect(x).toBeGreaterThan(c.x);
+    expect(x).toBeLessThan(c.x + c.w);
+    expect(y).toBeGreaterThanOrEqual(c.y + c.h - 3);
+    expect(y).toBeLessThan(c.y + c.h);
+  }
+  // Nets never run through a card (other than entering their own card's bottom edge) or any other content.
+  for (const n of board.nets) {
+    // The card the net ends in (a bus line that lights nothing itself still ends in the bottom card).
+    const [ex, ey] = n.points[n.points.length - 1];
+    const target = fx.cards.find((c) => ex > c.x && ex < c.x + c.w && ey >= c.y + c.h - 3 && ey <= c.y + c.h) ?? null;
+    expect(target, 'every net ends in a card').not.toBeNull();
+    for (const [x, y] of sample(n.points)) {
+      if (target && x > target.x && x < target.x + target.w && y >= target.y + target.h - 3) continue;
+      for (const o of fx.obstacles) {
+        if (inside(o, x, y, 1)) throw new Error(`net point (${x.toFixed(1)}, ${y.toFixed(1)}) inside ${JSON.stringify(o)}`);
+      }
+    }
+  }
+  // Nets never cross each other, the trace or the board's own wires.
+  const netSegs = board.nets.map((n) => segsOf(n.points));
+  const routeSegs: Seg[] = route.segments.map((sg) => [sg.a[0], sg.a[1], sg.b[0], sg.b[1]]);
+  const wireSegs = board.wires.flatMap((w) => segsOf(w));
+  netSegs.forEach((a, i) => {
+    netSegs.forEach((b, j) => {
+      if (j <= i) return;
+      for (const sa of a) for (const sb of b) expect(crosses(sa, sb), `nets ${i} and ${j} cross`).toBe(false);
+    });
+    for (const sa of a) {
+      for (const sb of routeSegs) expect(crosses(sa, sb), `net ${i} crosses the trace`).toBe(false);
+      for (const sb of wireSegs) expect(crosses(sa, sb), `net ${i} crosses a wire`).toBe(false);
+    }
+  });
+  for (const sa of wireSegs) for (const sb of routeSegs) expect(crosses(sa, sb), 'a wire crosses the trace').toBe(false);
+  // Circuit style: only straight and 45° legs.
+  for (const n of board.nets) {
+    for (const [x0, y0, x1, y1] of segsOf(n.points)) {
+      const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+      expect(dx < 0.01 || dy < 0.01 || Math.abs(dx - dy) < 0.01, `net leg (${x0},${y0})-(${x1},${y1})`).toBe(true);
+    }
+  }
+  return { route, board };
+}
+
+describe.each([1440, 1280, 1024, 900, 768])('chip network at %ipx (two columns)', (width) => {
+  const fx = makeLayout(width);
+  it('wires every card, stays clear of content and never crosses itself or the trace', () => {
+    const { board } = checkBoard(fx);
+    expect(board.nets).toHaveLength(4);
+    expect(board.nets.every((n) => n.cards.length === 1)).toBe(true);
+  });
+});
+
+describe.each([414, 390, 360])('chip network at %ipx (one column)', (width) => {
+  const fx = makeLayout(width);
+  it('runs a bus into the bottom card and lights the column bottom to top', () => {
+    const { board } = checkBoard(fx);
+    const bus = board.nets.find((n) => n.cards.length)!;
+    const ys = bus.cards.map((i) => fx.cards[i].y);
+    expect([...ys].sort((a, b) => b - a)).toEqual(ys);
+  });
+});
+
+describe('buildBoard falls back to a plain end', () => {
+  const fx = makeLayout(1440);
+  const route = buildRoute(fx.snap)!;
+  it('when there is no room between the cards and the end point', () => {
+    expect(buildBoard([route.end[0], Math.max(...fx.cards.map((c) => c.y + c.h)) + 40], route.endDir, fx.cards, 1440)).toBeNull();
+  });
+  it('when the cards are neither a 2×2 grid nor one column', () => {
+    expect(buildBoard(route.end, route.endDir, fx.cards.slice(0, 3), 1440)).toBeNull();
+    expect(buildBoard(route.end, route.endDir, [], 1440)).toBeNull();
   });
 });

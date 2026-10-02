@@ -4,13 +4,16 @@
  * Measures the home page (transform-free, see `measure`), feeds the snapshot to
  * the pure route builder, and draws the route as the visitor reads: the drawn
  * length follows the reading line (62% down the viewport) through a critically
- * damped spring. Also drives the pen, timeline nodes, ink underlines, contact
- * card stitches and the pluck effect.
+ * damped spring. Also drives the pen, timeline nodes, ink underlines, the
+ * contact cards' silkscreen marks, signal pulses (a fast pointer sweep across
+ * the trace) and the chip network at the end (board.ts), whose reset switch
+ * takes the reader back to the top.
  *
  * Everything visual is opt-in through `html.thread-on`, which only this script
  * adds, so without JavaScript the page renders exactly as before.
  */
-import { buildRoute, carryOver, computeRails, lengthAtY, loopReach, LOOP_FILLET, pointAt, type LayoutSnapshot, type Rect, type Route, type SectionLayout } from './route';
+import { buildBoard, type Board } from './board';
+import { buildRoute, carryOver, computeRails, lengthAtY, loopReach, pointAt, type LayoutSnapshot, type Rect, type Route, type SectionLayout } from './route';
 
 const SPRING_K = 40;
 const READ_LINE = 0.62;
@@ -20,9 +23,19 @@ const INTRO_FALLBACK_MS = 2600;
 const BOOT_CAP_MS = 8000;
 /** Only for font swaps; layout changes rebuild in the same frame (see the ResizeObserver). */
 const FONT_DEBOUNCE_MS = 120;
-const PLUCK_LIFE = 1.4;
-const PLUCK_REACH = 160;
-const PLUCK_MIN_SPEED = 400; // px/s: a deliberate sweep, not a stroll
+const SWEEP_MIN_SPEED = 400; // px/s: a deliberate sweep, not a stroll
+/** Signal pulse: a short bright dash running along the trace. */
+const PULSE_LEN = 26;
+const PULSE_SPEED = 950;
+const PULSE_LIFE = 1.2;
+/** The reset pulse runs the whole drawn trace back to the start in at most this long (s). */
+const RESET_PULSE_S = 0.6;
+const RESET_PRESS_MS = 320;
+/** Card lighting after power-on: the pulses leave the chip after this, one net after another. */
+const NET_DELAY_MS = 260;
+const NET_STAGGER_MS = 140;
+/** ms per px of a net: the speed of the pulse along it (keep in sync with global.css). */
+const NET_MS_PER_PX = 1.4;
 const HASH_CELL = 40;
 const GLOW_R = 11;
 /** After a start with the hero out of view, how long the line tracks the reading position exactly. */
@@ -51,8 +64,6 @@ const GATE_SLACK = 48;
 const SETTLE_SPEED = 240;
 /** Fallback poll while the hero intro has not visibly played (hidden tab, stalled main thread). */
 const FALLBACK_POLL_MS = 250;
-/** Plucks only move straight stretches; the swing eases out over this distance before a corner or loop. */
-const PLUCK_EASE = 36;
 /** Once the page bottom was reached, scrolling up this little (or a mobile URL bar returning) keeps the route complete. */
 const END_LATCH_PX = 64;
 
@@ -81,10 +92,14 @@ interface Gate {
   hero: boolean;
 }
 
-interface Pluck {
-  i: number;
+interface Pulse {
+  el: SVGPathElement;
+  /** Route length where it started, its direction and speed (px/s). */
+  from: number;
+  dir: 1 | -1;
+  speed: number;
   t0: number;
-  a: number;
+  life: number;
 }
 
 interface GateSpec {
@@ -96,6 +111,16 @@ interface GateSpec {
 }
 
 const now = () => performance.now() / 1000;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svgEl<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>, parent: Element): SVGElementTagNameMap[K] {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const k in attrs) e.setAttribute(k, String(attrs[k]));
+  parent.append(e);
+  return e;
+}
+
+const polyline = (pts: readonly (readonly [number, number])[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(2)},${p[1].toFixed(2)}`).join('');
 
 function union(rects: (Rect | null)[]): Rect | null {
   const list = rects.filter((r): r is Rect => !!r);
@@ -118,7 +143,9 @@ export function initThread(): () => void {
   const pen = svg?.querySelector<SVGCircleElement>('[data-thread-pen]');
   const glow = svg?.querySelector<SVGCircleElement>('[data-thread-glow]');
   const gradient = svg?.querySelector<SVGLinearGradientElement>('[data-thread-gradient]');
-  if (!root || !main || !svg || !path || !knot || !endKnot || !pen || !glow || !gradient) return () => {};
+  const boardG = svg?.querySelector<SVGGElement>('[data-thread-board]');
+  const pulseG = svg?.querySelector<SVGGElement>('[data-thread-pulses]');
+  if (!root || !main || !svg || !path || !knot || !endKnot || !pen || !glow || !gradient || !boardG || !pulseG) return () => {};
 
   const ac = new AbortController();
   const { signal } = ac;
@@ -133,8 +160,12 @@ export function initThread(): () => void {
   let lastT = 0;
   let raf = 0;
   let started = false;
-  let polyMode = false;
-  let plucks: Pluck[] = [];
+  let pulses: Pulse[] = [];
+  let board: Board | null = null;
+  /** Card elements in the order buildBoard() was given them. */
+  let boardCards: Element[] = [];
+  let powered = false;
+  let resetBtn: HTMLButtonElement | null = null;
   let ptr: { x: number; y: number; t: number } | null = null;
   let hash = new Map<number, number[]>();
   let nodes: Anchor[] = [];
@@ -165,8 +196,6 @@ export function initThread(): () => void {
   /** The hero intro has completed (or was given up on): the hero gates are open. */
   let heroDone = reduced || 'heroRevealed' in html.dataset;
   let gates: Gate[] = [];
-  /** Per-sample pluck weight: 1 on straight stretches, easing to 0 at corners and loops. */
-  let straight: Float32Array = new Float32Array(0);
   /** scrollY as of the last tick. */
   let lastTickY = window.scrollY;
   /** scrollY and time (s) as of the last revealCap(). */
@@ -196,7 +225,7 @@ export function initThread(): () => void {
    * reveal elements are neutralised for the duration of this synchronous read
    * (`html.thread-measuring`, see global.css). Nothing is painted in between.
    */
-  function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[] } | null {
+  function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[]; cardEls: Element[]; cardRects: Rect[] } | null {
     html.classList.add('thread-measuring');
     try {
       const m = main!.getBoundingClientRect();
@@ -248,17 +277,28 @@ export function initThread(): () => void {
           if (!r) continue;
           nodeRects.push(r);
           const card = nodeEl.closest('.gsap-reveal');
-          if (card) loopTop.set(card, r.y + r.h / 2 - loopReach(r.w / 2 + 9, LOOP_FILLET));
+          if (card) loopTop.set(card, r.y + r.h / 2 - loopReach(r.w / 2 + 9));
         }
         // Phones hide the nodes: a timeline card is then an ordinary block.
         for (const block of el.querySelectorAll('.gsap-reveal')) {
           const r = rel(block);
           if (r) gateSpecs.push({ el: block, y: loopTop.get(block) ?? r.y, hero: false, box: r });
         }
-        const cardRects = [...el.querySelectorAll('[data-thread-stitch]')].map(rel);
+        const cardRects = [...el.querySelectorAll('[data-thread-card]')].map(rel);
         sections.push({ top: box.y, bottom: box.y + box.h, bar, nodes: nodeRects, cards: union(cardRects) });
       }
       if (!sections.length) return null;
+      // The chip network wires up the last section's cards.
+      const lastSection = [...main!.querySelectorAll('[data-thread-section]')].pop();
+      const cardEls: Element[] = [];
+      const cardRects: Rect[] = [];
+      for (const el of lastSection?.querySelectorAll('[data-thread-card]') ?? []) {
+        const r = rel(el);
+        if (r) {
+          cardEls.push(el);
+          cardRects.push(r);
+        }
+      }
 
       const anchor = (sel: string, at: (r: Rect) => number): Anchor[] =>
         [...main!.querySelectorAll(sel)].flatMap((el) => {
@@ -271,11 +311,13 @@ export function initThread(): () => void {
         });
       nodes = anchor('[data-thread-node]', (r) => r.y + r.h / 2);
       inks = anchor('[data-thread-ink]', (r) => r.y + r.h);
-      cards = anchor('[data-thread-stitch]', (r) => r.y + Math.min(24, r.h / 3));
+      cards = anchor('[data-thread-card]', (r) => r.y + Math.min(24, r.h / 3));
 
       return {
         height: m.height,
         gateSpecs,
+        cardEls,
+        cardRects,
         snap: {
           width,
           rails: computeRails(width, cLeft, cRight),
@@ -405,6 +447,10 @@ export function initThread(): () => void {
     if (!measured || !next) {
       // Layout not recognised: step aside and leave the page as it is without JS.
       route = null;
+      board = null;
+      boardG!.replaceChildren();
+      setPowered(false);
+      resetBtn?.setAttribute('hidden', '');
       html.classList.remove('thread-on', 'thread-drawing');
       return;
     }
@@ -429,6 +475,10 @@ export function initThread(): () => void {
     knot!.setAttribute('cy', next.start[1].toFixed(2));
     endKnot!.setAttribute('cx', next.end[0].toFixed(2));
     endKnot!.setAttribute('cy', next.end[1].toFixed(2));
+    setPowered(false);
+    board = buildBoard(next.end, next.endDir, measured.cardRects, w);
+    boardCards = measured.cardEls;
+    drawBoard(board);
 
     hash = new Map();
     for (let i = 0; i < next.count; i++) {
@@ -437,7 +487,6 @@ export function initThread(): () => void {
       if (list) list.push(i);
       else hash.set(k, [i]);
     }
-    straight = straightness(next);
 
     gates = measured.gateSpecs
       .map((g) => ({ el: g.el, len: lengthAtY(next, g.y - 2), top: g.box.y, bottom: g.box.y + g.box.h, island: g.el.closest('astro-island'), hero: g.hero }))
@@ -464,7 +513,7 @@ export function initThread(): () => void {
       }
       holdAt(target);
     }
-    plucks = [];
+    clearPulses();
     render(now());
     schedule();
   }
@@ -506,57 +555,129 @@ export function initThread(): () => void {
     path!.setAttribute('d', route.d);
     // Lengths below are in the builder's units; pathLength maps them onto the browser's.
     path!.setAttribute('pathLength', route.total.toFixed(3));
-    polyMode = false;
   }
 
-  /**
-   * Pluck weight per sample: 0 on curves (corners, loops, fillets), easing up
-   * to 1 over PLUCK_EASE along straight stretches. Offsetting a curve along
-   * its normal would change its radius (a loop squashing onto its node) and
-   * fold its fillets into cusps; a straight stretch just bows. The hero run
-   * (start knot, through the tag pills, to the first corner) does not swing
-   * either: the beads are strung on it, and a swing would pull the line out
-   * from behind the fixed pills into stray dashes in the gaps.
-   */
-  function straightness(r: Route): Float32Array {
-    const P = r.points, n = r.count;
-    const dist = new Float32Array(n).fill(1e9);
-    for (let i = 1; i < n - 1; i++) {
-      const ax = P[i * 2] - P[i * 2 - 2], ay = P[i * 2 + 1] - P[i * 2 - 1];
-      const bx = P[i * 2 + 2] - P[i * 2], by = P[i * 2 + 3] - P[i * 2 + 1];
-      const turn = Math.abs(Math.atan2(ax * by - ay * bx, ax * bx + ay * by));
-      if (turn > 0.01) dist[i] = 0;
+  /** Draw the chip network (board.ts) into its group; empty when there is none. */
+  function drawBoard(b: Board | null) {
+    boardG!.replaceChildren();
+    if (!b) {
+      resetBtn?.setAttribute('hidden', '');
+      return;
     }
-    for (let i = 0; i < n && i * r.step <= r.minLen; i++) dist[i] = 0;
-    dist[0] = dist[n - 1] = 0; // the ends do not swing either
-    for (let i = 1; i < n; i++) dist[i] = Math.min(dist[i], dist[i - 1] + 1);
-    for (let i = n - 2; i >= 0; i--) dist[i] = Math.min(dist[i], dist[i + 1] + 1);
-    const out = new Float32Array(n);
-    for (let i = 0; i < n; i++) out[i] = Math.sin((Math.PI / 2) * Math.min(1, (dist[i] * r.step) / PLUCK_EASE)) ** 2;
-    return out;
-  }
-
-  /**
-   * The drawing head is a fixed end too (the pen and its glow sit on it): the
-   * swing eases out over PLUCK_EASE before the drawn length `L`, so the line
-   * runs smoothly into the pen instead of jogging sideways into it.
-   */
-  function headTaper(i: number, L: number): number {
-    return Math.sin((Math.PI / 2) * Math.max(0, Math.min(1, (L - i * route!.step) / PLUCK_EASE))) ** 2;
-  }
-
-  function offsetAt(i: number, t: number, L: number): number {
-    const k = (straight[i] ?? 0) * headTaper(i, L);
-    if (k === 0) return 0;
-    let o = 0;
-    for (const pk of plucks) {
-      const ds = Math.abs(i - pk.i) * route!.step;
-      if (ds > PLUCK_REACH) continue;
-      const tau = t - pk.t0;
-      const w = Math.cos((Math.PI / 2) * (ds / PLUCK_REACH)) ** 2;
-      o += pk.a * Math.exp(-3.2 * tau) * Math.sin(2 * Math.PI * 7 * tau) * w;
+    const g = boardG!;
+    b.nets.forEach((n, i) => {
+      const d = polyline(n.points);
+      const delay = NET_DELAY_MS + i * NET_STAGGER_MS;
+      const vars = `--i:${i};--len:${n.length.toFixed(1)};--delay:${delay}ms;--lit-at:${Math.round(delay + n.length * NET_MS_PER_PX)}ms`;
+      svgEl('path', { d, class: 'site-thread__net', style: vars }, g);
+      svgEl('path', { d, class: 'site-thread__net-pulse', style: vars }, g);
+    });
+    for (const w of b.wires) svgEl('path', { d: polyline(w), class: 'site-thread__wire' }, g);
+    for (const [x, y] of b.grounds) {
+      [20, 12, 5].forEach((wd, k) => svgEl('path', { d: `M${x - wd / 2},${y + k * 4.5}H${x + wd / 2}`, class: 'site-thread__wire' }, g));
     }
-    return o * k;
+    const { cx, cy, w, h } = b.chip;
+    const left = b.inputPin === 0;
+    b.topPins.forEach((x) => svgEl('rect', { x: x - 1.6, y: b.pinTop, width: 3.2, height: 9, rx: 0.6, class: 'site-thread__pin' }, g));
+    b.botPins.forEach((x, k) => svgEl('rect', { x: x - 1.6, y: b.pinBottom - 9, width: 3.2, height: 9, rx: 0.6, class: k === b.inputPin ? 'site-thread__pin site-thread__pin--in' : 'site-thread__pin' }, g));
+    svgEl('rect', { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 2.5, class: 'site-thread__chip' }, g);
+    const nx = left ? cx - w / 2 : cx + w / 2;
+    svgEl('path', { d: `M${nx},${cy - 4}A4,4 0 0 ${left ? 1 : 0} ${nx},${cy + 4}`, class: 'site-thread__chip-notch' }, g);
+    svgEl('circle', { cx: cx + (left ? -1 : 1) * (w / 2 - 6), cy: cy + h / 2 - 6, r: 1.6, class: 'site-thread__chip-dot' }, g);
+    svgEl('text', { x: cx, y: cy + 3, 'text-anchor': 'middle', class: 'site-thread__chip-text' }, g).textContent = 'AK-01';
+    // SW1: four pads, the body and the actuator that presses in.
+    const [sx, sy] = b.reset;
+    const sw = svgEl('g', { class: 'site-thread__switch' }, g);
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) svgEl('rect', { x: sx + dx * 9 - 2.5, y: sy + dy * 5.5 - 2, width: 5, height: 4, rx: 0.8, class: 'site-thread__pad' }, sw);
+    svgEl('rect', { x: sx - 8, y: sy - 8, width: 16, height: 16, rx: 2, class: 'site-thread__switch-body' }, sw);
+    svgEl('circle', { cx: sx, cy: sy, r: 4.6, class: 'site-thread__switch-act' }, sw);
+    for (const l of b.labels) svgEl('text', { x: l.x, y: l.y, 'text-anchor': l.anchor, class: 'site-thread__silk' }, g).textContent = l.text;
+
+    // The reset switch's button: after the contact cards in the tab order (it
+    // is created here, so the page without JavaScript has none).
+    if (!resetBtn) {
+      resetBtn = document.createElement('button');
+      resetBtn.type = 'button';
+      resetBtn.className = 'site-thread-reset';
+      resetBtn.setAttribute('aria-label', 'Back to top');
+      resetBtn.setAttribute('data-thread-reset', '');
+      const tip = document.createElement('span');
+      tip.className = 'site-thread-reset__tip';
+      tip.setAttribute('aria-hidden', 'true');
+      tip.textContent = 'Reset · back to top';
+      resetBtn.append(tip);
+      resetBtn.addEventListener('click', resetToTop, { signal });
+    }
+    if (resetBtn.parentElement !== main) main!.append(resetBtn);
+    resetBtn.style.left = `${sx}px`;
+    resetBtn.style.top = `${sy}px`;
+    // Its hover label opens away from the chip, over empty board, or below the
+    // switch when the viewport has no room beside it (phones).
+    const room = sx > cx ? layoutWidth() - sx - 22 : sx - 22;
+    resetBtn.dataset.side = room < 150 ? 'below' : sx > cx ? 'right' : 'left';
+  }
+
+  /** Power on the board (the line has arrived): the input pin lights and the nets light the cards one after another (CSS timing). */
+  function setPowered(on: boolean) {
+    if (on === powered) return;
+    powered = on;
+    boardG!.toggleAttribute('data-powered', on);
+    if (!board) return;
+    board.nets.forEach((n, i) => {
+      const at = NET_DELAY_MS + i * NET_STAGGER_MS + n.length * NET_MS_PER_PX;
+      n.cards.forEach((ci, k) => {
+        const el = boardCards[ci] as HTMLElement | undefined;
+        if (!el) return;
+        el.style.setProperty('--thread-lit-delay', `${Math.round(at + k * NET_STAGGER_MS)}ms`);
+        el.toggleAttribute('data-thread-lit', on);
+      });
+    });
+  }
+
+  function spawnPulse(from: number, dir: 1 | -1, speed = PULSE_SPEED, life = PULSE_LIFE) {
+    const r = route;
+    if (!r || reduced) return;
+    const el = svgEl('path', {
+      d: r.d,
+      pathLength: r.total.toFixed(3),
+      class: 'site-thread__pulse',
+      'stroke-width': (r.strokeWidth + 1.6).toFixed(2),
+      'stroke-dasharray': `${PULSE_LEN} ${(r.total + PULSE_LEN * 2).toFixed(2)}`,
+    }, pulseG!);
+    pulses.push({ el, from, dir, speed, t0: now(), life });
+    schedule();
+  }
+
+  function clearPulses() {
+    for (const p of pulses) p.el.remove();
+    pulses = [];
+  }
+
+  /** Move the pulses; a pulse never runs past the drawn head. */
+  function updatePulses(t: number, L: number) {
+    pulses = pulses.filter((p) => {
+      const age = t - p.t0;
+      const pos = p.from + p.dir * age * p.speed;
+      if (age > p.life || pos < -PULSE_LEN || pos > L) {
+        p.el.remove();
+        return false;
+      }
+      p.el.setAttribute('stroke-dashoffset', (PULSE_LEN / 2 - pos).toFixed(2));
+      p.el.style.opacity = String(Math.max(0, 1 - (age / p.life) ** 3));
+      return true;
+    });
+  }
+
+  function resetToTop() {
+    boardG!.setAttribute('data-pressed', '');
+    window.setTimeout(() => boardG!.removeAttribute('data-pressed'), RESET_PRESS_MS);
+    // The reset signal races back up the drawn trace to the start.
+    const L = Math.max(0, Math.min(route?.total ?? 0, shown));
+    if (L > 0) spawnPulse(L, -1, Math.max(2600, L / RESET_PULSE_S), RESET_PULSE_S + 0.3);
+    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+    // Keyboard users continue from the top of the content, not from the footer.
+    if (!main!.hasAttribute('tabindex')) main!.setAttribute('tabindex', '-1');
+    main!.focus({ preventScroll: true });
   }
 
   function setDone(list: Anchor[], reached: number, lead: number) {
@@ -574,38 +695,8 @@ export function initThread(): () => void {
     if (!r) return;
     const L = Math.max(0, Math.min(r.total, shown));
     const arrived = started && L >= r.total - 1;
-    plucks = plucks.filter((pk) => t - pk.t0 < PLUCK_LIFE);
-
-    if (plucks.length) {
-      // Vibrating stretch: draw the drawn part as a displaced polyline.
-      const { points: P, step } = r;
-      const upto = L / step;
-      const last = Math.floor(upto);
-      let d = '';
-      for (let i = 0; i <= last && i < r.count; i++) {
-        const o = offsetAt(i, t, L);
-        let nx = 0, ny = 0;
-        if (o !== 0) {
-          const a = Math.max(0, i - 1), b = Math.min(r.count - 1, i + 1);
-          const dx = P[b * 2] - P[a * 2], dy = P[b * 2 + 1] - P[a * 2 + 1];
-          const l = Math.hypot(dx, dy) || 1;
-          nx = -dy / l;
-          ny = dx / l;
-        }
-        // Hard guard: a vibrating rail never leaves the viewport.
-        const px = Math.max(r.strokeWidth / 2, Math.min(viewW - r.strokeWidth / 2, P[i * 2] + nx * o));
-        d += (i ? 'L' : 'M') + px.toFixed(1) + ',' + (P[i * 2 + 1] + ny * o).toFixed(1);
-      }
-      const head = pointAt(r, L);
-      d += `L${head[0].toFixed(1)},${head[1].toFixed(1)}`;
-      path!.setAttribute('d', d);
-      path!.removeAttribute('pathLength');
-      path!.removeAttribute('stroke-dasharray');
-      polyMode = true;
-    } else {
-      if (polyMode) setGeometry();
-      path!.setAttribute('stroke-dasharray', `${L.toFixed(2)} ${(r.total + 10).toFixed(2)}`);
-    }
+    path!.setAttribute('stroke-dasharray', `${L.toFixed(2)} ${(r.total + 10).toFixed(2)}`);
+    updatePulses(t, L);
     if (inPlace && !(capActive && capUnseen)) inPlace = false;
     const veiled = inPlace;
     // While veiled the page shows its own timeline line, as before the thread started.
@@ -639,11 +730,19 @@ export function initThread(): () => void {
       knot!.style.transition = showKnot ? '' : 'none';
       knot!.style.opacity = showKnot ? '1' : '0';
     }
-    endKnot!.toggleAttribute('data-on', arrived);
+    // Without a chip network the line ends on a plain pad.
+    endKnot!.toggleAttribute('data-on', arrived && !board);
     const reached = !started ? -Infinity : arrived ? Infinity : r.maxY[Math.min(r.count - 1, Math.floor(L / r.step))];
     setDone(nodes, reached, 4);
     setDone(inks, reached, 6);
     setDone(cards, reached, 0);
+    // The board shows once the line has reached the cards (they have revealed
+    // by then), and powers on when the line arrives.
+    const boardOn = !!board && started && !veiled && (arrived || cards.some((c) => c.done));
+    boardG!.toggleAttribute('data-on', boardOn);
+    if (resetBtn) resetBtn.toggleAttribute('hidden', !boardOn);
+    if (arrived && !powered && board && !reduced && !veiled) spawnPulse(Math.max(0, r.total - 320), 1, PULSE_SPEED, 0.5);
+    setPowered(arrived && !veiled && !!board);
   }
 
   function tick(ts: number) {
@@ -690,7 +789,7 @@ export function initThread(): () => void {
     render(now());
     settled = shown === target && vel === 0;
     // A closed gate keeps the loop polling until its content reveals.
-    if (!raf && (!settled || plucks.length || capPoll)) raf = requestAnimationFrame(tick);
+    if (!raf && (!settled || pulses.length || capPoll)) raf = requestAnimationFrame(tick);
     else lastT = 0;
   }
 
@@ -726,26 +825,6 @@ export function initThread(): () => void {
     svg!.setAttribute('data-thread-ready', 'true');
   }
 
-  /**
-   * Largest pluck amplitude that keeps the stretch around sample `best` inside
-   * the viewport: a rail 7px from the edge only has a few px of room outwards
-   * (and the swing is symmetric, so it stays out of the content gutter too).
-   */
-  function pluckRoom(r: Route, best: number): number {
-    const P = r.points;
-    const reach = Math.ceil(PLUCK_REACH / r.step);
-    let cap = Infinity;
-    for (let j = Math.max(1, best - reach); j <= Math.min(r.count - 2, best + reach); j++) {
-      const w = Math.cos((Math.PI / 2) * ((Math.abs(j - best) * r.step) / PLUCK_REACH)) ** 2 * (straight[j] ?? 0) * headTaper(j, shown);
-      const dx = P[(j + 1) * 2] - P[(j - 1) * 2], dy = P[(j + 1) * 2 + 1] - P[(j - 1) * 2 + 1];
-      const nx = Math.abs(dy) / (Math.hypot(dx, dy) || 1);
-      if (nx * w < 0.05) continue;
-      const room = Math.min(P[j * 2], viewW - P[j * 2]) - r.strokeWidth / 2 - 1;
-      cap = Math.min(cap, Math.max(0, room) / (nx * w));
-    }
-    return cap;
-  }
-
   function onPointerMove(e: PointerEvent) {
     if (reduced || !route || !started || e.pointerType === 'touch') return;
     // Track the pointer in viewport coordinates: page coordinates would count
@@ -756,7 +835,7 @@ export function initThread(): () => void {
     ptr = { x: e.clientX, y: e.clientY, t };
     if (!prev || t - prev.t > 0.12) return;
     const speed = Math.hypot(e.clientX - prev.x, e.clientY - prev.y) / Math.max(0.008, t - prev.t);
-    if (speed < PLUCK_MIN_SPEED) return;
+    if (speed < SWEEP_MIN_SPEED) return;
     // Both ends in the thread layer's space, with the current scroll.
     const ox = window.scrollX - mainLeft, oy = window.scrollY - mainTop;
     const x0 = prev.x + ox, y0 = prev.y + oy, x = e.clientX + ox, y = e.clientY + oy;
@@ -781,16 +860,13 @@ export function initThread(): () => void {
         }
       }
     }
-    // A sweep across a loop, a corner, the beads or the pen plucks nothing (only straight stretches swing).
-    if (best >= 0 && (straight[best] ?? 0) * headTaper(best, shown) < 0.3) return;
-    if (best < 0 || plucks.some((pk) => Math.abs(pk.i - best) * r.step < 60 && t - pk.t0 < 0.25)) return;
-    const a = Math.max(0, best - 1), b = Math.min(r.count - 1, best + 1);
-    const nx = -(r.points[b * 2 + 1] - r.points[a * 2 + 1]), ny = r.points[b * 2] - r.points[a * 2];
-    const side = Math.sign(vx * nx + vy * ny) || 1;
-    const amp = Math.min(13, 4 + speed / 160, pluckRoom(r, best));
-    if (amp < 1.5) return;
-    plucks.push({ i: best, t0: t, a: side * amp });
-    schedule();
+    if (best < 0) return;
+    const at = best * r.step;
+    // One signal per crossing (a sweep reports several events near the same spot).
+    if (pulses.some((p) => p.speed === PULSE_SPEED && Math.abs(p.from - at) < 60 && t - p.t0 < 0.25)) return;
+    // The signal runs out both ways along the trace from where it was touched.
+    spawnPulse(at, 1);
+    spawnPulse(at, -1);
   }
 
   // Boot.
@@ -874,7 +950,7 @@ export function initThread(): () => void {
   document.fonts?.addEventListener?.('loadingdone', scheduleRebuild, { signal });
   reduceQuery.addEventListener('change', () => {
     reduced = reduceQuery.matches;
-    plucks = [];
+    clearPulses();
     if (reduced) {
       heroDone = true;
       start();
@@ -898,6 +974,8 @@ export function initThread(): () => void {
     window.clearTimeout(fallbackTimer);
     window.clearTimeout(capTimer);
     if (raf) cancelAnimationFrame(raf);
+    clearPulses();
+    resetBtn?.remove();
     html.classList.remove('thread-on', 'thread-drawing');
   };
 }

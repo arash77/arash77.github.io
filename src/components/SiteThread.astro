@@ -1,7 +1,7 @@
 ---
 /**
- * Scroll thread: one line that draws itself down the home page as the visitor
- * reads. The geometry comes from the live layout (src/lib/thread/route.ts);
+ * Scroll thread: one circuit trace that draws itself down the home page as the
+ * visitor reads, ending in a small chip network wired to the contact cards. The geometry comes from the live layout (src/lib/thread/route.ts);
  * the runtime (src/lib/thread/runtime.ts) measures, draws and animates it.
  *
  * Hidden unless the runtime adds `html.thread-on`, so the page without
@@ -33,6 +33,8 @@
       stroke-width="2.25"
       stroke-linecap="round"
       stroke-linejoin="round"></path>
+    <g data-thread-pulses></g>
+    <g data-thread-board class="site-thread__board"></g>
     <circle data-thread-knot class="site-thread__knot" r="4" cx="0" cy="0"></circle>
     <circle data-thread-end class="site-thread__end" r="4" cx="0" cy="0"></circle>
     <circle data-thread-glow class="site-thread__glow" r="11" cx="0" cy="0"></circle>

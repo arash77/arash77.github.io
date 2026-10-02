@@ -50,7 +50,8 @@ function collisions(page: Page) {
     const range = document.createRange();
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
       const text = n.textContent?.trim();
-      if (!text || n.parentElement?.closest('[data-thread-root]')) continue;
+      // The reset switch's own hover label is part of the thread, not content.
+      if (!text || n.parentElement?.closest('[data-thread-root], .site-thread-reset__tip')) continue;
       range.selectNodeContents(n);
       for (const r of range.getClientRects()) add(r, `text "${text.slice(0, 30)}"`);
     }
@@ -70,7 +71,7 @@ function collisions(page: Page) {
     };
     // Also icons and decorated boxes (icon tiles, date pills): anything with a
     // rounded background, except the purely decorative (aria-hidden) layers.
-    const obstacles = 'a, button, img, svg, .skill-card, [data-thread-stitch], [data-thread-hint] > *, [class*="rounded"][class*="bg-"]:not([aria-hidden="true"]):not([data-thread-bar])';
+    const obstacles = 'a, button, img, svg, .skill-card, [data-thread-card], [data-thread-hint] > *, [class*="rounded"][class*="bg-"]:not([aria-hidden="true"]):not([data-thread-bar])';
     for (const el of main.querySelectorAll(obstacles)) {
       if (el.closest('[data-thread-root], [data-thread-node]')) continue;
       add(visibleBox(el), `<${el.tagName.toLowerCase()} class="${el.className}">`.slice(0, 80));
@@ -98,6 +99,56 @@ function collisions(page: Page) {
       }
       for (const c of circles) {
         if (Math.hypot(x - c.x, y - c.y) < c.r + 4) hits.push(`(${x.toFixed(0)}, ${y.toFixed(0)}) on a timeline node`);
+      }
+    }
+    return [...new Set(hits)].slice(0, 20);
+  });
+}
+
+/**
+ * Parts of the chip network that touch content: every net, wire and label,
+ * the chip and the switch, against the same text / card / button boxes as the
+ * route. A net may only enter its card through the last few px of its end.
+ */
+function boardCollisions(page: Page) {
+  return page.evaluate(() => {
+    const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+    const s = svg.getBoundingClientRect();
+    const main = document.getElementById('main-content')!;
+    type Box = { x0: number; y0: number; x1: number; y1: number; label: string };
+    const boxes: Box[] = [];
+    const add = (r: DOMRect, label: string) => {
+      if (r.width < 1 || r.height < 1) return;
+      boxes.push({ x0: r.left - 1, y0: r.top - 1, x1: r.right + 1, y1: r.bottom + 1, label });
+    };
+    const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const text = n.textContent?.trim();
+      if (!text || n.parentElement?.closest('[data-thread-root], [data-thread-reset]')) continue;
+      range.selectNodeContents(n);
+      for (const r of range.getClientRects()) add(r, `text "${text.slice(0, 30)}"`);
+    }
+    for (const el of main.querySelectorAll('a, button, img, [data-thread-card]')) {
+      if (el.closest('[data-thread-root], [data-thread-reset]')) continue;
+      add(el.getBoundingClientRect(), `<${el.tagName.toLowerCase()}>`);
+    }
+    const hits: string[] = [];
+    const check = (x: number, y: number, what: string) => {
+      for (const b of boxes) if (x > b.x0 && x < b.x1 && y > b.y0 && y < b.y1) hits.push(`${what} (${x.toFixed(0)}, ${y.toFixed(0)}) in ${b.label}`);
+    };
+    for (const el of svg.querySelectorAll<SVGPathElement>('.site-thread__net, .site-thread__wire')) {
+      const total = el.getTotalLength();
+      const isNet = el.classList.contains('site-thread__net');
+      for (let l = 0; l <= total - (isNet ? 4 : 0); l += 2) {
+        const p = el.getPointAtLength(l);
+        check(s.left + p.x, s.top + p.y, isNet ? 'net' : 'wire');
+      }
+    }
+    for (const el of svg.querySelectorAll<SVGGraphicsElement>('.site-thread__chip, .site-thread__switch, .site-thread__silk, .site-thread__chip-text')) {
+      const b = el.getBBox();
+      for (const [x, y] of [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height], [b.x + b.width / 2, b.y + b.height / 2]]) {
+        check(s.left + x, s.top + y, el.getAttribute('class') ?? 'board');
       }
     }
     return [...new Set(hits)].slice(0, 20);
@@ -156,9 +207,9 @@ function beadOffsets(page: Page) {
 }
 
 /**
- * Records, for every change of the route geometry (the path's `d` outside a
- * pluck), the vertical translation of the element `sel` at that moment: was
- * the geometry measured while that element was transformed?
+ * Records, for every change of the route geometry (the path's `d`), the
+ * vertical translation of the element `sel` at that moment: was the geometry
+ * measured while that element was transformed?
  */
 function recordRebuilds(page: Page, sel: string) {
   return page.evaluate((sel) => {
@@ -167,7 +218,6 @@ function recordRebuilds(page: Page, sel: string) {
     const p = document.querySelector('[data-thread-path]')!;
     const el = document.querySelector(sel)!;
     new MutationObserver(() => {
-      if (!p.hasAttribute('pathLength')) return; // a pluck's polyline
       const t = getComputedStyle(el).transform;
       w.__rebuilds.push(t === 'none' ? 0 : new DOMMatrixReadOnly(t).m42);
     }).observe(p, { attributes: true, attributeFilter: ['d'] });
@@ -180,6 +230,29 @@ const translateY = (page: Page, sel: string) =>
     return t === 'none' ? 0 : new DOMMatrixReadOnly(t).m42;
   }, sel);
 
+/** Count `.site-thread__pulse` elements added from now on (the signal pulses). */
+function countPulses(page: Page) {
+  return page.evaluate(() => {
+    const w = window as unknown as { __pulses: number };
+    w.__pulses = 0;
+    new MutationObserver((list) => {
+      for (const m of list) for (const n of m.addedNodes) if ((n as Element).classList?.contains('site-thread__pulse')) w.__pulses++;
+    }).observe(document.querySelector('[data-thread-pulses]')!, { childList: true });
+  });
+}
+const pulsesSeen = (page: Page) => page.evaluate(() => (window as unknown as { __pulses: number }).__pulses);
+
+/** Colour of `hsl(var(--name) / alpha)` in the current theme, as computed by the browser. */
+const themeColor = (page: Page, css: string) =>
+  page.evaluate((css) => {
+    const probe = document.createElement('div');
+    probe.style.color = css;
+    document.body.append(probe);
+    const c = getComputedStyle(probe).color;
+    probe.remove();
+    return c;
+  }, css);
+
 const dashLength = (page: Page) =>
   page.locator('[data-thread-path]').evaluate((p) => parseFloat((p.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]));
 
@@ -188,7 +261,7 @@ test.describe('scroll thread, reduced motion', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
   });
 
-  test('draws the full route statically with nodes, ink and stitches applied', async ({ page }) => {
+  test('draws the full route statically with nodes, ink, card marks and the powered chip network', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     await ready(page);
@@ -202,30 +275,71 @@ test.describe('scroll thread, reduced motion', () => {
 
     const nodes = page.locator('[data-thread-node]');
     expect(await nodes.count()).toBeGreaterThan(0);
-    for (const sel of ['[data-thread-node]', '[data-thread-ink]', '[data-thread-stitch]']) {
+    for (const sel of ['[data-thread-node]', '[data-thread-ink]', '[data-thread-card]']) {
       const all = await page.locator(sel).count();
       expect(all, sel).toBeGreaterThan(0);
       await expect(page.locator(`${sel}[data-thread-done]`)).toHaveCount(all);
     }
     // Lit nodes take the primary colour; the original timeline line is hidden.
     const nodeBg = await nodes.last().evaluate((el) => getComputedStyle(el).backgroundColor);
-    const primary = await page.evaluate(() => {
-      const probe = document.createElement('div');
-      probe.style.color = 'hsl(var(--primary))';
-      document.body.append(probe);
-      const c = getComputedStyle(probe).color;
-      probe.remove();
-      return c;
-    });
-    expect(nodeBg).toBe(primary);
+    expect(nodeBg).toBe(await themeColor(page, 'hsl(var(--primary))'));
     await expect(page.locator('[data-thread-line]')).toHaveCSS('opacity', '0');
-    // Ink underline and stitches are actually painted.
+    // Ink underline and the cards' silkscreen marks are actually painted.
     await expect(page.locator('[data-thread-ink]').first()).toHaveCSS('background-size', '100% 2px');
-    const sew = await page.locator('[data-thread-stitch]').first().evaluate((el) => getComputedStyle(el, '::after').getPropertyValue('--thread-sew').trim());
-    expect(sew).toBe('360deg');
-    // No pen under reduced motion; end knot shown.
+    const marks = await page.locator('[data-thread-card]').evaluateAll((els) => els.map((el) => [getComputedStyle(el, '::after').opacity, getComputedStyle(el, '::before').opacity]));
+    expect(marks.flat().every((o) => o === '1'), JSON.stringify(marks)).toBe(true);
+    // The chip network is on and powered; every card is lit; no end pad and no pen.
+    const board = page.locator('[data-thread-board]');
+    await expect(board).toHaveAttribute('data-on', '');
+    await expect(board).toHaveAttribute('data-powered', '');
+    await expect(board.locator('.site-thread__chip')).toHaveCount(1);
+    await expect(board.locator('.site-thread__net')).toHaveCount(4);
+    const cards = await page.locator('[data-thread-card]').count();
+    await expect(page.locator('[data-thread-card][data-thread-lit]')).toHaveCount(cards);
+    await expect(page.locator('[data-thread-card]').first()).toHaveCSS('border-color', await themeColor(page, 'hsl(var(--secondary) / 0.6)'));
+    await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '0');
     await expect(page.locator('[data-thread-pen]')).toHaveCSS('opacity', '0');
-    await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '1');
+    await expect(page.locator('[data-thread-reset]')).toBeVisible();
+    await expect(page.locator('[data-thread-reset]')).toHaveAttribute('aria-label', 'Back to top');
+  });
+
+  test('the reset switch hover label stays on screen at every width', async ({ page }) => {
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await ready(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const tip = page.locator('.site-thread-reset__tip');
+      await page.locator('[data-thread-reset]').hover();
+      await expect(tip).toHaveCSS('opacity', '1');
+      const r = await tip.evaluate((el) => el.getBoundingClientRect().toJSON());
+      const cw = await page.evaluate(() => document.documentElement.clientWidth);
+      expect(r.left, `${width}px`).toBeGreaterThanOrEqual(0);
+      expect(r.right, `${width}px`).toBeLessThanOrEqual(cw);
+    }
+  });
+
+  test('the reset switch takes the reader back to the top, also by keyboard', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    await ready(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const reset = page.locator('[data-thread-reset]');
+    await reset.click();
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 3000 }).toBe(0);
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('main-content');
+    // The next Tab continues from the top of the content, not from the footer.
+    await page.keyboard.press('Tab');
+    const next = await page.evaluate(() => {
+      const a = document.activeElement!;
+      return a.getBoundingClientRect().top;
+    });
+    expect(next).toBeLessThan(900);
+    // Keyboard: focus the switch and press Enter.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await reset.focus();
+    await page.keyboard.press('Enter');
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 3000 }).toBe(0);
   });
 
   for (const width of WIDTHS) {
@@ -246,6 +360,16 @@ test.describe('scroll thread, reduced motion', () => {
       }
 
       expect(await collisions(page)).toEqual([]);
+      // The chip network fits at every width, clear of all content too.
+      await expect(page.locator('[data-thread-board] .site-thread__chip')).toHaveCount(1);
+      expect(await boardCollisions(page)).toEqual([]);
+      const box = await page.locator('[data-thread-board]').evaluate((g) => {
+        const s = g.closest('svg')!.getBoundingClientRect();
+        const b = (g as SVGGElement).getBBox();
+        return { x0: s.left + b.x, x1: s.left + b.x + b.width };
+      });
+      expect(box.x0).toBeGreaterThanOrEqual(0);
+      expect(box.x1).toBeLessThanOrEqual(cw);
     });
   }
 
@@ -269,6 +393,7 @@ test.describe('scroll thread, reduced motion', () => {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
     expect(await collisions(page)).toEqual([]);
+    expect(await boardCollisions(page)).toEqual([]);
     // Still fully drawn after the rebuild.
     const pathLength = parseFloat((await path.getAttribute('pathLength')) ?? '0');
     expect(await dashLength(page)).toBeCloseTo(pathLength, 0);
@@ -278,7 +403,7 @@ test.describe('scroll thread, reduced motion', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
     await ready(page);
-    for (const sel of ['main a[href="/projects"]', '[data-thread-stitch]', '[data-thread-node]']) {
+    for (const sel of ['main a[href="/projects"]', '[data-thread-card]', '[data-thread-node]', '[data-thread-reset]']) {
       const el = page.locator(sel).first();
       await el.scrollIntoViewIfNeeded();
       const hit = await el.evaluate((target) => {
@@ -310,19 +435,13 @@ test.describe('scroll thread, reduced motion', () => {
     // The route is laid out for the screen, not the paper: it must not print.
     await expect(page.locator('.site-thread')).toBeHidden();
     await expect(page.locator('[data-thread-line]')).toHaveCSS('opacity', '1');
-    // Lit nodes, ink and stitches print as the page without the thread.
-    const card = await page.evaluate(() => {
-      const probe = document.createElement('div');
-      probe.style.color = 'hsl(var(--card))';
-      document.body.append(probe);
-      const c = getComputedStyle(probe).color;
-      probe.remove();
-      return c;
-    });
-    await expect(page.locator('[data-thread-node]').last()).toHaveCSS('background-color', card);
+    await expect(page.locator('[data-thread-reset]')).toBeHidden();
+    // Lit nodes, ink and the cards' marks and lighting print as the page without the thread.
+    await expect(page.locator('[data-thread-node]').last()).toHaveCSS('background-color', await themeColor(page, 'hsl(var(--card))'));
     await expect(page.locator('[data-thread-ink]').first()).toHaveCSS('background-size', '0% 2px');
-    const sew = await page.locator('[data-thread-stitch]').first().evaluate((el) => getComputedStyle(el, '::after').getPropertyValue('--thread-sew').trim());
-    expect(sew).toBe('0deg');
+    const marks = await page.locator('[data-thread-card]').first().evaluate((el) => [getComputedStyle(el, '::after').display, getComputedStyle(el, '::before').display]);
+    expect(marks).toEqual(['none', 'none']);
+    await expect(page.locator('[data-thread-card]').first()).toHaveCSS('border-color', await themeColor(page, 'hsl(var(--border))'));
   });
 
   test("uses the layout's own breakpoint at a non-default browser font size", async ({ page }) => {
@@ -411,63 +530,91 @@ test.describe('scroll thread, normal motion', () => {
     await expect(page.locator('[data-thread-knot]')).toHaveCSS('opacity', '1', { timeout: 6000 });
   });
 
-  test('scrolling down then up reverses ink, stitches and nodes', async ({ page }) => {
-    const sels = ['[data-thread-node]', '[data-thread-ink]', '[data-thread-stitch]'];
+  test('scrolling down then up reverses ink, card marks, nodes and the chip network', async ({ page }) => {
+    const sels = ['[data-thread-node]', '[data-thread-ink]', '[data-thread-card]'];
     // Every node starts unlit, the current job's too (only the pen lights it).
     const nodeFills = () => page.locator('[data-thread-node]').evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor));
     const unlit = await nodeFills();
     expect(new Set(unlit).size, unlit.join(' | ')).toBe(1);
+    const board = page.locator('[data-thread-board]');
+    await expect(board).not.toHaveAttribute('data-on', '');
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     for (const sel of sels) {
       const all = await page.locator(sel).count();
       await expect(page.locator(`${sel}[data-thread-done]`), sel).toHaveCount(all, { timeout: 8000 });
     }
-    await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '1');
+    await expect(board).toHaveAttribute('data-powered', '');
+    await expect(page.locator('[data-thread-card][data-thread-lit]')).toHaveCount(await page.locator('[data-thread-card]').count());
 
     await page.evaluate(() => window.scrollTo(0, 0));
     for (const sel of sels) {
       await expect(page.locator(`${sel}[data-thread-done]`), sel).toHaveCount(0, { timeout: 8000 });
     }
-    await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '0');
+    await expect(board).not.toHaveAttribute('data-powered', '');
+    await expect(board).not.toHaveAttribute('data-on', '');
+    await expect(page.locator('[data-thread-card][data-thread-lit]')).toHaveCount(0);
+    await expect(page.locator('[data-thread-reset]')).toBeHidden();
     await expect.poll(nodeFills, { timeout: 2000 }).toEqual(unlit);
   });
 
-  test('stitches and ink go as soon as the line retracts past them', async ({ page }) => {
+  test('card marks and ink go as soon as the line retracts past them', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    const stitches = page.locator('[data-thread-stitch]');
-    const all = await stitches.count();
-    await expect(page.locator('[data-thread-stitch][data-thread-done]')).toHaveCount(all, { timeout: 8000 });
-    await page.waitForTimeout(1600); // fully sewn
-    const sew = () => stitches.evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el, '::after').getPropertyValue('--thread-sew'))));
-    expect(Math.min(...(await sew()))).toBeGreaterThan(350);
+    const cards = page.locator('[data-thread-card]');
+    const all = await cards.count();
+    await expect(page.locator('[data-thread-card][data-thread-done]')).toHaveCount(all, { timeout: 8000 });
+    await page.waitForTimeout(900); // fully shown
+    const marks = () => cards.evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el, '::after').opacity)));
+    expect(Math.min(...(await marks()))).toBeGreaterThan(0.95);
     await page.evaluate(() => window.scrollBy(0, -500));
-    await expect(page.locator('[data-thread-stitch][data-thread-done]')).toHaveCount(0, { timeout: 3000 });
-    // The line has left the cards: within a moment nothing of the stitches is left either.
+    await expect(page.locator('[data-thread-card][data-thread-done]')).toHaveCount(0, { timeout: 3000 });
+    // The line has left the cards: within a moment nothing of the marks is left either.
     await page.waitForTimeout(450);
-    expect(Math.max(...(await sew()))).toBeLessThan(10);
+    expect(Math.max(...(await marks()))).toBeLessThan(0.05);
   });
 
-  test('the end knot appears as the pen arrives, without a crawling tail', async ({ page }) => {
+  test('the chip powers on as the pen arrives, without a crawling tail, and lights the cards one by one', async ({ page }) => {
     await page.evaluate(() => {
       const w = window as unknown as { __end: { t30: number; on: number } };
       w.__end = { t30: 0, on: 0 };
       const p = document.querySelector('[data-thread-path]')!;
-      const end = document.querySelector('[data-thread-end]')!;
+      const board = document.querySelector('[data-thread-board]')!;
       const tick = (ts: number) => {
         const total = parseFloat(p.getAttribute('pathLength') ?? '0');
         const dash = parseFloat((p.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
         if (!w.__end.t30 && total > 0 && total - dash < 30) w.__end.t30 = ts;
-        if (end.hasAttribute('data-on')) w.__end.on = ts;
+        if (board.hasAttribute('data-powered')) w.__end.on = ts;
         else requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
       window.scrollTo(0, document.documentElement.scrollHeight);
     });
-    await expect(page.locator('[data-thread-end]')).toHaveAttribute('data-on', '', { timeout: 8000 });
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
     const end = await page.evaluate(() => (window as unknown as { __end: { t30: number; on: number } }).__end);
     expect(end.t30).toBeGreaterThan(0);
     // A critically damped spring alone takes ~0.7s over its last 30px.
     expect(end.on - end.t30).toBeLessThan(350);
+    // Each card lights when its net's pulse reaches it: one after another, all within a couple of seconds.
+    const delays = await page.locator('[data-thread-card]').evaluateAll((els) => els.map((el) => parseFloat((el as HTMLElement).style.getPropertyValue('--thread-lit-delay'))));
+    expect(new Set(delays).size).toBe(delays.length);
+    expect(Math.max(...delays)).toBeLessThan(2000);
+    const lit = await themeColor(page, 'hsl(var(--secondary) / 0.6)');
+    await page.waitForTimeout(Math.max(...delays) + 700);
+    const borders = await page.locator('[data-thread-card]').evaluateAll((els) => els.map((el) => getComputedStyle(el).borderColor));
+    expect(borders.every((b) => b === lit), borders.join(' | ')).toBe(true);
+  });
+
+  test('the reset switch presses, sends the signal back up the trace and returns to the top', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    await countPulses(page);
+    await page.locator('[data-thread-reset]').hover();
+    await expect(page.locator('.site-thread-reset__tip')).toHaveCSS('opacity', '1');
+    await page.locator('[data-thread-reset]').click();
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-pressed', '');
+    expect(await pulsesSeen(page)).toBeGreaterThan(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 4000 }).toBe(0);
+    await expect(page.locator('[data-thread-board]')).not.toHaveAttribute('data-powered', '', { timeout: 4000 });
+    await expect(page.locator('[data-thread-board]')).not.toHaveAttribute('data-pressed', '');
   });
 
   test('a height-only resize (mobile URL bar) never makes the drawn length jump', async ({ page }) => {
@@ -550,7 +697,7 @@ test.describe('scroll thread, normal motion', () => {
     expect(off, 'the crossing runs through the bar').toBeLessThan(1);
   });
 
-  test('loops are concentric with the nodes, also after a rebuild while the timeline text slides in', async ({ page }) => {
+  test('jogs keep clear of the nodes, also after a rebuild while the timeline text slides in', async ({ page }) => {
     // Nodes: rebuild while the timeline cards are still sliding in.
     const vh = 800;
     await page.locator('#experience').evaluate((el, vh) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - vh * 0.7), vh);
@@ -575,27 +722,23 @@ test.describe('scroll thread, normal motion', () => {
       return [...document.querySelectorAll('[data-thread-node]')].map((el) => {
         const r = el.getBoundingClientRect();
         const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-        const want = r.width / 2 + 9;
-        let near = Infinity, left = Infinity, right = -Infinity;
+        const rn = r.width / 2 + 9;
+        let near = Infinity, side = 0;
         for (const [x, y] of pts) {
-          if (Math.abs(y - cy) > want * 1.6) continue;
+          if (Math.abs(y - cy) > rn * 2) continue;
           near = Math.min(near, Math.hypot(x - cx, y - cy));
-          if (Math.abs(y - cy) < 1) {
-            left = Math.min(left, x);
-            right = Math.max(right, x);
-          }
+          if (Math.abs(y - cy) < 1) side = Math.max(side, Math.abs(x - cx));
         }
-        // Concentric: closest approach is the loop radius, and the loop's far
-        // side at the node's row is one radius from the centre.
-        const far = Math.max(cx - left, right - cx);
-        return { near: near - want, far: far - want };
+        // The jog passes 8px clear of the node (its 45° legs) and runs rn beside the spine level with the node centre.
+        return { clear: near - r.width / 2, side: side - rn };
       });
     });
     expect(gaps.length).toBe(await page.locator('[data-thread-node]').count());
     expect(gaps.length).toBeGreaterThan(0);
     for (const g of gaps) {
-      expect(Math.abs(g.near)).toBeLessThan(1.5);
-      expect(Math.abs(g.far)).toBeLessThan(1.5);
+      expect(g.clear).toBeGreaterThan(6.5);
+      expect(g.clear).toBeLessThan(10);
+      expect(Math.abs(g.side)).toBeLessThan(1.5);
     }
   });
 
@@ -613,37 +756,33 @@ test.describe('scroll thread, normal motion', () => {
     await expect(page.locator('[data-thread-node][data-thread-done]')).toHaveCount(0);
   });
 
-  test('wheel scrolling with a jittering mouse does not pluck', async ({ page }) => {
+  test('wheel scrolling with a jittering mouse sends no signal pulse', async ({ page }) => {
     await page.mouse.move(600, 300);
-    await page.evaluate(() => {
-      const w = window as unknown as { __plucked: boolean };
-      w.__plucked = false;
-      const p = document.querySelector('[data-thread-path]')!;
-      new MutationObserver(() => {
-        if (!p.hasAttribute('pathLength')) w.__plucked = true;
-      }).observe(p, { attributes: true, attributeFilter: ['pathLength'] });
-    });
+    await countPulses(page);
     for (let i = 0; i < 40; i++) {
       await page.mouse.wheel(0, 60);
       await page.mouse.move(600 + (i % 2), 300);
       await page.waitForTimeout(25);
     }
     await page.waitForTimeout(300);
-    expect(await page.evaluate(() => (window as unknown as { __plucked: boolean }).__plucked)).toBe(false);
+    expect(await pulsesSeen(page)).toBe(0);
   });
 
-  test('the end knot goes the moment the line retracts from it', async ({ page }) => {
+  test('the chip powers off the moment the line retracts from it', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '1', { timeout: 8000 });
-    const op = await page.evaluate(
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    const state = await page.evaluate(
       () =>
-        new Promise<number>((res) => {
+        new Promise<{ powered: boolean; lit: number }>((res) => {
           window.scrollBy(0, -400);
-          // Two frames: the line has left the knot; a fade-out would still be near 1.
-          requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => res(parseFloat(getComputedStyle(document.querySelector('[data-thread-end]')!).opacity)))));
+          // Three frames: the line has left the chip.
+          requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => res({
+            powered: document.querySelector('[data-thread-board]')!.hasAttribute('data-powered'),
+            lit: document.querySelectorAll('[data-thread-lit]').length,
+          }))));
         }),
     );
-    expect(op).toBe(0);
+    expect(state).toEqual({ powered: false, lit: 0 });
   });
 
   test('a lighting node keeps its icon readable through the colour change', async ({ page }) => {
@@ -721,27 +860,16 @@ test.describe('scroll thread, normal motion', () => {
     }
   });
 
-  test('a pluck on an edge rail stays inside the viewport, and the pen glow is never clipped', async ({ page }) => {
+  test('on an edge rail the pen glow is never clipped', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 900 });
     await page.locator('#about').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 100));
     await page.waitForTimeout(2500);
     await page.evaluate(() => {
-      const w = window as unknown as { __x: [number, number]; __poly: number; __glow: number[] };
-      w.__x = [Infinity, -Infinity];
-      w.__poly = 0;
+      const w = window as unknown as { __glow: number[] };
       w.__glow = [];
-      const svg = document.querySelector('[data-thread-svg]')!;
-      const p = svg.querySelector('[data-thread-path]')!;
-      const g = svg.querySelector('[data-thread-glow]')!;
+      const g = document.querySelector('[data-thread-glow]')!;
       const t0 = performance.now();
       const tick = () => {
-        if (!p.hasAttribute('pathLength')) {
-          w.__poly++;
-          for (const m of (p.getAttribute('d') ?? '').matchAll(/[ML](-?[\d.]+),/g)) {
-            const x = parseFloat(m[1]);
-            w.__x = [Math.min(w.__x[0], x), Math.max(w.__x[1], x)];
-          }
-        }
         if (getComputedStyle(g).opacity !== '0') {
           const cx = parseFloat(g.getAttribute('cx')!), r = parseFloat(g.getAttribute('r')!);
           w.__glow.push(cx - r, cx + r);
@@ -750,32 +878,19 @@ test.describe('scroll thread, normal motion', () => {
       };
       requestAnimationFrame(tick);
     });
-    const y = 400;
-    await page.mouse.move(80, y);
-    await page.mouse.move(0, y, { steps: 2 });
-    await page.mouse.move(80, y + 10, { steps: 2 });
-    // Scroll a little too, so the pen runs down a rail with its glow.
+    // Scroll a little, so the pen runs down a rail with its glow.
+    await page.mouse.move(400, 400);
     await page.mouse.wheel(0, 300);
     await page.waitForTimeout(2600);
-    const { x, poly, glow, cw } = await page.evaluate(() => {
-      const w = window as unknown as { __x: [number, number]; __poly: number; __glow: number[] };
-      return { x: w.__x, poly: w.__poly, glow: w.__glow, cw: document.documentElement.clientWidth };
-    });
-    expect(poly, 'the sweep plucked the rail').toBeGreaterThan(0);
-    // render() clamps every vibrating x to [stroke/2, width - stroke/2] as a
-    // last resort; the amplitude cap must keep the swing off that clamp (a
-    // clamped stretch would be squashed flat against the edge).
-    const sw = parseFloat((await page.locator('[data-thread-path]').getAttribute('stroke-width')) ?? '0');
-    expect(sw).toBeGreaterThan(0);
-    expect(x[0]).toBeGreaterThan(sw / 2 + 0.5);
-    expect(x[1]).toBeLessThan(cw - sw / 2 - 0.5);
+    const { glow, cw } = await page.evaluate(() => ({ glow: (window as unknown as { __glow: number[] }).__glow, cw: document.documentElement.clientWidth }));
+    expect(glow.length).toBeGreaterThan(0);
     for (const v of glow) {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThanOrEqual(cw);
     }
   });
 
-  test('a fast pointer sweep plucks a rail, and the swinging line still runs straight into the pen', async ({ page }) => {
+  test('a fast pointer sweep across the drawn trace sends a signal pulse both ways, never past the pen', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => window.scrollTo(0, 1250));
     await page.waitForTimeout(2500); // the pen comes to rest on the right rail
@@ -786,57 +901,59 @@ test.describe('scroll thread, normal motion', () => {
       const s = svg.getBoundingClientRect();
       const dash = parseFloat((path.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
       const a = path.getPointAtLength(dash - 40), b = path.getPointAtLength(dash);
-      return { x: s.left + parseFloat(c.getAttribute('cx')!), y: s.top + parseFloat(c.getAttribute('cy')!), vertical: Math.abs(a.x - b.x) < 0.5 && b.y - a.y > 39 };
+      return { x: s.left + parseFloat(c.getAttribute('cx')!), y: s.top + parseFloat(c.getAttribute('cy')!), vertical: Math.abs(a.x - b.x) < 0.5 && b.y - a.y > 39, dash };
     });
     expect(pen.vertical, 'the pen rests on a rail').toBe(true);
     await page.evaluate(() => {
-      const w = window as unknown as { __pk: { frames: number; jog: number; swing: number } };
-      w.__pk = { frames: 0, jog: 0, swing: 0 };
-      const p = document.querySelector('[data-thread-path]')!;
+      const w = window as unknown as { __pl: { max: number; min: number; seen: number; dirs: Set<number> } };
+      w.__pl = { max: -Infinity, min: Infinity, seen: 0, dirs: new Set() };
+      const g = document.querySelector('[data-thread-pulses]')!;
+      const last = new Map<Element, number>();
       const t0 = performance.now();
       const tick = () => {
-        if (!p.hasAttribute('pathLength')) {
-          const pts = [...(p.getAttribute('d') ?? '').matchAll(/[ML](-?[\d.]+),(-?[\d.]+)/g)].map((m) => [parseFloat(m[1]), parseFloat(m[2])]);
-          const head = pts[pts.length - 1], prev = pts[pts.length - 2];
-          w.__pk.frames++;
-          // The rail is vertical: any sideways step into the head is a jog.
-          w.__pk.jog = Math.max(w.__pk.jog, Math.abs(prev[0] - head[0]));
-          for (const q of pts) if (head[1] - q[1] < 160) w.__pk.swing = Math.max(w.__pk.swing, Math.abs(q[0] - head[0]));
+        for (const el of g.querySelectorAll('.site-thread__pulse')) {
+          const pos = 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0');
+          w.__pl.seen++;
+          w.__pl.max = Math.max(w.__pl.max, pos);
+          w.__pl.min = Math.min(w.__pl.min, pos);
+          const prev = last.get(el);
+          if (prev !== undefined && pos !== prev) w.__pl.dirs.add(Math.sign(pos - prev));
+          last.set(el, pos);
         }
         if (performance.now() - t0 < 1800) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     });
-    await page.mouse.move(pen.x + 60, pen.y - 30);
-    await page.mouse.move(pen.x - 60, pen.y - 30, { steps: 2 });
+    await page.mouse.move(pen.x + 60, pen.y - 80);
+    await page.mouse.move(pen.x - 60, pen.y - 80, { steps: 2 });
     await page.waitForTimeout(1900);
-    const pk = await page.evaluate(() => (window as unknown as { __pk: { frames: number; jog: number; swing: number } }).__pk);
-    expect(pk.frames, 'the sweep plucked the rail').toBeGreaterThan(0);
-    expect(pk.swing).toBeGreaterThan(2);
-    expect(pk.jog).toBeLessThan(1);
-    // ...and it settles back to the exact geometry.
-    await expect.poll(() => page.locator('[data-thread-path]').getAttribute('pathLength'), { timeout: 4000 }).not.toBeNull();
+    const pl = await page.evaluate(() => {
+      const w = window as unknown as { __pl: { max: number; min: number; seen: number; dirs: Set<number> } };
+      return { max: w.__pl.max, min: w.__pl.min, seen: w.__pl.seen, dirs: [...w.__pl.dirs].sort() };
+    });
+    expect(pl.seen, 'the sweep sent a pulse').toBeGreaterThan(0);
+    expect(pl.dirs).toEqual([-1, 1]);
+    expect(pl.max).toBeLessThanOrEqual(pen.dash + 1);
+    // ...and they are gone again.
+    await expect(page.locator('.site-thread__pulse')).toHaveCount(0, { timeout: 2000 });
   });
 
-  test('the beads row does not swing (the pills stay strung on it)', async ({ page }) => {
-    await expect.poll(() => dashLength(page)).toBeGreaterThan(200);
-    const target = await page.evaluate(() => {
-      const pills = [...document.querySelector('[data-thread-beads]')!.children].map((el) => el.getBoundingClientRect());
-      const [a, b] = pills;
-      return { x: (a.right + b.left) / 2, y: a.top + a.height / 2 };
+  test('a sweep across a part of the trace that is not drawn yet sends nothing', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 1250));
+    await page.waitForTimeout(2500);
+    // Well below the pen on the same rail: not drawn yet.
+    const pen = await page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+      const c = svg.querySelector('[data-thread-pen]')!;
+      const s = svg.getBoundingClientRect();
+      return { x: s.left + parseFloat(c.getAttribute('cx')!), y: s.top + parseFloat(c.getAttribute('cy')!) };
     });
-    await page.evaluate(() => {
-      const w = window as unknown as { __plucked: boolean };
-      w.__plucked = false;
-      const p = document.querySelector('[data-thread-path]')!;
-      new MutationObserver(() => {
-        if (!p.hasAttribute('pathLength')) w.__plucked = true;
-      }).observe(p, { attributes: true, attributeFilter: ['pathLength'] });
-    });
-    await page.mouse.move(target.x + 30, target.y - 60);
-    await page.mouse.move(target.x - 30, target.y + 60, { steps: 3 });
+    await countPulses(page);
+    await page.mouse.move(pen.x + 60, pen.y + 220);
+    await page.mouse.move(pen.x - 60, pen.y + 220, { steps: 2 });
     await page.waitForTimeout(400);
-    expect(await page.evaluate(() => (window as unknown as { __plucked: boolean }).__plucked)).toBe(false);
+    expect(await pulsesSeen(page)).toBe(0);
   });
 });
 
@@ -847,6 +964,7 @@ test('without JavaScript the page has no thread and keeps the timeline line', as
   await expect(page.locator('html')).not.toHaveClass(/\bthread-on\b/);
   await expect(page.locator('.site-thread')).toBeHidden();
   await expect(page.locator('[data-thread-line]')).toHaveCSS('opacity', '1');
+  await expect(page.locator('[data-thread-reset]')).toHaveCount(0);
   await context.close();
 });
 
@@ -855,6 +973,7 @@ for (const path of ['/projects', '/resume', '/impressum']) {
     await page.goto(path);
     await page.waitForLoadState('networkidle');
     await expect(page.locator('[data-thread-root]')).toHaveCount(0);
+    await expect(page.locator('[data-thread-reset]')).toHaveCount(0);
     await expect(page.locator('html')).not.toHaveClass(/\bthread-on\b/);
   });
 }
@@ -1211,7 +1330,7 @@ test.describe('scroll thread, start', () => {
     await page.addStyleTag({ content: 'html { scroll-behavior: auto !important; }' });
     await expect(page.locator('[data-thread-knot]')).toHaveCSS('opacity', '1', { timeout: 6000 });
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '1', { timeout: 8000 });
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
     const full = await dashLength(page);
     const y = await page.evaluate(() => window.scrollY);
     // The viewport loses the URL bar's height; scrollY stays where it was.
@@ -1219,7 +1338,7 @@ test.describe('scroll thread, start', () => {
     await page.waitForTimeout(800);
     expect(await page.evaluate(() => window.scrollY)).toBe(y);
     expect(await dashLength(page)).toBeCloseTo(full, 0);
-    await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '1');
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '');
     await context.close();
   });
 });
