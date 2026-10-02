@@ -703,7 +703,8 @@ export function initThread(): () => void {
       resetBtn = document.createElement('button');
       resetBtn.type = 'button';
       resetBtn.className = 'site-thread-reset';
-      resetBtn.setAttribute('aria-label', 'Back to top');
+      // Its name starts with its visible label (RESET), for speech input.
+      resetBtn.setAttribute('aria-label', 'Reset: back to top');
       resetBtn.setAttribute('data-thread-reset', '');
       const tip = document.createElement('span');
       tip.className = 'site-thread-reset__tip';

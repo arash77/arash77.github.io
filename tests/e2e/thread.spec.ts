@@ -326,7 +326,9 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('[data-thread-end]')).toHaveCSS('opacity', '0');
     await expect(page.locator('[data-thread-pen]')).toHaveCSS('opacity', '0');
     await expect(page.locator('[data-thread-reset]')).toBeVisible();
-    await expect(page.locator('[data-thread-reset]')).toHaveAttribute('aria-label', 'Back to top');
+    // Its name starts with the label it shows, so "click Reset" by voice finds it.
+    await expect(page.locator('[data-thread-reset]')).toHaveAccessibleName('Reset: back to top');
+    await expect(page.getByRole('button', { name: /^reset\b/i })).toHaveCount(1);
   });
 
   test('the reset switch focus ring passes clear of its label at every width', async ({ page }) => {
