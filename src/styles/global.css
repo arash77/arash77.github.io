@@ -807,6 +807,13 @@ html.thread-on #main-content:focus {
   position: absolute;
   inset: -9px;
 }
+/* The button hit-tests as a circle, which falls away from the tip's edge
+   off its centre line: while hovered, its whole square keeps the hover. */
+.site-thread-reset:not([data-tip-off]):hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
 
 /* Print: the route is laid out for the screen, not for the paper width, so
    it would run through the reflowed text. Print the page as it is without the

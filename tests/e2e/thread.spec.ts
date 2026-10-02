@@ -429,6 +429,51 @@ test.describe('scroll thread, reduced motion', () => {
     }
   });
 
+  test('the reset switch hover label can be hovered from anywhere on the round switch, not only its centre line', async ({ page }) => {
+    const sides = new Set<string>();
+    for (const width of [1280, 1024, 600, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await ready(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const reset = page.locator('[data-thread-reset]');
+      const tip = page.locator('.site-thread-reset__tip');
+      const side = (await reset.getAttribute('data-side'))!;
+      sides.add(side);
+      const b = (await reset.boundingBox())!;
+      const [cx, cy] = [b.x + b.width / 2, b.y + b.height / 2];
+      // Where the pointer leaves the switch, and with it the tip, if anywhere.
+      await reset.evaluate((el: HTMLElement, [cx, cy]) => {
+        const w = window as unknown as { __left: string | null };
+        el.addEventListener('mouseleave', (e) => (w.__left ??= `(${e.clientX - cx}, ${e.clientY - cy})`));
+      }, [cx, cy]);
+      // Points of the round switch off its line to the tip (above and below it
+      // beside the switch, either side of it below): from these a move to the
+      // tip leaves the circle before it meets the tip's edge.
+      const starts = side === 'below' ? [[13, 1], [-12, 4], [10, 9]] : [[4, 10], [0, -12], [-6, 12]];
+      for (const [sx, dy] of starts) {
+        const dx = side === 'left' ? -sx : sx;
+        const [x0, y0] = [cx + dx, cy + dy];
+        await page.mouse.move(5, 5);
+        await page.mouse.move(x0, y0);
+        await expect(tip, `${width}px: shown from (${dx}, ${dy})`).toHaveCSS('opacity', '1');
+        await page.evaluate(() => ((window as unknown as { __left: string | null }).__left = null));
+        // 1px at a time onto the tip: level across beside the switch (then up
+        // or down onto it from above or below its reach), straight down below it.
+        const t = (await tip.boundingBox())!;
+        const x1 = side === 'below' ? x0 : side === 'right' ? t.x + 3 : t.x + t.width - 3;
+        const y1 = side === 'below' ? t.y + 3 : y0;
+        await page.mouse.move(x1, y1, { steps: Math.ceil(Math.abs(x1 - x0) + Math.abs(y1 - y0)) });
+        const y2 = Math.min(Math.max(y1, t.y + 3), t.y + t.height - 3);
+        if (y2 !== y1) await page.mouse.move(x1, y2, { steps: Math.ceil(Math.abs(y2 - y1)) });
+        const left = await page.evaluate(() => (window as unknown as { __left: string | null }).__left);
+        expect(left, `${width}px ${side}: from (${dx}, ${dy}) the pointer left the switch at ${left}`).toBeNull();
+        await expect(tip).toHaveCSS('opacity', '1');
+      }
+    }
+    expect([...sides].sort()).toEqual(['below', 'left', 'right']);
+  });
+
   test('the reset switch label is readable in both themes', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
