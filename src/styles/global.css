@@ -448,15 +448,11 @@ html.thread-on [data-thread-ink] {
   }
 }
 
-/* Contact cards: silkscreen marks, like a component's footprint on a board:
-   corner marks and a reference designator (J1-J4), shown when the line has
-   reached the cards; lit by the chip network when the signal arrives. */
-html.thread-on main {
-  counter-reset: thread-card;
-}
+/* Contact cards: silkscreen corner marks, like a component's footprint on a
+   board, shown when the line has reached the cards; lit by the chip network
+   when the signal arrives. */
 html.thread-on [data-thread-card] {
   position: relative;
-  counter-increment: thread-card;
   transition: border-color 0.3s ease-out, box-shadow 0.3s ease-out;
 }
 html.thread-on [data-thread-card]::after {
@@ -478,22 +474,8 @@ html.thread-on [data-thread-card]::after {
   /* Gone quickly as the line retracts past the cards; shown slowly (below). */
   transition: opacity 0.3s ease-out;
 }
-html.thread-on [data-thread-card]::before {
-  content: 'J' counter(thread-card);
-  position: absolute;
-  top: 8px;
-  /* Left of the corner mark's arm (6px in, 12px long), not under it. */
-  right: 24px;
-  font: 9px/1 var(--font-mono);
-  letter-spacing: 0.06em;
-  color: hsl(var(--primary) / 0.75);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease-out;
-}
 @media screen {
-  html.thread-on [data-thread-card][data-thread-done]::after,
-  html.thread-on [data-thread-card][data-thread-done]::before {
+  html.thread-on [data-thread-card][data-thread-done]::after {
     opacity: 1;
     transition: opacity 0.6s ease;
   }
@@ -505,10 +487,6 @@ html.thread-on [data-thread-card]::before {
   }
   html.thread-on [data-thread-card][data-thread-lit]::after {
     --mark: hsl(var(--secondary));
-  }
-  html.thread-on [data-thread-card][data-thread-lit]::before {
-    color: hsl(var(--secondary));
-    transition: opacity 0.6s ease, color 0.3s ease var(--thread-lit-delay, 0s);
   }
 }
 
@@ -636,19 +614,6 @@ html.thread-on [data-thread-card]::before {
   stroke: hsl(186 20% 45%);
   stroke-width: 1px;
 }
-.site-thread__chip-dot {
-  fill: hsl(186 20% 55%);
-}
-.site-thread__chip-text {
-  font: 600 8px var(--font-mono);
-  letter-spacing: 0.08em;
-  fill: hsl(186 20% 78%);
-}
-.site-thread__silk {
-  font: 9px var(--font-mono);
-  letter-spacing: 0.06em;
-  fill: hsl(var(--muted-foreground) / 0.85);
-}
 .site-thread__pad {
   fill: hsl(var(--primary) / 0.85);
 }
@@ -707,7 +672,8 @@ html.thread-on #main-content:focus {
 .site-thread-reset__tip {
   position: absolute;
   top: 50%;
-  left: calc(100% + 4px);
+  /* Clear of the ground symbol on that side of the switch. */
+  left: calc(100% + 12px);
   transform: translateY(-50%);
   white-space: nowrap;
   font: 11px/1.2 var(--font-mono);
@@ -723,10 +689,10 @@ html.thread-on #main-content:focus {
 }
 .site-thread-reset[data-side='left'] .site-thread-reset__tip {
   left: auto;
-  right: calc(100% + 4px);
+  right: calc(100% + 12px);
 }
 .site-thread-reset[data-side='below'] .site-thread-reset__tip {
-  top: calc(100% + 4px);
+  top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
 }
@@ -744,8 +710,7 @@ html.thread-on #main-content:focus {
   html.thread-on .site-thread-reset {
     display: none;
   }
-  html.thread-on [data-thread-card]::after,
-  html.thread-on [data-thread-card]::before {
+  html.thread-on [data-thread-card]::after {
     display: none;
   }
   html.thread-on.thread-drawing [data-thread-line] {
@@ -759,7 +724,6 @@ html.thread-on #main-content:focus {
   html.thread-on [data-thread-ink],
   html.thread-on [data-thread-card],
   html.thread-on [data-thread-card]::after,
-  html.thread-on [data-thread-card]::before,
   .site-thread__board,
   .site-thread__net,
   .site-thread__pin--in,

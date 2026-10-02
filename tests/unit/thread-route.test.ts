@@ -551,11 +551,29 @@ function checkBoard(fx: Fixture) {
     }),
   );
   expect(nearest, 'ground symbol clearance from the input').toBeGreaterThanOrEqual(8);
-  // SW1 is wired to its pads: the reset wire ends at a near-side pad's outer edge, the ground leaves from a far-side pad.
+  // The reset switch bridges two of the chip's bottom pins: their wires land on
+  // its pads on opposite sides, and the ground symbol hangs from a pad on one
+  // side only (pressing the switch is what joins the other side to ground).
   const [sx, sy] = board.reset;
-  const padEnds = board.wires.flatMap((w) => [w[0], w[w.length - 1]]).filter(([x, y]) => Math.abs(Math.abs(x - sx) - (SW_PAD_X + 2.5)) < 0.01 && Math.abs(Math.abs(y - sy) - SW_PAD_Y) < 0.01);
-  expect(padEnds).toHaveLength(2);
-  expect(Math.sign(padEnds[0][0] - sx)).not.toBe(Math.sign(padEnds[1][0] - sx));
+  const onPad = (p: readonly number[]) => [-1, 1].some((i) => [-1, 1].some((j) => Math.hypot(p[0] - (sx + i * SW_PAD_X), p[1] - (sy + j * SW_PAD_Y)) < 0.01));
+  const fromPins = board.wires.filter((w) => Math.abs(w[0][1] - board.pinBottom) < 0.01 && w[0][0] !== route.end[0]);
+  expect(fromPins).toHaveLength(2);
+  for (const w of fromPins) {
+    expect(board.botPins.some((x, k) => k !== board.inputPin && Math.abs(x - w[0][0]) < 0.01), 'starts at a bottom pin').toBe(true);
+    expect(onPad(w[w.length - 1]), 'lands on a switch pad').toBe(true);
+  }
+  expect(Math.sign(fromPins[0][0][0] - sx)).toBe(-Math.sign(fromPins[1][0][0] - sx));
+  const toGround = board.wires.filter((w) => Math.hypot(w[w.length - 1][0] - gx, w[w.length - 1][1] - gy) < 0.01);
+  expect(toGround).toHaveLength(1);
+  expect(onPad(toGround[0][0]), 'the ground leaves from a switch pad').toBe(true);
+  // The switch and its pads stay clear of the input trace and stub.
+  const swClear = Math.min(
+    ...[...sample([route.end, [route.end[0] - route.endDir * 60, route.end[1]]]), ...sample(board.wires[0])].map(([x, y]) => {
+      const dx = Math.max(0, Math.abs(x - sx) - (SW_PAD_X + 2.5)), dy = Math.max(0, Math.abs(y - sy) - (SW_PAD_Y + 2));
+      return Math.hypot(dx, dy);
+    }),
+  );
+  expect(swClear, 'switch clearance from the input').toBeGreaterThanOrEqual(6);
   // Circuit style: only straight and 45° legs.
   for (const n of board.nets) {
     for (const [x0, y0, x1, y1] of segsOf(n.points)) {

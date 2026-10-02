@@ -12,7 +12,7 @@
  * Everything visual is opt-in through `html.thread-on`, which only this script
  * adds, so without JavaScript the page renders exactly as before.
  */
-import { buildBoard, SW_PAD_X, SW_PAD_Y, type Board } from './board';
+import { buildBoard, GROUND_BAR_GAP, SW_PAD_X, SW_PAD_Y, type Board } from './board';
 import { buildRoute, carryOver, computeRails, lengthAtY, loopReach, pointAt, type LayoutSnapshot, type Rect, type Route, type SectionLayout } from './route';
 
 const SPRING_K = 40;
@@ -28,8 +28,14 @@ const SWEEP_MIN_SPEED = 400; // px/s: a deliberate sweep, not a stroll
 const PULSE_LEN = 26;
 const PULSE_SPEED = 950;
 const PULSE_LIFE = 1.2;
-/** Once the page is back at the top, the reset pulse runs the last stretch into the start pad at this speed. */
-const RESET_RUN_SPEED = 1200;
+/**
+ * The reset signal runs back to the start pad in this long (s per px of
+ * drawn line, within bounds), the page following it: steady enough to
+ * visibly cross every horizontal wire, quick enough for a "back to top".
+ */
+const REWIND_S_PER_PX = 1 / 5500;
+const REWIND_MIN_S = 0.9;
+const REWIND_MAX_S = 2;
 const RESET_PRESS_MS = 320;
 const FLASH_MS = 700;
 /** The arrival pulse starts this far before the end and runs on up the stub into pin 1. */
@@ -107,9 +113,8 @@ interface Pulse {
   pos: number;
   /** Runs along its own path (the arrival into pin 1) instead of the route; ends at `end`. */
   end?: number;
-  /** The reset pulse: rides the reading position while the page scrolls back up. */
-  ride?: boolean;
-  lastY?: number;
+  /** Placed by the reset each frame (see stepRewind), not by its speed; never fades. */
+  held?: boolean;
   /** Ran off its end (not faded out): what it reached. */
   onEnd?: () => void;
 }
@@ -180,8 +185,12 @@ export function initThread(): () => void {
   let resetBtn: HTMLButtonElement | null = null;
   /** When the nets fire after power-on (ms): once the arrival pulse has reached pin 1. */
   let netDelay = 0;
-  /** The drawn length the reading position asked for in the last frame. */
-  let lastTarget = 0;
+  /**
+   * The reset in flight: its signal runs back up the trace from `from` over
+   * `T` seconds, the line retracting behind it and the page following it.
+   * `y` is the scroll position it set last (any other means the reader took over).
+   */
+  let rewind: { p: Pulse; from: number; t0: number; T: number; y: number } | null = null;
   let ptr: { x: number; y: number; t: number } | null = null;
   let hash = new Map<number, number[]>();
   let nodes: Anchor[] = [];
@@ -533,7 +542,10 @@ export function initThread(): () => void {
       }
       holdAt(target);
     }
+    // A reset in flight goes on from the same place in the content.
+    const rw = rewind;
     clearPulses();
+    if (rw && prev && started) beginRewind(carryOver(prev, next, Math.max(0, rw.p.pos)), Math.max(0.3, rw.T - (now() - rw.t0)));
     render(now());
     schedule();
   }
@@ -598,7 +610,7 @@ export function initThread(): () => void {
     // The first wire is the stub from the end point up into pin 1: part of the trace, drawn when the line arrives.
     b.wires.forEach((w, k) => svgEl('path', { d: polyline(w), class: k === 0 ? 'site-thread__wire site-thread__stub' : 'site-thread__wire' }, g));
     for (const [x, y] of b.grounds) {
-      [20, 12, 5].forEach((wd, k) => svgEl('path', { d: `M${x - wd / 2},${y + k * 4.5}H${x + wd / 2}`, class: 'site-thread__wire' }, g));
+      [16, 10, 4].forEach((wd, k) => svgEl('path', { d: `M${x - wd / 2},${y + k * GROUND_BAR_GAP}H${x + wd / 2}`, class: 'site-thread__wire' }, g));
     }
     const { cx, cy, w, h } = b.chip;
     const left = b.inputPin === 0;
@@ -607,15 +619,12 @@ export function initThread(): () => void {
     svgEl('rect', { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 2.5, class: 'site-thread__chip' }, g);
     const nx = left ? cx - w / 2 : cx + w / 2;
     svgEl('path', { d: `M${nx},${cy - 4}A4,4 0 0 ${left ? 1 : 0} ${nx},${cy + 4}`, class: 'site-thread__chip-notch' }, g);
-    svgEl('circle', { cx: cx + (left ? -1 : 1) * (w / 2 - 6), cy: cy + h / 2 - 6, r: 1.6, class: 'site-thread__chip-dot' }, g);
-    svgEl('text', { x: cx, y: cy + 3, 'text-anchor': 'middle', class: 'site-thread__chip-text' }, g).textContent = 'AK-01';
-    // SW1: four pads, the body and the actuator that presses in.
+    // The reset switch: four pads (its legs, on the wires), the body and the actuator that presses in.
     const [sx, sy] = b.reset;
     const sw = svgEl('g', { class: 'site-thread__switch' }, g);
     for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) svgEl('rect', { x: sx + dx * SW_PAD_X - 2.5, y: sy + dy * SW_PAD_Y - 2, width: 5, height: 4, rx: 0.8, class: 'site-thread__pad' }, sw);
-    svgEl('rect', { x: sx - 8, y: sy - 8, width: 16, height: 16, rx: 2, class: 'site-thread__switch-body' }, sw);
-    svgEl('circle', { cx: sx, cy: sy, r: 4.6, class: 'site-thread__switch-act' }, sw);
-    for (const l of b.labels) svgEl('text', { x: l.x, y: l.y, 'text-anchor': l.anchor, class: 'site-thread__silk' }, g).textContent = l.text;
+    svgEl('rect', { x: sx - SW_PAD_X + 2, y: sy - SW_PAD_Y - 1, width: 2 * (SW_PAD_X - 2), height: 2 * (SW_PAD_Y + 1), rx: 2, class: 'site-thread__switch-body' }, sw);
+    svgEl('circle', { cx: sx, cy: sy, r: 4, class: 'site-thread__switch-act' }, sw);
 
     // The reset switch's button: after the contact cards in the tab order (it
     // is created here, so the page without JavaScript has none).
@@ -628,7 +637,7 @@ export function initThread(): () => void {
       const tip = document.createElement('span');
       tip.className = 'site-thread-reset__tip';
       tip.setAttribute('aria-hidden', 'true');
-      tip.textContent = 'Reset · back to top';
+      tip.textContent = 'Back to top';
       resetBtn.append(tip);
       resetBtn.addEventListener('click', resetToTop, { signal });
     }
@@ -668,7 +677,7 @@ export function initThread(): () => void {
   }
 
   /** A pulse along the route (or along `path` / `pathLen`, its own polyline). */
-  function spawnPulse(from: number, dir: 1 | -1, opts: Partial<Pick<Pulse, 'speed' | 'life' | 'end' | 'ride' | 'onEnd'>> & { d?: string } = {}) {
+  function spawnPulse(from: number, dir: 1 | -1, opts: Partial<Pick<Pulse, 'speed' | 'life' | 'end' | 'held' | 'onEnd'>> & { d?: string } = {}) {
     const r = route;
     if (!r || reduced) return null;
     const len = opts.end ?? r.total;
@@ -678,8 +687,10 @@ export function initThread(): () => void {
       class: 'site-thread__pulse',
       'stroke-width': (r.strokeWidth + 1.6).toFixed(2),
       'stroke-dasharray': `${PULSE_LEN} ${(len + PULSE_LEN * 2).toFixed(2)}`,
+      // Where it starts, before its first frame (without it the dash would sit at the path's start).
+      'stroke-dashoffset': (PULSE_LEN / 2 - from).toFixed(2),
     }, pulseG!);
-    const p: Pulse = { el, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, ride: opts.ride, lastY: window.scrollY, onEnd: opts.onEnd };
+    const p: Pulse = { el, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, held: opts.held, onEnd: opts.onEnd };
     pulses.push(p);
     schedule();
     return p;
@@ -688,6 +699,7 @@ export function initThread(): () => void {
   function clearPulses() {
     for (const p of pulses) p.el.remove();
     pulses = [];
+    rewind = null;
   }
 
   /** A short flash where a pulse arrives (the start pad, the pen, pin 1). */
@@ -707,27 +719,11 @@ export function initThread(): () => void {
   function updatePulses(t: number, L: number, arrived: boolean) {
     pulses = pulses.filter((p) => {
       const age = t - p.t0;
-      if (p.ride) {
-        // Scrolling down again cancels the reset.
-        if (window.scrollY > (p.lastY ?? 0) + 2) {
-          p.el.remove();
-          return false;
-        }
-        p.lastY = window.scrollY;
-        p.pos = Math.max(0, Math.min(L, lastTarget));
-        if (window.scrollY <= 1 || (route && p.pos <= route.minLen + 1)) {
-          // Back at the top: run the last stretch into the start pad.
-          p.ride = false;
-          p.from = p.pos;
-          p.t0 = t;
-          p.speed = RESET_RUN_SPEED;
-          p.life = p.pos / RESET_RUN_SPEED + 0.3;
-        }
-      } else p.pos = p.from + p.dir * age * p.speed;
+      if (!p.held) p.pos = p.from + p.dir * age * p.speed;
       const far = p.end ?? L;
       const offStart = p.dir < 0 && p.pos < 0;
       const offEnd = p.dir > 0 && p.pos > far;
-      if (offStart || offEnd || (!p.ride && age > p.life)) {
+      if (offStart || offEnd || (!p.held && age > p.life)) {
         p.el.remove();
         if (offStart && p.end === undefined) flash(knot);
         else if (offEnd) {
@@ -738,7 +734,7 @@ export function initThread(): () => void {
         return false;
       }
       p.el.setAttribute('stroke-dashoffset', (PULSE_LEN / 2 - p.pos).toFixed(2));
-      p.el.style.opacity = p.ride ? '1' : String(Math.max(0, 1 - (age / p.life) ** 3));
+      p.el.style.opacity = p.held ? '1' : String(Math.max(0, 1 - (age / p.life) ** 3));
       return true;
     });
   }
@@ -755,15 +751,62 @@ export function initThread(): () => void {
     spawnPulse(0, 1, { d: polyline(pts), end: len, life: len / PULSE_SPEED + 0.2, onEnd: () => flash(boardG!.querySelector('.site-thread__pin--in')) });
   }
 
+  function beginRewind(from: number, T: number): boolean {
+    const p = from > 0 ? spawnPulse(from, -1, { held: true, life: Infinity }) : null;
+    if (!p) return false;
+    rewind = { p, from, t0: now(), T, y: window.scrollY };
+    return true;
+  }
+
+  function stopRewind() {
+    if (!rewind) return;
+    const { p } = rewind;
+    p.el.remove();
+    pulses = pulses.filter((q) => q !== p);
+    rewind = null;
+  }
+
+  /**
+   * One frame of the reset: the signal moves back along the trace (eased, so
+   * it leaves the chip and reaches the start pad gently), the drawn line ends
+   * right behind it and the page scrolls to keep it on the reading line. On a
+   * horizontal wire the page holds still while the signal crosses it.
+   */
+  function stepRewind(t: number): boolean {
+    const rw = rewind!;
+    const r = route!;
+    // The reader took over (scrollbar, find in page, a scroll the listeners missed): let go.
+    if (Math.abs(window.scrollY - rw.y) > 2) {
+      stopRewind();
+      return false;
+    }
+    const u = Math.min(1, Math.max(0, (t - rw.t0) / rw.T));
+    // On past the start, all the way into the start pad (which flashes, see updatePulses).
+    rw.p.pos = rw.from - (rw.from + PULSE_LEN) * ((1 - Math.cos(Math.PI * u)) / 2);
+    // The line retracts with it, down to what the top of the page shows.
+    const vh = window.innerHeight;
+    const rest = Math.max(r.minLen, lengthAtY(r, vh * READ_LINE - mainTop));
+    shown = Math.max(rest, Math.min(rw.from, rw.p.pos + PULSE_LEN / 2));
+    vel = 0;
+    const follow = Math.max(0, Math.min(html.scrollHeight - vh, mainTop + pointAt(r, Math.max(0, rw.p.pos))[1] - vh * READ_LINE));
+    // In the last stretch the page settles on the very top (the start pad can sit below the reading line).
+    const k = Math.min(1, Math.max(0, (u - 0.85) / 0.15));
+    window.scrollTo({ top: follow * (1 - k * k * (3 - 2 * k)), behavior: 'instant' });
+    rw.y = window.scrollY;
+    if (u >= 1) rewind = null;
+    return true;
+  }
+
   function resetToTop() {
     boardG!.setAttribute('data-pressed', '');
     window.setTimeout(() => boardG!.removeAttribute('data-pressed'), RESET_PRESS_MS);
-    // The reset signal goes back up the trace with the reader and into the start pad.
-    for (const p of pulses) if (p.ride) p.el.remove();
-    pulses = pulses.filter((p) => !p.ride);
-    const L = Math.max(0, Math.min(route?.total ?? 0, shown));
-    if (L > 0) spawnPulse(L, -1, { ride: true, life: Infinity });
-    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+    // The reset signal runs back up the trace into the start pad and the page
+    // follows it (under reduced motion, or without a line, straight to the top).
+    stopRewind();
+    const from = Math.max(0, Math.min(route?.total ?? 0, shown));
+    if (!beginRewind(from, Math.min(REWIND_MAX_S, Math.max(REWIND_MIN_S, from * REWIND_S_PER_PX)))) {
+      window.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' });
+    }
     // Keyboard users continue from the top of the content, not from the footer.
     if (!main!.hasAttribute('tabindex')) main!.setAttribute('tabindex', '-1');
     main!.focus({ preventScroll: true });
@@ -799,7 +842,8 @@ export function initThread(): () => void {
     }
 
     const head = pointAt(r, L);
-    const showPen = started && !reduced && L > 1 && !arrived && !veiled;
+    // While the reset runs, its signal is the line's head.
+    const showPen = started && !reduced && L > 1 && !arrived && !veiled && !rewind;
     // Fades out where it comes to rest, but goes at once when the line is
     // pulled back to nothing (it would linger on the start knot's spot).
     const penNow = L <= 1 || veiled ? 'none' : '';
@@ -844,7 +888,6 @@ export function initThread(): () => void {
     const dt = lastT ? Math.min(0.05, Math.max(0, t - lastT)) : 1 / 60;
     lastT = t;
     const target = targetLen();
-    lastTarget = target;
     // After an in-place start the line tracks the target exactly while the
     // page scrolls (a hash link's smooth scroll), so it never trails behind,
     // or sweeps in from a gate the scroll has carried out of view. Once the
@@ -852,8 +895,12 @@ export function initThread(): () => void {
     // reveals (exact tracking would make it jump the moment a gate opens).
     const scrolling = window.scrollY !== lastTickY;
     lastTickY = window.scrollY;
-    holdAt(target);
-    if (reduced || (t < snapUntil && scrolling)) {
+    // The reset places the line (and the page) itself.
+    const placed = !!rewind && stepRewind(t);
+    if (!placed) holdAt(target);
+    if (placed) {
+      // Nothing to spring.
+    } else if (reduced || (t < snapUntil && scrolling)) {
       shown = target;
       vel = 0;
     } else {
@@ -879,7 +926,7 @@ export function initThread(): () => void {
     render(now());
     settled = shown === target && vel === 0;
     // A closed gate keeps the loop polling until its content reveals.
-    if (!raf && (!settled || pulses.length || capPoll)) raf = requestAnimationFrame(tick);
+    if (!raf && (!settled || pulses.length || capPoll || rewind)) raf = requestAnimationFrame(tick);
     else lastT = 0;
   }
 
@@ -953,7 +1000,7 @@ export function initThread(): () => void {
     if (best < 0) return;
     const at = best * r.step;
     // One signal per crossing (a sweep reports several events near the same spot).
-    if (pulses.some((p) => p.end === undefined && !p.ride && p.speed === PULSE_SPEED && Math.abs(p.from - at) < 60 && t - p.t0 < 0.25)) return;
+    if (pulses.some((p) => p.end === undefined && !p.held && p.speed === PULSE_SPEED && Math.abs(p.from - at) < 60 && t - p.t0 < 0.25)) return;
     // The signal runs out both ways along the trace from where it was touched.
     spawnPulse(at, 1);
     spawnPulse(at, -1);
@@ -1037,6 +1084,8 @@ export function initThread(): () => void {
     });
   }, { passive: true, signal });
   window.addEventListener('pointermove', onPointerMove, { passive: true, signal });
+  // The reader scrolling during a reset takes over from it.
+  for (const type of ['wheel', 'touchstart', 'keydown'] as const) window.addEventListener(type, stopRewind, { passive: true, signal });
   document.fonts?.addEventListener?.('loadingdone', scheduleRebuild, { signal });
   reduceQuery.addEventListener('change', () => {
     reduced = reduceQuery.matches;

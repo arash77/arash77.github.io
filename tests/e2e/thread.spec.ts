@@ -145,7 +145,7 @@ function boardCollisions(page: Page) {
         check(s.left + p.x, s.top + p.y, isNet ? 'net' : 'wire');
       }
     }
-    for (const el of svg.querySelectorAll<SVGGraphicsElement>('.site-thread__chip, .site-thread__switch, .site-thread__silk, .site-thread__chip-text')) {
+    for (const el of svg.querySelectorAll<SVGGraphicsElement>('.site-thread__chip, .site-thread__switch')) {
       const b = el.getBBox();
       for (const [x, y] of [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height], [b.x + b.width / 2, b.y + b.height / 2]]) {
         check(s.left + x, s.top + y, el.getAttribute('class') ?? 'board');
@@ -286,8 +286,10 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('[data-thread-line]')).toHaveCSS('opacity', '0');
     // Ink underline and the cards' silkscreen marks are actually painted.
     await expect(page.locator('[data-thread-ink]').first()).toHaveCSS('background-size', '100% 2px');
-    const marks = await page.locator('[data-thread-card]').evaluateAll((els) => els.map((el) => [getComputedStyle(el, '::after').opacity, getComputedStyle(el, '::before').opacity]));
-    expect(marks.flat().every((o) => o === '1'), JSON.stringify(marks)).toBe(true);
+    const marks = await page.locator('[data-thread-card]').evaluateAll((els) => els.map((el) => getComputedStyle(el, '::after').opacity));
+    expect(marks.every((o) => o === '1'), JSON.stringify(marks)).toBe(true);
+    // No silkscreen text anywhere on the board.
+    await expect(page.locator('[data-thread-board] text')).toHaveCount(0);
     // The chip network is on and powered; every card is lit; no end pad and no pen.
     const board = page.locator('[data-thread-board]');
     await expect(board).toHaveAttribute('data-on', '');
@@ -301,26 +303,6 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('[data-thread-pen]')).toHaveCSS('opacity', '0');
     await expect(page.locator('[data-thread-reset]')).toBeVisible();
     await expect(page.locator('[data-thread-reset]')).toHaveAttribute('aria-label', 'Back to top');
-  });
-
-  test('the reset switch focus ring passes clear of its silkscreen label at every width', async ({ page }) => {
-    for (const width of WIDTHS) {
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto('/');
-      await ready(page);
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      const gap = await page.evaluate(() => {
-        const btn = document.querySelector('[data-thread-reset]')!.getBoundingClientRect();
-        const cs = getComputedStyle(document.querySelector('[data-thread-reset]')!);
-        // Ring: outline offset + width outside the (round) button.
-        const ring = btn.width / 2 + 1 + 2;
-        const cx = btn.left + btn.width / 2, cy = btn.top + btn.height / 2;
-        const label = [...document.querySelectorAll<SVGTextElement>('.site-thread__silk')].find((t) => t.textContent === 'SW1 RESET')!.getBoundingClientRect();
-        const dx = Math.max(label.left - cx, 0, cx - label.right), dy = Math.max(label.top - cy, 0, cy - label.bottom);
-        return { gap: Math.hypot(dx, dy) - ring, round: cs.borderRadius };
-      });
-      expect(gap.gap, `${width}px`).toBeGreaterThan(0);
-    }
   });
 
   test('the reset switch hover label stays on screen at every width', async ({ page }) => {
@@ -462,8 +444,7 @@ test.describe('scroll thread, reduced motion', () => {
     // Lit nodes, ink and the cards' marks and lighting print as the page without the thread.
     await expect(page.locator('[data-thread-node]').last()).toHaveCSS('background-color', await themeColor(page, 'hsl(var(--card))'));
     await expect(page.locator('[data-thread-ink]').first()).toHaveCSS('background-size', '0% 2px');
-    const marks = await page.locator('[data-thread-card]').first().evaluate((el) => [getComputedStyle(el, '::after').display, getComputedStyle(el, '::before').display]);
-    expect(marks).toEqual(['none', 'none']);
+    expect(await page.locator('[data-thread-card]').first().evaluate((el) => getComputedStyle(el, '::after').display)).toBe('none');
     await expect(page.locator('[data-thread-card]').first()).toHaveCSS('border-color', await themeColor(page, 'hsl(var(--border))'));
   });
 
@@ -686,6 +667,86 @@ test.describe('scroll thread, normal motion', () => {
     await expect(page.locator('[data-thread-board]')).not.toHaveAttribute('data-pressed', '');
     // The reset signal arrives at the start pad, which flashes.
     await expect.poll(() => page.evaluate(() => (window as unknown as { __knotFlash: boolean }).__knotFlash), { timeout: 4000 }).toBe(true);
+  });
+
+  test('the reset signal crosses every horizontal wire on screen, the line retracting behind it', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    // Each frame: the signal's position, the drawn length and the signal's place on screen.
+    await page.evaluate(() => {
+      const w = window as unknown as { __rw: { pos: number; drawn: number; x: number; ly: number; y: number; flat: boolean }[] };
+      w.__rw = [];
+      const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
+      const scale = line.getTotalLength() / parseFloat(line.getAttribute('pathLength')!);
+      const at = (l: number) => line.getPointAtLength(Math.max(0, l) * scale);
+      const f = () => {
+        const el = document.querySelector('[data-thread-pulses] path');
+        if (el) {
+          const pos = 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0');
+          const a = at(pos - 8), b = at(pos + 8), p = at(pos);
+          const m = line.getScreenCTM()!;
+          w.__rw.push({ pos, drawn: parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]), x: p.x, ly: p.y, y: m.d * p.y + m.f, flat: Math.abs(a.y - b.y) < 0.5 && Math.abs(a.x - b.x) > 15 });
+        }
+        if (w.__rw.length < 600) requestAnimationFrame(f);
+      };
+      requestAnimationFrame(f);
+    });
+    await page.locator('[data-thread-reset]').click();
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 4000 }).toBe(0);
+    await page.waitForTimeout(300);
+    const { log, rows, rest, vh } = await page.evaluate(() => {
+      const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
+      // Horizontal wires (200px or longer) of the route, by their y and x span.
+      const total = line.getTotalLength();
+      const rows: { y: number; x0: number; x1: number }[] = [];
+      let run: { y: number; x0: number; x1: number } | null = null;
+      for (let l = 0; l <= total; l += 2) {
+        const p = line.getPointAtLength(l), q = line.getPointAtLength(Math.min(total, l + 2));
+        if (Math.abs(p.y - q.y) < 0.01 && Math.abs(p.x - q.x) > 1.9) {
+          if (run && Math.abs(run.y - p.y) < 0.01) {
+            run.x0 = Math.min(run.x0, p.x, q.x);
+            run.x1 = Math.max(run.x1, p.x, q.x);
+          } else run = { y: p.y, x0: Math.min(p.x, q.x), x1: Math.max(p.x, q.x) };
+          if (run.x1 - run.x0 >= 200 && !rows.includes(run)) rows.push(run);
+        } else run = null;
+      }
+      return {
+        log: (window as unknown as { __rw: { pos: number; drawn: number; x: number; ly: number; y: number; flat: boolean }[] }).__rw,
+        rows,
+        rest: parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]),
+        vh: window.innerHeight,
+      };
+    });
+    expect(log.length, 'frames with the signal').toBeGreaterThan(30);
+    expect(rows.length, 'horizontal wires').toBeGreaterThan(3);
+    // It crosses every horizontal wire (seen inside it), instead of jumping from one end to the other.
+    for (const r of rows) {
+      const inside = log.some((e) => e.flat && Math.abs(e.ly - r.y) < 1 && e.x > r.x0 + 20 && e.x < r.x1 - 20);
+      expect(inside, `signal seen on the wire at y=${r.y.toFixed(0)} (${r.x0.toFixed(0)}-${r.x1.toFixed(0)})`).toBe(true);
+    }
+    for (const e of log) {
+      if (e.pos <= 0) continue;
+      // The page follows it: always on screen.
+      expect(e.y, `signal on screen at ${e.pos.toFixed(0)}`).toBeGreaterThan(-2);
+      expect(e.y, `signal on screen at ${e.pos.toFixed(0)}`).toBeLessThan(vh + 2);
+      // It is the line's head: on the drawn part, with the line retracting right behind it.
+      expect(e.drawn, 'on the drawn part').toBeGreaterThanOrEqual(e.pos - 0.5);
+      expect(e.drawn, 'line retracts behind it').toBeLessThanOrEqual(Math.max(rest, e.pos + 14));
+    }
+  });
+
+  test('scrolling during a reset hands the page back to the reader', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    await page.locator('[data-thread-reset]').click();
+    await page.waitForTimeout(300);
+    await page.mouse.wheel(0, 300);
+    await page.waitForTimeout(150);
+    const y = await page.evaluate(() => window.scrollY);
+    await page.waitForTimeout(600);
+    // No more scrolling by the reset, and its signal is gone.
+    expect(Math.abs((await page.evaluate(() => window.scrollY)) - y)).toBeLessThan(2);
+    await expect(page.locator('[data-thread-pulses] path')).toHaveCount(0);
   });
 
   test('a height-only resize (mobile URL bar) never makes the drawn length jump', async ({ page }) => {
