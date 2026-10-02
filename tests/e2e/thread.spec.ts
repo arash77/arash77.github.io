@@ -1465,6 +1465,25 @@ test.describe('scroll thread, normal motion', () => {
     await expect.poll(() => page.evaluate(() => (window as unknown as { __blink: boolean }).__blink), { timeout: 2000 }).toBe(true);
   });
 
+  test('the reset signal blinks each lit heading LED it runs back through', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    const bars = page.locator('[data-thread-bar]');
+    await expect(page.locator('[data-thread-bar][data-thread-done]')).toHaveCount(await bars.count());
+    await bars.evaluateAll((els) => {
+      const w = window as unknown as { __blinks: boolean[] };
+      w.__blinks = els.map(() => false);
+      els.forEach((el, i) => new MutationObserver(() => {
+        if (el.hasAttribute('data-flash')) w.__blinks[i] = true;
+      }).observe(el, { attributes: true, attributeFilter: ['data-flash'] }));
+    });
+    await page.locator('[data-thread-reset]').click();
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 4000 }).toBe(0);
+    // Each blinks as the signal passes, then goes dark with the line behind it.
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __blinks: boolean[] }).__blinks), { timeout: 2000 }).toEqual(Array(await bars.count()).fill(true));
+    await expect(page.locator('[data-thread-bar][data-thread-done]')).toHaveCount(0);
+  });
+
   test('a sweep across a powered net sends the signal into its card (which blinks) and its pin (which flashes); the ground wire stays quiet', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });

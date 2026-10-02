@@ -136,6 +136,8 @@ interface Pulse {
   held?: boolean;
   /** Not moved yet (it may start inside an LED). */
   fresh?: boolean;
+  /** Where it was drawn last (the reset moves its signal before the frame draws it). */
+  last?: number;
   /** Ran off its end (not faded out): what it reached. */
   onEnd?: () => void;
 }
@@ -801,11 +803,12 @@ export function initThread(): () => void {
         return false;
       }
       const age = t - p.t0;
-      const was = p.pos;
+      const was = p.last ?? p.pos;
       if (!p.held) p.pos = p.from + p.dir * age * p.speed;
       // A signal through a lit LED makes it blink (it is in series on the trace).
       if (p.end === undefined) for (const led of leds) if (led.done && Math.min(was, p.pos) <= led.exit && Math.max(was, p.pos) >= led.enter && (was < led.enter || was > led.exit || p.fresh)) flash(led.el);
       p.fresh = false;
+      p.last = p.pos;
       // On the trace, the light never runs past the drawn line's head: it pours
       // into the pen, and goes once none of it is left on the drawn line (also
       // when the line retracts past it).
