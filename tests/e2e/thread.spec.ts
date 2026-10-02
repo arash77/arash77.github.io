@@ -484,6 +484,25 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('#main-content')).toHaveCSS('outline-style', 'none');
   });
 
+  test('after a reset, a click in the page still sets where the next Tab goes', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await ready(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.locator('[data-thread-reset]').click();
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 3000 }).toBe(0);
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => document.activeElement!.getBoundingClientRect().top)).toBeLessThan(800);
+    // Later, a click on plain text in Contact, then Tab: on to the next link
+    // there, not back to the first one in the page (<main> took the click).
+    await page.locator('#contact p.text-lg').first().click({ position: { x: 4, y: 8 } });
+    expect(await page.evaluate(() => document.activeElement?.id)).not.toBe('main-content');
+    const y = await page.evaluate(() => window.scrollY);
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => !!document.activeElement?.closest('#contact'))).toBe(true);
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(y - 80);
+  });
+
   for (const width of WIDTHS) {
     test(`stays in bounds, clear of content and causes no horizontal overflow at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });

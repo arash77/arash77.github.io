@@ -927,7 +927,12 @@ export function initThread(): () => void {
       window.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' });
     }
     // Keyboard users continue from the top of the content, not from the footer.
-    if (!main!.hasAttribute('tabindex')) main!.setAttribute('tabindex', '-1');
+    // Focusable only for that: left so, <main> would take a later click on its
+    // text, and the next Tab would go back to its first link.
+    if (!main!.hasAttribute('tabindex')) {
+      main!.setAttribute('tabindex', '-1');
+      main!.addEventListener('blur', () => main!.removeAttribute('tabindex'), { once: true, signal });
+    }
     main!.focus({ preventScroll: true });
   }
 
