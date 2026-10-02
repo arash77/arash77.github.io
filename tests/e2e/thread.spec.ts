@@ -242,6 +242,36 @@ function countPulses(page: Page) {
 }
 const pulsesSeen = (page: Page) => page.evaluate(() => (window as unknown as { __pulses: number }).__pulses);
 
+/**
+ * Where the route runs through each heading bar (pads included, 4px beyond
+ * its ends): the length at which the line enters it (in the path's own
+ * pathLength units) and which way it runs.
+ */
+function barCrossings(page: Page) {
+  return page.evaluate(() => {
+    const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+    const line = svg.querySelector<SVGPathElement>('[data-thread-path]')!;
+    const s = svg.getBoundingClientRect();
+    const total = line.getTotalLength();
+    const unit = parseFloat(line.getAttribute('pathLength')!) / total;
+    return [...document.querySelectorAll<HTMLElement>('[data-thread-bar]')].map((el) => {
+      const r = el.getBoundingClientRect();
+      const y = r.top + r.height / 2 - s.top, x0 = r.left - 4 - s.left, x1 = r.right + 4 - s.left;
+      let enter = -1, xIn = 0, xOut = 0;
+      for (let l = 0; l <= total; l += 1) {
+        const p = line.getPointAtLength(l);
+        const on = Math.abs(p.y - y) < 0.6 && p.x >= x0 && p.x <= x1;
+        if (on && enter < 0) {
+          enter = l * unit;
+          xIn = p.x;
+        } else if (on) xOut = p.x;
+        else if (enter >= 0) break;
+      }
+      return { enter, flow: xOut < xIn ? 'rtl' : 'ltr', dataFlow: el.dataset.flow ?? '' };
+    });
+  });
+}
+
 /** Colour of `hsl(var(--name) / alpha)` in the current theme, as computed by the browser. */
 const themeColor = (page: Page, css: string) =>
   page.evaluate((css) => {
@@ -321,6 +351,30 @@ test.describe('scroll thread, reduced motion', () => {
         return Math.hypot(dx, dy) - ring;
       });
       expect(gap, `${width}px`).toBeGreaterThan(2);
+    }
+  });
+
+  test('the heading bars are LEDs on the trace: pads at both ends, lit, the cathode band where the line leaves', async ({ page }) => {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await ready(page);
+      const bars = page.locator('[data-thread-bar]');
+      const n = await bars.count();
+      expect(n).toBeGreaterThan(3);
+      await expect(page.locator('[data-thread-bar][data-thread-done]')).toHaveCount(n);
+      const looks = await bars.evaluateAll((els) => els.map((el) => [getComputedStyle(el, '::before').width, getComputedStyle(el, '::after').width, getComputedStyle(el).boxShadow]));
+      for (const [a, b, glow] of looks) {
+        expect([a, b]).toEqual(['5px', '5px']);
+        expect(glow, 'lit').not.toBe('none');
+      }
+      // The band marks the end the line leaves by, so it follows the route's zigzag.
+      const crossings = await barCrossings(page);
+      for (const c of crossings) {
+        expect(c.enter, 'the route runs through the bar').toBeGreaterThanOrEqual(0);
+        expect(c.dataFlow, `${width}px`).toBe(c.flow);
+      }
+      expect(new Set(crossings.map((c) => c.flow)).size, 'both directions').toBe(2);
     }
   });
 
@@ -464,6 +518,8 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('[data-thread-node]').last()).toHaveCSS('background-color', await themeColor(page, 'hsl(var(--card))'));
     await expect(page.locator('[data-thread-ink]').first()).toHaveCSS('background-size', '0% 2px');
     expect(await page.locator('[data-thread-card]').first().evaluate((el) => getComputedStyle(el, '::after').display)).toBe('none');
+    // The heading bars print as plain bars: no pads, no glow.
+    expect(await page.locator('[data-thread-bar]').first().evaluate((el) => [getComputedStyle(el, '::before').content, getComputedStyle(el).boxShadow])).toEqual(['none', 'none']);
     await expect(page.locator('[data-thread-card]').first()).toHaveCSS('border-color', await themeColor(page, 'hsl(var(--border))'));
   });
 
@@ -1201,6 +1257,61 @@ test.describe('scroll thread, normal motion', () => {
     }
   });
 
+  test('a heading LED is lit exactly while the drawn line has entered it', async ({ page }) => {
+    const crossings = await barCrossings(page);
+    const k = 1; // the Skills heading
+    const enter = crossings[k].enter;
+    expect(enter).toBeGreaterThan(0);
+    // Every frame: the drawn length and whether the LED is lit (both set in the same frame).
+    await page.evaluate((k) => {
+      const w = window as unknown as { __led: [number, boolean][] };
+      w.__led = [];
+      const line = document.querySelector('[data-thread-path]')!;
+      const bar = document.querySelectorAll('[data-thread-bar]')[k];
+      const f = () => {
+        w.__led.push([parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]), bar.hasAttribute('data-thread-done')]);
+        if (w.__led.length < 900) requestAnimationFrame(f);
+      };
+      requestAnimationFrame(f);
+    }, k);
+    const barTop = () => page.locator('[data-thread-bar]').nth(k).evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+    // Ahead of the line, then through it, then back.
+    await page.evaluate((y) => window.scrollTo(0, y - window.innerHeight * 0.95), await barTop());
+    await page.waitForTimeout(1500);
+    await expect(page.locator('[data-thread-bar]').nth(k)).not.toHaveAttribute('data-thread-done', '');
+    await page.evaluate((y) => window.scrollTo(0, y - window.innerHeight * 0.3), await barTop());
+    await expect(page.locator('[data-thread-bar]').nth(k)).toHaveAttribute('data-thread-done', '', { timeout: 4000 });
+    await page.evaluate((y) => window.scrollTo(0, y - window.innerHeight * 0.95), await barTop());
+    await expect(page.locator('[data-thread-bar]').nth(k)).not.toHaveAttribute('data-thread-done', '', { timeout: 4000 });
+    const log = await page.evaluate(() => (window as unknown as { __led: [number, boolean][] }).__led);
+    expect(log.some(([, on]) => on) && log.some(([, on]) => !on)).toBe(true);
+    for (const [dash, on] of log) {
+      if (Math.abs(dash - enter) < 4) continue; // the sample step of the route
+      expect(on, `drawn ${dash.toFixed(0)} vs enters at ${enter.toFixed(0)}`).toBe(dash > enter);
+    }
+  });
+
+  test('a signal through a lit heading LED makes it blink', async ({ page }) => {
+    // The About row is drawn and its LED lit.
+    await page.locator('#about [data-thread-bar]').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 300));
+    await expect(page.locator('#about [data-thread-bar]')).toHaveAttribute('data-thread-done', '', { timeout: 4000 });
+    await page.waitForTimeout(1500);
+    await page.locator('#about [data-thread-bar]').evaluate((el) => {
+      const w = window as unknown as { __blink: boolean };
+      w.__blink = false;
+      new MutationObserver(() => {
+        if (el.hasAttribute('data-flash')) w.__blink = true;
+      }).observe(el, { attributes: true, attributeFilter: ['data-flash'] });
+    });
+    // Sweep across the row 160px beside the bar: one of the two signals runs through it.
+    const r = await page.locator('#about [data-thread-bar]').evaluate((el) => el.getBoundingClientRect().toJSON());
+    const x = r.left - 160, y = r.top + r.height / 2;
+    await page.mouse.move(x, y - 40);
+    await page.waitForTimeout(300);
+    await page.mouse.move(x, y + 40, { steps: 2 });
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __blink: boolean }).__blink), { timeout: 2000 }).toBe(true);
+  });
+
   test('a sweep across a part of the trace that is not drawn yet sends nothing', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => window.scrollTo(0, 1250));
@@ -1228,6 +1339,8 @@ test('without JavaScript the page has no thread and keeps the timeline line', as
   await expect(page.locator('.site-thread')).toBeHidden();
   await expect(page.locator('[data-thread-line]')).toHaveCSS('opacity', '1');
   await expect(page.locator('[data-thread-reset]')).toHaveCount(0);
+  // The heading bars stay plain bars.
+  expect(await page.locator('[data-thread-bar]').first().evaluate((el) => getComputedStyle(el, '::before').content)).toBe('none');
   await context.close();
 });
 

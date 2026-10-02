@@ -448,6 +448,60 @@ html.thread-on [data-thread-ink] {
   }
 }
 
+/* Section heading bars: the trace runs through each heading's row, and the
+   bar is an indicator LED on it. Solder pads at both ends (like the reset
+   switch's); a cathode band at the end the current leaves by (data-flow, set
+   by the runtime from the line's direction). Off until the line enters it,
+   then lit, and it blinks when a signal passes through. Screen only: print
+   and the page without JavaScript keep the plain bar. */
+@media screen {
+  html.thread-on [data-thread-bar] {
+    --led-off: hsl(var(--muted-foreground) / 0.3);
+    --led-body: linear-gradient(var(--led-off), var(--led-off));
+    --led-band: hsl(var(--background) / 0.6);
+    --led-glow: hsl(var(--secondary) / 0.3);
+    position: relative;
+    border-radius: 1px;
+    background: linear-gradient(var(--led-band), var(--led-band)) right 6px center / 3px 100% no-repeat, var(--led-body);
+    transition: box-shadow 0.35s ease-out;
+  }
+  html.thread-on.dark [data-thread-bar] {
+    --led-glow: hsl(var(--secondary) / 0.5);
+  }
+  html.thread-on [data-thread-bar][data-flow='rtl'] {
+    background-position: left 6px center, 0 0;
+  }
+  html.thread-on [data-thread-bar]::before,
+  html.thread-on [data-thread-bar]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 5px;
+    height: 9px;
+    margin-top: -4.5px;
+    border-radius: 1px;
+    background: hsl(var(--primary) / 0.85);
+  }
+  html.thread-on [data-thread-bar]::before {
+    left: -4px;
+  }
+  html.thread-on [data-thread-bar]::after {
+    right: -4px;
+  }
+  html.thread-on [data-thread-bar][data-thread-done] {
+    --led-body: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)));
+    box-shadow: 0 0 10px 1px var(--led-glow);
+  }
+  html.thread-on [data-thread-bar][data-flash] {
+    animation: thread-led-blip 0.6s ease-out;
+  }
+}
+@keyframes thread-led-blip {
+  0% {
+    box-shadow: 0 0 18px 5px hsl(var(--secondary) / 0.85);
+  }
+}
+
 /* Room under the chip network at the end of the line for its ground symbol
    (py-24 otherwise). */
 html.thread-on #contact {
@@ -749,6 +803,7 @@ html.thread-on #main-content:focus {
   html.thread-on [data-thread-ink],
   html.thread-on [data-thread-card],
   html.thread-on [data-thread-card]::after,
+  html.thread-on [data-thread-bar],
   .site-thread__board,
   .site-thread__net,
   .site-thread__pin--in,

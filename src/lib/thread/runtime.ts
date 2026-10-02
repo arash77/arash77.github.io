@@ -38,6 +38,8 @@ const REWIND_MIN_S = 0.9;
 const REWIND_MAX_S = 2;
 const RESET_PRESS_MS = 320;
 const FLASH_MS = 700;
+/** A heading bar's solder pads reach this far beyond its ends (CSS). */
+const LED_PAD = 4;
 /** The arrival pulse starts this far before the end and runs on up the stub into pin 1. */
 const ARRIVAL_RUN = 240;
 /** The nets fire this long after the arrival pulse has reached pin 1. */
@@ -83,6 +85,17 @@ interface Anchor {
 }
 
 /**
+ * A section heading bar, drawn as an indicator LED on the trace (CSS): it
+ * lights once the line has entered it, between route lengths `enter` and `exit`.
+ */
+interface Led {
+  el: Element;
+  enter: number;
+  exit: number;
+  done: boolean;
+}
+
+/**
  * A point on the route the pen may only pass once `el` (a section heading or a
  * timeline card) has revealed: the line is never drawn over, or looped around,
  * content that is still invisible (sections are client:visible islands that
@@ -117,6 +130,8 @@ interface Pulse {
   end?: number;
   /** Placed by the reset each frame (see stepRewind), not by its speed; never fades. */
   held?: boolean;
+  /** Not moved yet (it may start inside an LED). */
+  fresh?: boolean;
   /** Ran off its end (not faded out): what it reached. */
   onEnd?: () => void;
 }
@@ -198,6 +213,7 @@ export function initThread(): () => void {
   let nodes: Anchor[] = [];
   let inks: Anchor[] = [];
   let cards: Anchor[] = [];
+  let leds: Led[] = [];
   let rebuildTimer = 0;
   let fallbackTimer = 0;
   let capTimer = 0;
@@ -252,7 +268,7 @@ export function initThread(): () => void {
    * reveal elements are neutralised for the duration of this synchronous read
    * (`html.thread-measuring`, see global.css). Nothing is painted in between.
    */
-  function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[]; cardEls: Element[]; cardRects: Rect[] } | null {
+  function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[]; cardEls: Element[]; cardRects: Rect[]; barEls: Element[] } | null {
     html.classList.add('thread-measuring');
     try {
       const m = main!.getBoundingClientRect();
@@ -284,6 +300,7 @@ export function initThread(): () => void {
         : null;
 
       const sections: SectionLayout[] = [];
+      const barEls: Element[] = [];
       // Reveal gates: every block that fades in (see Gate). The hero's are
       // held by its intro; a section's block holds the line level with its
       // top, or, for a timeline card, at the top of its node's loop.
@@ -295,8 +312,10 @@ export function initThread(): () => void {
       for (const el of main!.querySelectorAll('[data-thread-section]')) {
         if (el === heroEl) continue;
         const box = rel(el);
-        const bar = rel(el.querySelector('[data-thread-bar]'));
+        const barEl = el.querySelector('[data-thread-bar]');
+        const bar = rel(barEl);
         if (!box || !bar) continue;
+        barEls.push(barEl!);
         const nodeRects: Rect[] = [];
         const loopTop = new Map<Element, number>();
         for (const nodeEl of el.querySelectorAll('[data-thread-node]')) {
@@ -345,6 +364,7 @@ export function initThread(): () => void {
         gateSpecs,
         cardEls,
         cardRects,
+        barEls,
         snap: {
           width,
           rails: computeRails(width, cLeft, cRight),
@@ -507,6 +527,7 @@ export function initThread(): () => void {
     const wasPowered = powered;
     board = buildBoard(next.end, next.endDir, measured.cardRects, w);
     boardCards = measured.cardEls;
+    leds = placeLeds(next, measured.snap.sections, measured.barEls);
     drawBoard(board);
     if (wasPowered && board) setPowered(true, true);
     else setPowered(false);
@@ -589,6 +610,33 @@ export function initThread(): () => void {
     path!.setAttribute('d', route.d);
     // Lengths below are in the builder's units; pathLength maps them onto the browser's.
     path!.setAttribute('pathLength', route.total.toFixed(3));
+  }
+
+  /**
+   * Where the route runs through each section heading bar (its LED): the
+   * lengths at which the line enters and leaves it (pads included), and which
+   * way it runs (the cathode band marks the end the current leaves by).
+   */
+  function placeLeds(r: Route, sections: SectionLayout[], els: Element[]): Led[] {
+    const out: Led[] = [];
+    sections.forEach((sec, i) => {
+      const el = els[i];
+      const y = r.barRows[i];
+      if (!el || y === undefined) return;
+      const x0 = sec.bar.x - LED_PAD, x1 = sec.bar.x + sec.bar.w + LED_PAD;
+      let first = -1, last = -1;
+      for (let k = 0; k < r.count; k++) {
+        const px = r.points[k * 2], py = r.points[k * 2 + 1];
+        if (Math.abs(py - y) < 0.5 && px >= x0 && px <= x1) {
+          if (first < 0) first = k;
+          last = k;
+        } else if (first >= 0) break;
+      }
+      if (first < 0) return;
+      (el as HTMLElement).dataset.flow = r.points[last * 2] < r.points[first * 2] ? 'rtl' : 'ltr';
+      out.push({ el, enter: first * r.step, exit: last * r.step, done: el.hasAttribute('data-thread-done') });
+    });
+    return out;
   }
 
   /** Draw the chip network (board.ts) into its group; empty when there is none. */
@@ -696,7 +744,7 @@ export function initThread(): () => void {
     // size of the page is drawn in GPU tiles, with seams (a copy of the light beside it).
     const halos = [11, 5].map((extra, k) => svgEl('path', { ...dash, class: `site-thread__pulse-halo site-thread__pulse-halo--${k}`, 'stroke-width': (r.strokeWidth + extra).toFixed(2) }, pulseG!));
     const el = svgEl('path', { ...dash, class: 'site-thread__pulse', 'stroke-width': (r.strokeWidth + 1.6).toFixed(2) }, pulseG!);
-    const p: Pulse = { el, halos, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, held: opts.held, onEnd: opts.onEnd };
+    const p: Pulse = { el, halos, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, held: opts.held, onEnd: opts.onEnd, fresh: true };
     pulses.push(p);
     schedule();
     return p;
@@ -730,7 +778,11 @@ export function initThread(): () => void {
   function updatePulses(t: number, L: number, arrived: boolean) {
     pulses = pulses.filter((p) => {
       const age = t - p.t0;
+      const was = p.pos;
       if (!p.held) p.pos = p.from + p.dir * age * p.speed;
+      // A signal through a lit LED makes it blink (it is in series on the trace).
+      if (p.end === undefined) for (const led of leds) if (led.done && Math.min(was, p.pos) <= led.exit && Math.max(was, p.pos) >= led.enter && (was < led.enter || was > led.exit || p.fresh)) flash(led.el);
+      p.fresh = false;
       const far = p.end ?? L;
       const offStart = p.dir < 0 && p.pos < 0;
       const offEnd = p.dir > 0 && p.pos > far;
@@ -884,6 +936,13 @@ export function initThread(): () => void {
     setDone(nodes, reached, 4);
     setDone(inks, reached, 6);
     setDone(cards, reached, 0);
+    for (const led of leds) {
+      const on = started && !veiled && (arrived || L >= led.enter);
+      if (on !== led.done) {
+        led.done = on;
+        led.el.toggleAttribute('data-thread-done', on);
+      }
+    }
     // The board shows once the line has reached the cards (they have revealed
     // by then), and powers on when the line arrives.
     const boardOn = !!board && started && !veiled && (arrived || cards.some((c) => c.done));
