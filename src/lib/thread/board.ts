@@ -36,6 +36,8 @@ export interface Board {
   /** Centre of the reset switch. */
   reset: Pt;
   nets: BoardNet[];
+  /** Silkscreen text, kept sparse: the switch's label beside it. */
+  labels: { x: number; y: number; text: string; anchor: 'start' | 'end' }[];
   /** Bounding box of everything drawn except the nets (for tests and clearance checks). */
   box: Rect;
 }
@@ -59,6 +61,9 @@ export const SW_PAD_Y = 5;
 /** The ground symbol's top bar sits this far below the switch's bottom pads; its bars are this far apart. */
 const GROUND_DROP = 6;
 export const GROUND_BAR_GAP = 3.5;
+/** The switch's label starts this far beyond its pads; it is at most this wide (8px mono, 5 letters). */
+const LABEL_GAP = 9;
+export const LABEL_W = 32;
 /** 45° chamfer of the nets' corners. */
 const NET_CHAMFER = 6;
 
@@ -161,8 +166,14 @@ export function buildBoard(end: Pt, dir: 1 | -1, cards: Rect[], width: number): 
     return null;
   }
 
-  // Everything sits within the chip's width (the switch and the ground symbol under it).
-  const box = { x: cx - CHIP_W / 2 - 4, y: pinTop, w: CHIP_W + 8, h: groundY + 2 * GROUND_BAR_GAP + 2 - pinTop };
+  // The switch's label, beside it on the side away from the incoming trace,
+  // clear of its pads and of the ground wire.
+  const labelX = swX + dir * (SW_PAD_X + 2.5 + LABEL_GAP);
+  const labels: Board['labels'] = [{ x: labelX, y: swY + 3, text: 'RESET', anchor: dir > 0 ? 'start' : 'end' }];
+  // The chip, the switch and the ground symbol under it, and the label.
+  const x0 = Math.min(cx - CHIP_W / 2 - 4, labelX - (dir < 0 ? LABEL_W : 0));
+  const x1 = Math.max(cx + CHIP_W / 2 + 4, labelX + (dir > 0 ? LABEL_W : 0));
+  const box = { x: x0, y: pinTop, w: x1 - x0, h: groundY + 2 * GROUND_BAR_GAP + 2 - pinTop };
   if (box.x < 2 || box.x + box.w > width - 2) return null;
 
   return {
@@ -176,6 +187,7 @@ export function buildBoard(end: Pt, dir: 1 | -1, cards: Rect[], width: number): 
     grounds,
     reset: [swX, swY],
     nets,
+    labels,
     box,
   };
 }

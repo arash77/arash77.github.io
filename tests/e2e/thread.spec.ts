@@ -145,7 +145,7 @@ function boardCollisions(page: Page) {
         check(s.left + p.x, s.top + p.y, isNet ? 'net' : 'wire');
       }
     }
-    for (const el of svg.querySelectorAll<SVGGraphicsElement>('.site-thread__chip, .site-thread__switch')) {
+    for (const el of svg.querySelectorAll<SVGGraphicsElement>('.site-thread__chip, .site-thread__switch, .site-thread__silk, .site-thread__chip-text')) {
       const b = el.getBBox();
       for (const [x, y] of [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height], [b.x + b.width / 2, b.y + b.height / 2]]) {
         check(s.left + x, s.top + y, el.getAttribute('class') ?? 'board');
@@ -288,8 +288,8 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('[data-thread-ink]').first()).toHaveCSS('background-size', '100% 2px');
     const marks = await page.locator('[data-thread-card]').evaluateAll((els) => els.map((el) => getComputedStyle(el, '::after').opacity));
     expect(marks.every((o) => o === '1'), JSON.stringify(marks)).toBe(true);
-    // No silkscreen text anywhere on the board.
-    await expect(page.locator('[data-thread-board] text')).toHaveCount(0);
+    // Sparse silkscreen text: the chip's marking and the switch's label, nothing else.
+    expect(await page.locator('[data-thread-board] text').allTextContents()).toEqual(['AK-01', 'RESET']);
     // The chip network is on and powered; every card is lit; no end pad and no pen.
     const board = page.locator('[data-thread-board]');
     await expect(board).toHaveAttribute('data-on', '');
@@ -303,6 +303,25 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('[data-thread-pen]')).toHaveCSS('opacity', '0');
     await expect(page.locator('[data-thread-reset]')).toBeVisible();
     await expect(page.locator('[data-thread-reset]')).toHaveAttribute('aria-label', 'Back to top');
+  });
+
+  test('the reset switch focus ring passes clear of its label at every width', async ({ page }) => {
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await ready(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const gap = await page.evaluate(() => {
+        const btn = document.querySelector('[data-thread-reset]')!.getBoundingClientRect();
+        // Ring: outline offset + width outside the (round) button.
+        const ring = btn.width / 2 + 1 + 2;
+        const cx = btn.left + btn.width / 2, cy = btn.top + btn.height / 2;
+        const label = document.querySelector('.site-thread__silk')!.getBoundingClientRect();
+        const dx = Math.max(label.left - cx, 0, cx - label.right), dy = Math.max(label.top - cy, 0, cy - label.bottom);
+        return Math.hypot(dx, dy) - ring;
+      });
+      expect(gap, `${width}px`).toBeGreaterThan(2);
+    }
   });
 
   test('the reset switch hover label stays on screen at every width', async ({ page }) => {
@@ -1115,6 +1134,65 @@ test.describe('scroll thread, normal motion', () => {
     expect(pl.max).toBeLessThanOrEqual(pen.dash + 1);
     // ...and they are gone again.
     await expect(page.locator('.site-thread__pulse')).toHaveCount(0, { timeout: 2000 });
+  });
+
+  test('on a horizontal wire the signal starts where the pointer crossed it; moving along or beside it sends nothing', async ({ page }) => {
+    await page.locator('#skills').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 300));
+    await page.waitForTimeout(2500);
+    // A drawn horizontal stretch of at least 300px on screen.
+    const row = await page.evaluate(() => {
+      const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
+      const drawn = parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+      const scale = line.getTotalLength() / parseFloat(line.getAttribute('pathLength')!);
+      const m = line.getScreenCTM()!;
+      for (let l = 0; l < drawn - 300; l += 4) {
+        const a = line.getPointAtLength(l * scale), c = line.getPointAtLength((l + 300) * scale);
+        const y = m.d * a.y + m.f;
+        if (Math.abs(a.y - c.y) < 0.01 && Math.abs(a.x - c.x) > 299 && y > 100 && y < window.innerHeight - 100) {
+          return { x0: m.a * Math.min(a.x, c.x) + m.e, x1: m.a * Math.max(a.x, c.x) + m.e, y };
+        }
+      }
+      return null;
+    });
+    expect(row, 'a horizontal wire on screen').not.toBeNull();
+    const { x0, x1, y } = row!;
+    // Where each new pulse starts, on screen.
+    await page.evaluate(() => {
+      const w = window as unknown as { __starts: [number, number][] };
+      w.__starts = [];
+      const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
+      const scale = line.getTotalLength() / parseFloat(line.getAttribute('pathLength')!);
+      new MutationObserver((list) => {
+        for (const m of list) {
+          for (const n of m.addedNodes) {
+            const pos = 13 - parseFloat((n as Element).getAttribute('stroke-dashoffset') ?? 'NaN');
+            const p = line.getPointAtLength(pos * scale), c = line.getScreenCTM()!;
+            w.__starts.push([c.a * p.x + c.e, c.d * p.y + c.f]);
+          }
+        }
+      }).observe(document.querySelector('[data-thread-pulses]')!, { childList: true });
+    });
+    const starts = () => page.evaluate(() => (window as unknown as { __starts: [number, number][] }).__starts);
+    // Fast along the wire, then fast along a line 6px beside it: nothing.
+    for (const dy of [0, -6, 6]) {
+      await page.mouse.move(x0 + 20, y + dy);
+      await page.waitForTimeout(300);
+      await page.mouse.move(x1 - 20, y + dy, { steps: 6 });
+      await page.waitForTimeout(300);
+    }
+    expect(await starts(), 'no signal without crossing the wire').toEqual([]);
+    // Fast across it: two pulses, both starting where the pointer crossed.
+    const mid = (x0 + x1) / 2;
+    await page.mouse.move(mid, y - 40);
+    await page.waitForTimeout(300);
+    await page.mouse.move(mid, y + 40, { steps: 2 });
+    await page.waitForTimeout(200);
+    const got = await starts();
+    expect(got).toHaveLength(2);
+    for (const [sx, sy] of got) {
+      expect(Math.abs(sx - mid), `starts at the crossing (${sx.toFixed(1)} vs ${mid.toFixed(1)})`).toBeLessThan(2);
+      expect(Math.abs(sy - y)).toBeLessThan(1);
+    }
   });
 
   test('a sweep across a part of the trace that is not drawn yet sends nothing', async ({ page }) => {

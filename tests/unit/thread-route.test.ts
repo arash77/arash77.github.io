@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildBoard, SW_PAD_X, SW_PAD_Y, type Board } from '@/lib/thread/board';
+import { buildBoard, GROUND_BAR_GAP, LABEL_W, SW_PAD_X, SW_PAD_Y, type Board } from '@/lib/thread/board';
 import {
   buildRoute,
   carryOver,
@@ -574,6 +574,24 @@ function checkBoard(fx: Fixture) {
     }),
   );
   expect(swClear, 'switch clearance from the input').toBeGreaterThanOrEqual(6);
+  // Sparse text: one label, beside the switch on the side away from the incoming trace,
+  // well clear of every wire, the trace, the nets, the switch and the ground symbol.
+  expect(board.labels).toHaveLength(1);
+  for (const l of board.labels) {
+    const lx0 = l.anchor === 'start' ? l.x : l.x - LABEL_W, lx1 = lx0 + LABEL_W, ly0 = l.y - 7, ly1 = l.y + 1;
+    expect(Math.sign((lx0 + lx1) / 2 - sx), 'label on the far side from the trace').toBe(route.endDir);
+    const gap = ([x, y]: [number, number]) => Math.hypot(Math.max(0, lx0 - x, x - lx1), Math.max(0, ly0 - y, y - ly1));
+    const stuff: [number, number][] = [
+      ...board.wires.flatMap((w) => sample(w)),
+      ...board.nets.flatMap((n) => sample(n.points)),
+      ...route.segments.flatMap((sg) => sample([sg.a, sg.b])),
+      ...[0, 1, 2].flatMap((k) => sample([[gx - 8, gy + k * GROUND_BAR_GAP], [gx + 8, gy + k * GROUND_BAR_GAP]])),
+      ...[-1, 1].flatMap((i) => [-1, 1].map((j) => [sx + i * (SW_PAD_X + 2.5), sy + j * (SW_PAD_Y + 2)] as [number, number])),
+    ];
+    expect(Math.min(...stuff.map(gap)), `label "${l.text}" clearance`).toBeGreaterThanOrEqual(4);
+    expect(lx0).toBeGreaterThanOrEqual(board.box.x);
+    expect(lx1).toBeLessThanOrEqual(board.box.x + board.box.w);
+  }
   // Circuit style: only straight and 45° legs.
   for (const n of board.nets) {
     for (const [x0, y0, x1, y1] of segsOf(n.points)) {

@@ -614,6 +614,21 @@ html.thread-on [data-thread-card]::after {
   stroke: hsl(186 20% 45%);
   stroke-width: 1px;
 }
+.site-thread__chip-text {
+  font: 600 7.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  fill: hsl(186 16% 66%);
+}
+.site-thread__silk {
+  font: 8px var(--font-mono);
+  letter-spacing: 0.12em;
+  fill: hsl(var(--muted-foreground) / 0.75);
+  transition: opacity 0.15s ease;
+}
+/* The switch's hover tip opens where its label is, and takes its place. */
+html:has(.site-thread-reset:not([data-side='below']):is(:hover, :focus-visible)) .site-thread__silk {
+  opacity: 0;
+}
 .site-thread__pad {
   fill: hsl(var(--primary) / 0.85);
 }
@@ -672,8 +687,8 @@ html.thread-on #main-content:focus {
 .site-thread-reset__tip {
   position: absolute;
   top: 50%;
-  /* Clear of the ground symbol on that side of the switch. */
-  left: calc(100% + 12px);
+  /* Where the switch's label starts (it takes the label's place). */
+  left: calc(100% + 7px);
   transform: translateY(-50%);
   white-space: nowrap;
   font: 11px/1.2 var(--font-mono);
@@ -689,7 +704,7 @@ html.thread-on #main-content:focus {
 }
 .site-thread-reset[data-side='left'] .site-thread-reset__tip {
   left: auto;
-  right: calc(100% + 12px);
+  right: calc(100% + 7px);
 }
 .site-thread-reset[data-side='below'] .site-thread-reset__tip {
   top: calc(100% + 8px);

@@ -619,12 +619,14 @@ export function initThread(): () => void {
     svgEl('rect', { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 2.5, class: 'site-thread__chip' }, g);
     const nx = left ? cx - w / 2 : cx + w / 2;
     svgEl('path', { d: `M${nx},${cy - 4}A4,4 0 0 ${left ? 1 : 0} ${nx},${cy + 4}`, class: 'site-thread__chip-notch' }, g);
+    svgEl('text', { x: cx, y: cy + 2.6, 'text-anchor': 'middle', class: 'site-thread__chip-text' }, g).textContent = 'AK-01';
     // The reset switch: four pads (its legs, on the wires), the body and the actuator that presses in.
     const [sx, sy] = b.reset;
     const sw = svgEl('g', { class: 'site-thread__switch' }, g);
     for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) svgEl('rect', { x: sx + dx * SW_PAD_X - 2.5, y: sy + dy * SW_PAD_Y - 2, width: 5, height: 4, rx: 0.8, class: 'site-thread__pad' }, sw);
     svgEl('rect', { x: sx - SW_PAD_X + 2, y: sy - SW_PAD_Y - 1, width: 2 * (SW_PAD_X - 2), height: 2 * (SW_PAD_Y + 1), rx: 2, class: 'site-thread__switch-body' }, sw);
     svgEl('circle', { cx: sx, cy: sy, r: 4, class: 'site-thread__switch-act' }, sw);
+    for (const l of b.labels) svgEl('text', { x: l.x, y: l.y, 'text-anchor': l.anchor, class: 'site-thread__silk' }, g).textContent = l.text;
 
     // The reset switch's button: after the contact cards in the tab order (it
     // is created here, so the page without JavaScript has none).
@@ -976,29 +978,39 @@ export function initThread(): () => void {
     // Both ends in the thread layer's space, with the current scroll.
     const ox = window.scrollX - mainLeft, oy = window.scrollY - mainTop;
     const x0 = prev.x + ox, y0 = prev.y + oy, x = e.clientX + ox, y = e.clientY + oy;
-    // Test the whole movement since the last event: a fast sweep jumps right over the line.
+    // Where the movement since the last event crossed the drawn trace (a fast
+    // sweep jumps right over it), exactly. Only a real crossing counts: moving
+    // along a wire, or past it without touching it, sends nothing.
     const r = route;
-    const drawn = shown / r.step;
-    const vx = x - x0, vy = y - y0, vl = vx * vx + vy * vy || 1;
-    let best = -1, bd = 10;
-    const cx0 = Math.floor((Math.min(x0, x) - 12) / HASH_CELL), cx1 = Math.floor((Math.max(x0, x) + 12) / HASH_CELL);
-    const cy0 = Math.floor((Math.min(y0, y) - 12) / HASH_CELL), cy1 = Math.floor((Math.max(y0, y) + 12) / HASH_CELL);
+    const pts = r.points;
+    const drawn = Math.min(r.count - 1, Math.floor(shown / r.step));
+    const vx = x - x0, vy = y - y0;
+    let at = -1, latest = -1;
+    const seen = new Set<number>();
+    const cx0 = Math.floor((Math.min(x0, x) - 6) / HASH_CELL), cx1 = Math.floor((Math.max(x0, x) + 6) / HASH_CELL);
+    const cy0 = Math.floor((Math.min(y0, y) - 6) / HASH_CELL), cy1 = Math.floor((Math.max(y0, y) + 6) / HASH_CELL);
     for (let cx = cx0; cx <= cx1; cx++) {
       for (let cy = cy0; cy <= cy1; cy++) {
         for (const i of hash.get(cx * 100000 + cy) ?? []) {
-          if (i > drawn) continue;
-          const qx = r.points[i * 2], qy = r.points[i * 2 + 1];
-          const u = Math.max(0, Math.min(1, ((qx - x0) * vx + (qy - y0) * vy) / vl));
-          const dd = Math.hypot(x0 + vx * u - qx, y0 + vy * u - qy);
-          if (dd < bd) {
-            bd = dd;
-            best = i;
+          if (i >= drawn || seen.has(i)) continue;
+          seen.add(i);
+          // The trace between samples i and i + 1 against the pointer's movement.
+          const ax = pts[i * 2], ay = pts[i * 2 + 1];
+          const ex = pts[i * 2 + 2] - ax, ey = pts[i * 2 + 3] - ay;
+          const den = vx * ey - vy * ex;
+          if (Math.abs(den) < 1e-9) continue;
+          const u = ((ax - x0) * ey - (ay - y0) * ex) / den; // along the movement
+          const sg = ((ax - x0) * vy - (ay - y0) * vx) / den; // along the trace
+          if (u < 0 || u > 1 || sg < 0 || sg > 1) continue;
+          // A sweep across two wires at once: the one it crossed last.
+          if (u > latest) {
+            latest = u;
+            at = (i + sg) * r.step;
           }
         }
       }
     }
-    if (best < 0) return;
-    const at = best * r.step;
+    if (at < 0) return;
     // One signal per crossing (a sweep reports several events near the same spot).
     if (pulses.some((p) => p.end === undefined && !p.held && p.speed === PULSE_SPEED && Math.abs(p.from - at) < 60 && t - p.t0 < 0.25)) return;
     // The signal runs out both ways along the trace from where it was touched.
