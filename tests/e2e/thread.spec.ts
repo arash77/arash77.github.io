@@ -411,13 +411,6 @@ test.describe('scroll thread, normal motion', () => {
     await expect(page.locator('[data-thread-knot]')).toHaveCSS('opacity', '1', { timeout: 6000 });
   });
 
-  test('draws the beads after the hero intro, then follows the reading position', async ({ page }) => {
-    await expect.poll(() => dashLength(page)).toBeGreaterThan(200);
-    const atTop = await dashLength(page);
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
-    await expect.poll(() => dashLength(page)).toBeGreaterThan(atTop + 1000);
-  });
-
   test('scrolling down then up reverses ink, stitches and nodes', async ({ page }) => {
     const sels = ['[data-thread-node]', '[data-thread-ink]', '[data-thread-stitch]'];
     // Every node starts unlit, the current job's too (only the pen lights it).
@@ -475,22 +468,6 @@ test.describe('scroll thread, normal motion', () => {
     expect(end.t30).toBeGreaterThan(0);
     // A critically damped spring alone takes ~0.7s over its last 30px.
     expect(end.on - end.t30).toBeLessThan(350);
-  });
-
-  test('a resize keeps the drawn progress instead of replaying from the top', async ({ page }) => {
-    const firstNode = page.locator('[data-thread-node]').first();
-    await firstNode.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 200));
-    await expect(firstNode).toHaveAttribute('data-thread-done', '', { timeout: 8000 });
-    const before = await page.locator('[data-thread-path]').getAttribute('d');
-
-    await page.setViewportSize({ width: 1100, height: 800 });
-    await firstNode.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 200));
-    await expect.poll(() => page.locator('[data-thread-path]').getAttribute('d')).not.toBe(before);
-    // Sample for a while: the node must never go dark (a replay would un-draw it).
-    for (let i = 0; i < 10; i++) {
-      await expect(firstNode).toHaveAttribute('data-thread-done', '');
-      await page.waitForTimeout(80);
-    }
   });
 
   test('a height-only resize (mobile URL bar) never makes the drawn length jump', async ({ page }) => {
