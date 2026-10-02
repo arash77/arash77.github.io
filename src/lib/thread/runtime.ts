@@ -762,11 +762,14 @@ export function initThread(): () => void {
     rewind = null;
   }
 
-  /** A short flash where a pulse arrives (the start pad, the pen, pin 1). */
+  /**
+   * A short flash where a pulse arrives (the start pad, the pen, a pin, an
+   * LED, a card). A flash in progress runs to its end, and signals arriving
+   * meanwhile add nothing: restarting it (or an earlier flash's timer cutting
+   * a later one short) makes it jump, which flickers under a flurry of sweeps.
+   */
   function flash(el: Element | null | undefined) {
-    if (!el || reduced) return;
-    el.removeAttribute('data-flash');
-    void el.getBoundingClientRect(); // restart the animation
+    if (!el || reduced || el.hasAttribute('data-flash')) return;
     el.setAttribute('data-flash', '');
     window.setTimeout(() => el.removeAttribute('data-flash'), FLASH_MS);
   }

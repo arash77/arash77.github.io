@@ -1353,6 +1353,53 @@ test.describe('scroll thread, normal motion', () => {
     expect(ds.map(norm)).toEqual(expect.arrayContaining([net, [...net].reverse()]));
   });
 
+  test('a flurry of signals into the pen never makes its glow jump: a flash runs to its end', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 1250));
+    await page.waitForTimeout(2500); // the pen comes to rest on the right rail
+    const pen = await page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+      const c = svg.querySelector('[data-thread-pen]')!;
+      const s = svg.getBoundingClientRect();
+      return { x: s.left + parseFloat(c.getAttribute('cx')!), y: s.top + parseFloat(c.getAttribute('cy')!) };
+    });
+    // Every change of the glow's flash, and its scale every frame.
+    await page.evaluate(() => {
+      const g = document.querySelector('[data-thread-glow]')!;
+      const w = window as unknown as { __fl: [number, boolean][]; __sc: number[] };
+      w.__fl = [];
+      w.__sc = [];
+      const t0 = performance.now();
+      new MutationObserver(() => w.__fl.push([performance.now() - t0, g.hasAttribute('data-flash')])).observe(g, { attributes: true, attributeFilter: ['data-flash'] });
+      const f = () => {
+        const m = getComputedStyle(g).transform.match(/matrix\(([-\d.]+)/);
+        w.__sc.push(m ? parseFloat(m[1]) : 1);
+        if (performance.now() - t0 < 3200) requestAnimationFrame(f);
+      };
+      requestAnimationFrame(f);
+    });
+    // Sweeps across the rail above the pen, at different heights (each is its own crossing).
+    for (let i = 0; i < 14; i++) {
+      const y = pen.y - 60 - (i % 7) * 70;
+      await page.mouse.move(pen.x + 50, y);
+      await page.mouse.move(pen.x - 50, y, { steps: 2 });
+      await page.waitForTimeout(90);
+    }
+    await page.waitForTimeout(1600);
+    const { fl, sc } = await page.evaluate(() => {
+      const w = window as unknown as { __fl: [number, boolean][]; __sc: number[] };
+      return { fl: w.__fl, sc: w.__sc };
+    });
+    expect(fl.filter(([, on]) => on).length, 'it flashed').toBeGreaterThan(0);
+    // On, off, on, off... and every flash lasts its full length.
+    fl.forEach(([t, on], i) => {
+      expect(on, `change ${i}`).toBe(i % 2 === 0);
+      if (!on) expect(t - fl[i - 1][0], 'a flash runs to its end').toBeGreaterThan(650);
+    });
+    // The glow only ever grows at the start of a flash, from rest.
+    for (let i = 1; i < sc.length; i++) if (sc[i] - sc[i - 1] > 0.2) expect(sc[i - 1], `frame ${i}`).toBeLessThan(1.05);
+  });
+
   test('a sweep across a part of the trace that is not drawn yet sends nothing', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => window.scrollTo(0, 1250));
