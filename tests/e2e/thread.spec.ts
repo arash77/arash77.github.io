@@ -828,6 +828,19 @@ test.describe('scroll thread, normal motion', () => {
     await expect(page.locator('[data-thread-pulses] path')).toHaveCount(0);
   });
 
+  test('reduced motion turning on during a reset still takes the reader to the top', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    const max = await page.evaluate(() => window.scrollY);
+    await page.locator('[data-thread-reset]').click();
+    // Well on its way up, the reader's system switches to reduced motion.
+    await page.waitForFunction((max) => window.scrollY < max * 0.7, max, { polling: 'raf' });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    // The reset ends as it does under reduced motion: at the top at once, with no signal.
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 1000 }).toBe(0);
+    await expect(page.locator('[data-thread-pulses] path')).toHaveCount(0);
+  });
+
   test('a resize during a reset goes on at its pace, its signal leading the line into the start pad', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });

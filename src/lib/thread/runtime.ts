@@ -1245,6 +1245,8 @@ export function initThread(): () => void {
   document.fonts?.addEventListener?.('loadingdone', scheduleRebuild, { signal });
   reduceQuery.addEventListener('change', () => {
     reduced = reduceQuery.matches;
+    // A reset in flight ends as it does under reduced motion: at the top at once.
+    if (reduced && rewind) window.scrollTo({ top: 0, behavior: 'instant' });
     clearPulses();
     if (reduced) {
       heroDone = true;
