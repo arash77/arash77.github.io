@@ -672,6 +672,29 @@ test.describe('scroll thread, normal motion', () => {
     expect(borders.every((b) => b === lit), borders.join(' | ')).toBe(true);
   });
 
+  test('once the power-on has played, the nets, pin 1 and the lit cards follow a theme toggle with the page', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    const delays = await page.locator('[data-thread-card]').evaluateAll((els) => els.map((el) => parseFloat((el as HTMLElement).style.getPropertyValue('--thread-lit-delay'))));
+    await page.waitForTimeout(Math.max(...delays) + 1500); // the power-on sequence has played
+    const dark = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    await page.locator('button[aria-label="Toggle dark mode"]').first().click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!dark);
+    const want = {
+      nets: Array(await page.locator('.site-thread__net').count()).fill(await themeColor(page, 'hsl(var(--secondary) / 0.9)')),
+      pin: await themeColor(page, 'hsl(var(--secondary))'),
+      cards: Array(await page.locator('[data-thread-card]').count()).fill(await themeColor(page, 'hsl(var(--secondary) / 0.6)')),
+    };
+    const colours = () =>
+      page.evaluate(() => ({
+        nets: [...document.querySelectorAll('.site-thread__net')].map((el) => getComputedStyle(el).stroke),
+        pin: getComputedStyle(document.querySelector('.site-thread__pin--in')!).fill,
+        cards: [...document.querySelectorAll('[data-thread-card]')].map((el) => getComputedStyle(el).borderColor),
+      }));
+    // The page takes 0.3s, a card's border 0.45s: nothing waits out the power-on stagger (up to ~1.2s) again.
+    await expect.poll(colours, { timeout: 900, intervals: [50] }).toEqual(want);
+  });
+
   test('the signal flows on into pin 1: the stub appears on arrival, the pulse ends in the pin and lights it', async ({ page }) => {
     // Board shown, line not arrived yet: no stub dangling below the chip.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight - 500));

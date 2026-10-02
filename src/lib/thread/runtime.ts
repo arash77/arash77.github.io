@@ -49,6 +49,8 @@ const NET_AFTER_PIN_MS = 60;
 const NET_STAGGER_MS = 140;
 /** ms per px of a net: the speed of the pulse along it (keep in sync with global.css). */
 const NET_MS_PER_PX = 1.4;
+/** The longest transition of a part lit by power-on (a lit card's box-shadow, global.css). */
+const LIT_MS = 600;
 const HASH_CELL = 40;
 const GLOW_R = 11;
 /** After a start with the hero out of view, how long the line tracks the reading position exactly. */
@@ -223,6 +225,7 @@ export function initThread(): () => void {
   /** The chip's top pins (the nets start at them, in order). */
   let topPinEls: SVGRectElement[] = [];
   let rebuildTimer = 0;
+  let settleTimer = 0;
   let fallbackTimer = 0;
   let capTimer = 0;
   let viewW = 0;
@@ -719,10 +722,12 @@ export function initThread(): () => void {
   /**
    * Power on the board (the line has arrived): the input pin lights and the
    * nets light the cards one after another (CSS timing). `instant` re-applies
-   * the powered state after a rebuild without playing it again.
+   * the powered state after a rebuild without playing it again; a power-on
+   * that has played ends in it too (see below).
    */
   function setPowered(on: boolean, instant = false) {
     if (on === powered && !instant) return;
+    window.clearTimeout(settleTimer);
     powered = on;
     boardG!.toggleAttribute('data-powered', on);
     boardG!.toggleAttribute('data-settled', on && instant);
@@ -731,15 +736,23 @@ export function initThread(): () => void {
       return;
     }
     if (!board) return;
+    let end = 0;
     board.nets.forEach((n, i) => {
       const at = netDelay + i * NET_STAGGER_MS + n.length * NET_MS_PER_PX;
+      end = Math.max(end, at);
       n.cards.forEach((ci, k) => {
         const el = boardCards[ci] as HTMLElement | undefined;
         if (!el) return;
-        el.style.setProperty('--thread-lit-delay', instant ? '0ms' : `${Math.round(at + k * NET_STAGGER_MS)}ms`);
+        const delay = Math.round(at + k * NET_STAGGER_MS);
+        end = Math.max(end, delay);
+        el.style.setProperty('--thread-lit-delay', instant ? '0ms' : `${delay}ms`);
         el.setAttribute('data-thread-lit', '');
       });
     });
+    // Once played, the stagger's delays would hold back any later change of
+    // the lit colours (a theme toggle repainting the nets and cards one by
+    // one, a second late): rest as a rebuild leaves the board.
+    if (!instant) settleTimer = window.setTimeout(() => setPowered(true, true), end + LIT_MS);
   }
 
   /** A pulse along the route (or along `path` / `pathLen`, its own polyline). */
@@ -1268,6 +1281,7 @@ export function initThread(): () => void {
     ac.abort();
     ro.disconnect();
     window.clearTimeout(rebuildTimer);
+    window.clearTimeout(settleTimer);
     window.clearTimeout(fallbackTimer);
     window.clearTimeout(capTimer);
     if (raf) cancelAnimationFrame(raf);
