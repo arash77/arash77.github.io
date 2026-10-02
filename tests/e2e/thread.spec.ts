@@ -244,8 +244,8 @@ const pulsesSeen = (page: Page) => page.evaluate(() => (window as unknown as { _
 
 /**
  * Where the route runs through each heading bar (pads included, 4px beyond
- * its ends): the length at which the line enters it (in the path's own
- * pathLength units) and which way it runs.
+ * its ends): the length at which the line enters it, in the path's own
+ * pathLength units (-1 if it does not).
  */
 function barCrossings(page: Page) {
   return page.evaluate(() => {
@@ -257,17 +257,11 @@ function barCrossings(page: Page) {
     return [...document.querySelectorAll<HTMLElement>('[data-thread-bar]')].map((el) => {
       const r = el.getBoundingClientRect();
       const y = r.top + r.height / 2 - s.top, x0 = r.left - 4 - s.left, x1 = r.right + 4 - s.left;
-      let enter = -1, xIn = 0, xOut = 0;
       for (let l = 0; l <= total; l += 1) {
         const p = line.getPointAtLength(l);
-        const on = Math.abs(p.y - y) < 0.6 && p.x >= x0 && p.x <= x1;
-        if (on && enter < 0) {
-          enter = l * unit;
-          xIn = p.x;
-        } else if (on) xOut = p.x;
-        else if (enter >= 0) break;
+        if (Math.abs(p.y - y) < 0.6 && p.x >= x0 && p.x <= x1) return { enter: l * unit };
       }
-      return { enter, flow: xOut < xIn ? 'rtl' : 'ltr', dataFlow: el.dataset.flow ?? '' };
+      return { enter: -1 };
     });
   });
 }
@@ -354,7 +348,7 @@ test.describe('scroll thread, reduced motion', () => {
     }
   });
 
-  test('the heading bars are LEDs on the trace: pads at both ends, lit, the cathode band where the line leaves', async ({ page }) => {
+  test('the heading bars are LEDs on the trace: pads at both ends, lit, a plain body', async ({ page }) => {
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
@@ -363,18 +357,14 @@ test.describe('scroll thread, reduced motion', () => {
       const n = await bars.count();
       expect(n).toBeGreaterThan(3);
       await expect(page.locator('[data-thread-bar][data-thread-done]')).toHaveCount(n);
-      const looks = await bars.evaluateAll((els) => els.map((el) => [getComputedStyle(el, '::before').width, getComputedStyle(el, '::after').width, getComputedStyle(el).boxShadow]));
-      for (const [a, b, glow] of looks) {
+      const looks = await bars.evaluateAll((els) => els.map((el) => [getComputedStyle(el, '::before').width, getComputedStyle(el, '::after').width, getComputedStyle(el).boxShadow, getComputedStyle(el).backgroundImage]));
+      for (const [a, b, glow, body] of looks) {
         expect([a, b]).toEqual(['5px', '5px']);
         expect(glow, 'lit').not.toBe('none');
+        // One gradient, no marks on it.
+        expect(body.match(/gradient\(/g)?.length, body).toBe(1);
       }
-      // The band marks the end the line leaves by, so it follows the route's zigzag.
-      const crossings = await barCrossings(page);
-      for (const c of crossings) {
-        expect(c.enter, 'the route runs through the bar').toBeGreaterThanOrEqual(0);
-        expect(c.dataFlow, `${width}px`).toBe(c.flow);
-      }
-      expect(new Set(crossings.map((c) => c.flow)).size, 'both directions').toBe(2);
+      for (const c of await barCrossings(page)) expect(c.enter, `${width}px: the route runs through the bar`).toBeGreaterThanOrEqual(0);
     }
   });
 

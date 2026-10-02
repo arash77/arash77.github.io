@@ -614,8 +614,7 @@ export function initThread(): () => void {
 
   /**
    * Where the route runs through each section heading bar (its LED): the
-   * lengths at which the line enters and leaves it (pads included), and which
-   * way it runs (the cathode band marks the end the current leaves by).
+   * lengths at which the line enters and leaves it (pads included).
    */
   function placeLeds(r: Route, sections: SectionLayout[], els: Element[]): Led[] {
     const out: Led[] = [];
@@ -633,7 +632,6 @@ export function initThread(): () => void {
         } else if (first >= 0) break;
       }
       if (first < 0) return;
-      (el as HTMLElement).dataset.flow = r.points[last * 2] < r.points[first * 2] ? 'rtl' : 'ltr';
       out.push({ el, enter: first * r.step, exit: last * r.step, done: el.hasAttribute('data-thread-done') });
     });
     return out;

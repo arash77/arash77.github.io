@@ -449,27 +449,22 @@ html.thread-on [data-thread-ink] {
 }
 
 /* Section heading bars: the trace runs through each heading's row, and the
-   bar is an indicator LED on it. Solder pads at both ends (like the reset
-   switch's); a cathode band at the end the current leaves by (data-flow, set
-   by the runtime from the line's direction). Off until the line enters it,
-   then lit, and it blinks when a signal passes through. Screen only: print
-   and the page without JavaScript keep the plain bar. */
+   bar is an indicator LED on it, with solder pads at both ends (like the
+   reset switch's). Off until the line enters it, then lit, and it blinks
+   when a signal passes through. Screen only: print and the page without
+   JavaScript keep the plain bar. */
 @media screen {
   html.thread-on [data-thread-bar] {
     --led-off: hsl(var(--muted-foreground) / 0.3);
     --led-body: linear-gradient(var(--led-off), var(--led-off));
-    --led-band: hsl(var(--background) / 0.6);
     --led-glow: hsl(var(--secondary) / 0.3);
     position: relative;
     border-radius: 1px;
-    background: linear-gradient(var(--led-band), var(--led-band)) right 6px center / 3px 100% no-repeat, var(--led-body);
+    background: var(--led-body);
     transition: box-shadow 0.35s ease-out;
   }
   html.thread-on.dark [data-thread-bar] {
     --led-glow: hsl(var(--secondary) / 0.5);
-  }
-  html.thread-on [data-thread-bar][data-flow='rtl'] {
-    background-position: left 6px center, 0 0;
   }
   html.thread-on [data-thread-bar]::before,
   html.thread-on [data-thread-bar]::after {
