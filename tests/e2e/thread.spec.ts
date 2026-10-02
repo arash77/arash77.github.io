@@ -1302,6 +1302,57 @@ test.describe('scroll thread, normal motion', () => {
     await expect.poll(() => page.evaluate(() => (window as unknown as { __blink: boolean }).__blink), { timeout: 2000 }).toBe(true);
   });
 
+  test('a sweep across a powered net sends the signal into its card (which blinks) and its pin (which flashes); the ground wire stays quiet', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    await page.waitForTimeout(2500); // the power-on sequence has played
+    // The middle of the longest horizontal leg of the first net, on screen.
+    const leg = await page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+      const s = svg.getBoundingClientRect();
+      const net = svg.querySelector<SVGPathElement>('.site-thread__net')!;
+      const pts = [...(net.getAttribute('d') ?? '').matchAll(/[ML](-?[\d.]+),(-?[\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+      let best = { len: 0, x: 0, y: 0 };
+      for (let i = 1; i < pts.length; i++) {
+        const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+        if (Math.abs(ay - by) < 0.01 && Math.abs(bx - ax) > best.len) best = { len: Math.abs(bx - ax), x: s.left + (ax + bx) / 2, y: s.top + ay };
+      }
+      // The ground symbol's wire: the lowest vertical wire (it ends at the ground symbol).
+      const wires = [...svg.querySelectorAll<SVGPathElement>('.site-thread__wire')].map((w) => [...(w.getAttribute('d') ?? '').matchAll(/[ML](-?[\d.]+),(-?[\d.]+)/g)].map((m) => [+m[1], +m[2]]));
+      const g = wires.filter((w) => w.length === 2 && Math.abs(w[0][0] - w[1][0]) < 0.01).sort((p, q) => Math.max(q[0][1], q[1][1]) - Math.max(p[0][1], p[1][1]))[0];
+      return { ...best, gx: s.left + g[0][0], gy: s.top + (g[0][1] + g[1][1]) / 2, net: net.getAttribute('d') };
+    });
+    expect(leg.len).toBeGreaterThan(30);
+    await page.evaluate(() => {
+      const w = window as unknown as { __net: { ds: string[]; card: boolean; pin: boolean } };
+      w.__net = { ds: [], card: false, pin: false };
+      new MutationObserver((list) => {
+        for (const m of list) for (const n of m.addedNodes) if ((n as Element).classList.contains('site-thread__pulse')) w.__net.ds.push((n as Element).getAttribute('d') ?? '');
+      }).observe(document.querySelector('[data-thread-pulses]')!, { childList: true });
+      const watch = (el: Element, key: 'card' | 'pin') => new MutationObserver(() => {
+        if (el.hasAttribute('data-flash')) w.__net[key] = true;
+      }).observe(el, { attributes: true, attributeFilter: ['data-flash'] });
+      for (const el of document.querySelectorAll('[data-thread-card]')) watch(el, 'card');
+      for (const el of document.querySelectorAll('.site-thread__pin')) watch(el, 'pin');
+    });
+    // Across the ground wire first: nothing.
+    await page.mouse.move(leg.gx - 30, leg.gy);
+    await page.waitForTimeout(300);
+    await page.mouse.move(leg.gx + 30, leg.gy, { steps: 2 });
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => (window as unknown as { __net: { ds: string[] } }).__net.ds)).toEqual([]);
+    // Across the net: two signals along it, the card blinks and the pin flashes.
+    await page.mouse.move(leg.x, leg.y - 25);
+    await page.waitForTimeout(300);
+    await page.mouse.move(leg.x, leg.y + 25, { steps: 2 });
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __net: { card: boolean; pin: boolean } }).__net), { timeout: 2000 }).toEqual(expect.objectContaining({ card: true, pin: true }));
+    const ds = await page.evaluate(() => (window as unknown as { __net: { ds: string[] } }).__net.ds);
+    expect(ds).toHaveLength(2);
+    const norm = (d: string) => [...d.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map((m) => `${(+m[1]).toFixed(1)},${(+m[2]).toFixed(1)}`);
+    const net = norm(leg.net!);
+    expect(ds.map(norm)).toEqual(expect.arrayContaining([net, [...net].reverse()]));
+  });
+
   test('a sweep across a part of the trace that is not drawn yet sends nothing', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => window.scrollTo(0, 1250));

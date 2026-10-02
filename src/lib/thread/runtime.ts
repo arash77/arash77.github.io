@@ -214,6 +214,8 @@ export function initThread(): () => void {
   let inks: Anchor[] = [];
   let cards: Anchor[] = [];
   let leds: Led[] = [];
+  /** The chip's top pins (the nets start at them, in order). */
+  let topPinEls: SVGRectElement[] = [];
   let rebuildTimer = 0;
   let fallbackTimer = 0;
   let capTimer = 0;
@@ -662,7 +664,7 @@ export function initThread(): () => void {
     }
     const { cx, cy, w, h } = b.chip;
     const left = b.inputPin === 0;
-    b.topPins.forEach((x) => svgEl('rect', { x: x - 1.6, y: b.pinTop, width: 3.2, height: 9, rx: 0.6, class: 'site-thread__pin' }, g));
+    topPinEls = b.topPins.map((x) => svgEl('rect', { x: x - 1.6, y: b.pinTop, width: 3.2, height: 9, rx: 0.6, class: 'site-thread__pin' }, g));
     b.botPins.forEach((x, k) => svgEl('rect', { x: x - 1.6, y: b.pinBottom - 9, width: 3.2, height: 9, rx: 0.6, class: k === b.inputPin ? 'site-thread__pin site-thread__pin--in' : 'site-thread__pin' }, g));
     svgEl('rect', { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 2.5, class: 'site-thread__chip' }, g);
     const nx = left ? cx - w / 2 : cx + w / 2;
@@ -727,9 +729,10 @@ export function initThread(): () => void {
   }
 
   /** A pulse along the route (or along `path` / `pathLen`, its own polyline). */
-  function spawnPulse(from: number, dir: 1 | -1, opts: Partial<Pick<Pulse, 'speed' | 'life' | 'end' | 'held' | 'onEnd'>> & { d?: string } = {}) {
+  function spawnPulse(from: number, dir: 1 | -1, opts: Partial<Pick<Pulse, 'speed' | 'life' | 'end' | 'held' | 'onEnd'>> & { d?: string; width?: number } = {}) {
     const r = route;
     if (!r || reduced) return null;
+    const sw = opts.width ?? r.strokeWidth;
     const len = opts.end ?? r.total;
     const dash = {
       d: opts.d ?? r.d,
@@ -740,8 +743,8 @@ export function initThread(): () => void {
     };
     // The glow is layered strokes, not a CSS filter: a filter over a path the
     // size of the page is drawn in GPU tiles, with seams (a copy of the light beside it).
-    const halos = [11, 5].map((extra, k) => svgEl('path', { ...dash, class: `site-thread__pulse-halo site-thread__pulse-halo--${k}`, 'stroke-width': (r.strokeWidth + extra).toFixed(2) }, pulseG!));
-    const el = svgEl('path', { ...dash, class: 'site-thread__pulse', 'stroke-width': (r.strokeWidth + 1.6).toFixed(2) }, pulseG!);
+    const halos = [11, 5].map((extra, k) => svgEl('path', { ...dash, class: `site-thread__pulse-halo site-thread__pulse-halo--${k}`, 'stroke-width': (sw + extra).toFixed(2) }, pulseG!));
+    const el = svgEl('path', { ...dash, class: 'site-thread__pulse', 'stroke-width': (sw + 1.6).toFixed(2) }, pulseG!);
     const p: Pulse = { el, halos, from, dir, speed: opts.speed ?? PULSE_SPEED, t0: now(), life: opts.life ?? PULSE_LIFE, pos: from, end: opts.end, held: opts.held, onEnd: opts.onEnd, fresh: true };
     pulses.push(p);
     schedule();
@@ -1080,13 +1083,54 @@ export function initThread(): () => void {
         }
       }
     }
-    if (at < 0) return;
+    if (at < 0) {
+      sweepNets(x0, y0, x, y, t);
+      return;
+    }
     // One signal per crossing (a sweep reports several events near the same spot).
     if (pulses.some((p) => p.end === undefined && !p.held && p.speed === PULSE_SPEED && Math.abs(p.from - at) < 60 && t - p.t0 < 0.25)) return;
     // The signal runs out both ways along the trace from where it was touched.
     spawnPulse(at, 1);
     spawnPulse(at, -1);
   }
+
+  /**
+   * A sweep across one of the chip's nets (powered): the signal runs out both
+   * ways along it, into its card (which blinks) and into its pin (which
+   * flashes). The ground and reset wires stay quiet: ground carries no
+   * signal, and the reset line only changes when the switch is pressed.
+   */
+  function sweepNets(x0: number, y0: number, x1: number, y1: number, t: number) {
+    const b = board;
+    if (!b || !powered) return;
+    const vx = x1 - x0, vy = y1 - y0;
+    let hit: { k: number; at: number; u: number } | null = null;
+    b.nets.forEach((n, k) => {
+      let run = 0;
+      for (let i = 1; i < n.points.length; i++) {
+        const [ax, ay] = n.points[i - 1];
+        const ex = n.points[i][0] - ax, ey = n.points[i][1] - ay;
+        const seg = Math.hypot(ex, ey);
+        const den = vx * ey - vy * ex;
+        if (Math.abs(den) > 1e-9) {
+          const u = ((ax - x0) * ey - (ay - y0) * ex) / den;
+          const sg = ((ax - x0) * vy - (ay - y0) * vx) / den;
+          if (u >= 0 && u <= 1 && sg >= 0 && sg <= 1 && (!hit || u > hit.u)) hit = { k, at: run + sg * seg, u };
+        }
+        run += seg;
+      }
+    });
+    if (!hit) return;
+    const { k, at } = hit as { k: number; at: number; u: number };
+    if (netPulses.get(k) !== undefined && t - netPulses.get(k)! < 0.25) return;
+    netPulses.set(k, t);
+    const n = b.nets[k];
+    const width = 1.7;
+    spawnPulse(at, 1, { d: polyline(n.points), end: n.length, width, onEnd: () => flash(boardCards[n.target]) });
+    spawnPulse(n.length - at, 1, { d: polyline([...n.points].reverse()), end: n.length, width, onEnd: () => flash(topPinEls[k]) });
+  }
+  /** When each net last sent a signal (s): one per crossing. */
+  const netPulses = new Map<number, number>();
 
   // Boot.
   rebuild();

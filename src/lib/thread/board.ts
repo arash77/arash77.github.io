@@ -18,6 +18,8 @@ export interface BoardNet {
   length: number;
   /** Indices (into the cards passed in) lit when the signal arrives, in order. */
   cards: number[];
+  /** The card it ends in. */
+  target: number;
 }
 
 export interface Board {
@@ -84,9 +86,9 @@ export function chamfer(pts: Pt[], c = NET_CHAMFER): Pt[] {
   return out;
 }
 
-const net = (pts: Pt[], cards: number[]): BoardNet => {
+const net = (pts: Pt[], cards: number[], target = cards[0]): BoardNet => {
   const points = chamfer(pts);
-  return { points, length: len(points), cards };
+  return { points, length: len(points), cards, target };
 };
 
 /**
@@ -161,7 +163,7 @@ export function buildBoard(end: Pt, dir: 1 | -1, cards: Rect[], width: number): 
     const order = cards.map((c, i) => ({ c, i })).sort((a, b) => b.c.y - a.c.y);
     const last = order[0].c;
     if (topPins[0] < last.x + 8 || topPins[3] > last.x + last.w - 8) return null;
-    topPins.forEach((x, k) => nets.push(net([[x, pinTop], [x, last.y + last.h - 2]], k === 0 ? order.map((o) => o.i) : [])));
+    topPins.forEach((x, k) => nets.push(net([[x, pinTop], [x, last.y + last.h - 2]], k === 0 ? order.map((o) => o.i) : [], order[0].i)));
   } else {
     return null;
   }

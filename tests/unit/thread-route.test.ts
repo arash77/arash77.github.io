@@ -520,6 +520,7 @@ function checkBoard(fx: Fixture) {
     const [ex, ey] = n.points[n.points.length - 1];
     const target = fx.cards.find((c) => ex > c.x && ex < c.x + c.w && ey >= c.y + c.h - 3 && ey <= c.y + c.h) ?? null;
     expect(target, 'every net ends in a card').not.toBeNull();
+    expect(fx.cards[n.target], 'the net knows the card it ends in').toBe(target);
     for (const [x, y] of sample(n.points)) {
       if (target && x > target.x && x < target.x + target.w && y >= target.y + target.h - 3) continue;
       for (const o of fx.obstacles) {

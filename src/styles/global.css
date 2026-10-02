@@ -490,6 +490,16 @@ html.thread-on [data-thread-ink] {
   html.thread-on [data-thread-bar][data-flash] {
     animation: thread-led-blip 0.6s ease-out;
   }
+  /* A signal down its net makes a lit contact card blink. */
+  html.thread-on [data-thread-card][data-thread-lit][data-flash] {
+    animation: thread-card-blip 0.7s ease-out;
+  }
+}
+@keyframes thread-card-blip {
+  0% {
+    border-color: hsl(var(--secondary));
+    box-shadow: 0 0 0 1px hsl(var(--secondary) / 0.6), 0 0 26px -4px hsl(var(--secondary) / 0.8);
+  }
 }
 @keyframes thread-led-blip {
   0% {
@@ -628,7 +638,7 @@ html.thread-on [data-thread-card]::after {
 }
 /* Where a pulse arrives: the start pad, the pen's glow or pin 1 flash. */
 .site-thread__knot[data-flash],
-.site-thread__pin--in[data-flash] {
+.site-thread__pin[data-flash] {
   animation: thread-flash 0.7s ease-out;
 }
 .site-thread__glow[data-flash] {
