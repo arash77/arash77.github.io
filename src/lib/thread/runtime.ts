@@ -1098,7 +1098,8 @@ export function initThread(): () => void {
   }
 
   function onPointerMove(e: PointerEvent) {
-    if (reduced || !route || !started || e.pointerType === 'touch') return;
+    // Nothing while an in-place start keeps the line hidden: it is not drawn yet.
+    if (reduced || !route || !started || inPlace || e.pointerType === 'touch') return;
     // Track the pointer in viewport coordinates: page coordinates would count
     // the scroll between two events as pointer motion (a wheel step plus a 1px
     // jitter would read as a fast vertical sweep).

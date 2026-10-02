@@ -2183,6 +2183,64 @@ test.describe('scroll thread, start', () => {
     expect(rec.reachedNodes, 'the line does go on once the content is there').toBe(true);
   });
 
+  test('a sweep across the line while an in-place start still hides it sends nothing', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await page.addStyleTag({ content: 'html { scroll-behavior: auto !important; }' });
+    await expect(page.locator('[data-thread-knot]')).toHaveCSS('opacity', '1', { timeout: 6000 });
+    // The viewport top in the gap above the Contact heading: reloaded, the line
+    // is drawn (hidden) down to just above that heading, well into the viewport.
+    await page.evaluate(() => window.scrollTo(0, Math.max(...[...document.querySelectorAll('#education .gsap-reveal')].map((el) => el.getBoundingClientRect().bottom + window.scrollY)) + 2));
+    await page.waitForTimeout(1200);
+    const restored = await page.evaluate(() => window.scrollY);
+    // A slow connection: the sections hydrate (and reveal) only once released.
+    let release = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    await page.route(/\/_astro\/(About|Experience|Skills|Education|Contact)\.[^/]*\.js$/, async (route) => {
+      await held;
+      await route.continue().catch(() => {});
+    });
+    await page.reload({ waitUntil: 'commit' });
+    await ready(page);
+    // Back at that position (under load Chromium may get there in two steps, see above).
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(restored);
+    // A point on a rail of the drawn line, on screen.
+    const pick = () =>
+      page.evaluate(() => {
+        const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
+        const drawn = parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+        const scale = line.getTotalLength() / parseFloat(line.getAttribute('pathLength')!);
+        const m = line.getScreenCTM()!;
+        for (let l = drawn - 20; l > 0; l -= 2) {
+          const a = line.getPointAtLength(l * scale), b = line.getPointAtLength((l - 2) * scale);
+          const y = m.d * a.y + m.f;
+          if (y < 10) break;
+          if (Math.abs(a.x - b.x) < 0.01) return { x: m.a * a.x + m.e, y };
+        }
+        return null;
+      });
+    await expect.poll(pick, { message: 'the drawn line on screen' }).not.toBeNull();
+    const at = (await pick())!;
+    const hidden = () => page.locator('[data-thread-path]').evaluate((p) => (p as SVGPathElement).style.opacity === '0' && !document.documentElement.classList.contains('thread-drawing'));
+    expect(await hidden(), 'the line is drawn, but hidden').toBe(true);
+    // Fast across it (crossing it mid-step).
+    const sweep = async () => {
+      await page.mouse.move(at.x - 70, at.y);
+      await page.mouse.move(at.x + 50, at.y, { steps: 2 });
+    };
+    await countPulses(page);
+    await sweep();
+    await page.waitForTimeout(400);
+    expect(await hidden(), 'still hidden').toBe(true);
+    expect(await pulsesSeen(page)).toBe(0);
+    // Once the content reveals, the line shows and the same sweep sends signals.
+    release();
+    await expect(page.locator('[data-thread-path]')).toHaveCSS('opacity', '1', { timeout: 8000 });
+    await page.waitForTimeout(500);
+    await sweep();
+    await expect.poll(() => pulsesSeen(page), { timeout: 2000 }).toBeGreaterThan(0);
+  });
+
   test('scrolling away during the hero intro and back: nothing is drawn in the hero until the intro completes', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.addInitScript(() => {
