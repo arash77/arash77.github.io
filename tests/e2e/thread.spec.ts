@@ -1098,17 +1098,22 @@ test.describe('scroll thread, normal motion', () => {
   });
 
   test('jogs keep clear of the nodes, also after a rebuild while the timeline text slides in', async ({ page }) => {
-    // Nodes: rebuild while the timeline cards are still sliding in.
-    const vh = 800;
-    await page.locator('#experience').evaluate((el, vh) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - vh * 0.7), vh);
-    await expect
-      .poll(() => page.locator('.timeline-card').last().evaluate((el) => getComputedStyle(el).opacity), { timeout: 3000 })
-      .not.toBe('0');
-    const midReveal = await page.locator('.timeline-body').last().evaluate((el) => getComputedStyle(el).transform);
-    expect(midReveal).not.toBe('none');
-    await page.setViewportSize({ width: 1180, height: vh });
-    // Let every reveal finish, then compare the geometry with the settled layout.
-    await page.waitForTimeout(2000);
+    await page.evaluate(() => document.fonts.ready);
+    // Experience in view, but short of its reveal trigger (top 75%): the island
+    // has hydrated and holds the timeline text at its start offset (y: 20px).
+    const body = '#experience .timeline-card:last-child .timeline-body';
+    await page.locator('#experience').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.9));
+    await expect.poll(() => translateY(page, body), { timeout: 4000 }).toBeGreaterThan(10);
+    await recordRebuilds(page, body);
+    await page.setViewportSize({ width: 1180, height: 800 });
+    await expect.poll(() => rebuilds(page)).not.toEqual([]);
+    await page.waitForTimeout(500);
+    // Now let it reveal (scrolling rebuilds nothing), then compare the geometry with the settled layout.
+    await page.locator('#experience').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.5));
+    await expect.poll(() => translateY(page, body), { timeout: 4000 }).toBe(0);
+    await page.waitForTimeout(300);
+    const log = await rebuilds(page);
+    expect(log[log.length - 1], `the last rebuild ran mid-reveal: ${log.join(', ')}`).toBeGreaterThan(5);
     const gaps = await page.evaluate(() => {
       const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
       const path = svg.querySelector<SVGPathElement>('[data-thread-path]')!;
@@ -1139,6 +1144,36 @@ test.describe('scroll thread, normal motion', () => {
       expect(g.clear).toBeGreaterThan(6.5);
       expect(g.clear).toBeLessThan(10);
       expect(Math.abs(g.side)).toBeLessThan(1.5);
+    }
+
+    // What slides in with the text: each company's ink lights as the line reaches
+    // where it rests (its bottom, less the 6px lead), not before and not 20px later.
+    const inks = page.locator('#experience [data-thread-ink]');
+    expect(await inks.count()).toBeGreaterThan(0);
+    for (const ink of await inks.all()) {
+      // The reading line (62%) `d` px below the ink's bottom, and the line at rest there.
+      const lineAt = async (d: number) => {
+        await ink.evaluate((el, d) => window.scrollTo(0, el.getBoundingClientRect().bottom + window.scrollY - window.innerHeight * 0.62 + d), d);
+        await page.evaluate(
+          () =>
+            new Promise<void>((res) => {
+              const p = document.querySelector('[data-thread-path]')!;
+              let last = '', same = 0;
+              const f = () => {
+                const d = p.getAttribute('stroke-dasharray') ?? '';
+                same = d === last ? same + 1 : 0;
+                last = d;
+                if (same >= 10) res();
+                else requestAnimationFrame(f);
+              };
+              requestAnimationFrame(f);
+            }),
+        );
+      };
+      await lineAt(-14);
+      await expect(ink).not.toHaveAttribute('data-thread-done', '');
+      await lineAt(0);
+      await expect(ink).toHaveAttribute('data-thread-done', '');
     }
   });
 
