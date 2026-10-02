@@ -735,31 +735,41 @@ test.describe('scroll thread, normal motion', () => {
   });
 
   test('the reset signal crosses every horizontal wire on screen, the line retracting behind it', async ({ page }) => {
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
-    // Each frame: the signal's position, the drawn length and the signal's place on screen.
+    // Each frame: the signal's position, the drawn length, the signal's place on screen and how many other signals show.
     await page.evaluate(() => {
-      const w = window as unknown as { __rw: { pos: number; drawn: number; x: number; ly: number; y: number; flat: boolean }[] };
+      const w = window as unknown as { __rw: { pos: number; drawn: number; x: number; ly: number; y: number; flat: boolean; others: number }[]; __pressed: boolean };
       w.__rw = [];
+      w.__pressed = false;
       const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
       const scale = line.getTotalLength() / parseFloat(line.getAttribute('pathLength')!);
       const at = (l: number) => line.getPointAtLength(Math.max(0, l) * scale);
+      // Pressed the moment the chip powers on, while the arrival signal still runs (on its own path) into pin 1.
+      const board = document.querySelector('[data-thread-board]')!;
+      new MutationObserver((_, mo) => {
+        if (!board.hasAttribute('data-powered')) return;
+        mo.disconnect();
+        document.querySelector<HTMLButtonElement>('[data-thread-reset]')!.click();
+        w.__pressed = true;
+      }).observe(board, { attributes: true, attributeFilter: ['data-powered'] });
       const f = () => {
-        const el = document.querySelector('[data-thread-pulses] path');
+        // The reset signal is the one on the line itself.
+        const all = [...document.querySelectorAll('.site-thread__pulse')];
+        const el = all.find((p) => p.getAttribute('d') === line.getAttribute('d'));
         if (el) {
           const pos = 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0');
           const a = at(pos - 8), b = at(pos + 8), p = at(pos);
           const m = line.getScreenCTM()!;
-          w.__rw.push({ pos, drawn: parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]), x: p.x, ly: p.y, y: m.d * p.y + m.f, flat: Math.abs(a.y - b.y) < 0.5 && Math.abs(a.x - b.x) > 15 });
+          w.__rw.push({ pos, drawn: parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]), x: p.x, ly: p.y, y: m.d * p.y + m.f, flat: Math.abs(a.y - b.y) < 0.5 && Math.abs(a.x - b.x) > 15, others: all.length - 1 });
         }
         if (w.__rw.length < 600) requestAnimationFrame(f);
       };
       requestAnimationFrame(f);
     });
-    await page.locator('[data-thread-reset]').click();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __pressed: boolean }).__pressed), { timeout: 8000 }).toBe(true);
     await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 4000 }).toBe(0);
     await page.waitForTimeout(300);
-    const { log, rows, rest, vh } = await page.evaluate(() => {
+    const { log, rows, rest, end, vh } = await page.evaluate(() => {
       const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
       // Horizontal wires (200px or longer) of the route, by their y and x span.
       const total = line.getTotalLength();
@@ -776,14 +786,16 @@ test.describe('scroll thread, normal motion', () => {
         } else run = null;
       }
       return {
-        log: (window as unknown as { __rw: { pos: number; drawn: number; x: number; ly: number; y: number; flat: boolean }[] }).__rw,
+        log: (window as unknown as { __rw: { pos: number; drawn: number; x: number; ly: number; y: number; flat: boolean; others: number }[] }).__rw,
         rows,
         rest: parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]),
+        end: parseFloat(line.getAttribute('pathLength')!),
         vh: window.innerHeight,
       };
     });
     expect(log.length, 'frames with the signal').toBeGreaterThan(30);
     expect(rows.length, 'horizontal wires').toBeGreaterThan(3);
+    expect(log.some((e) => e.others > 0), 'pressed while the arrival signal ran').toBe(true);
     // It crosses every horizontal wire (seen inside it), instead of jumping from one end to the other.
     for (const r of rows) {
       const inside = log.some((e) => e.flat && Math.abs(e.ly - r.y) < 1 && e.x > r.x0 + 20 && e.x < r.x1 - 20);
@@ -797,6 +809,8 @@ test.describe('scroll thread, normal motion', () => {
       // It is the line's head: on the drawn part, with the line retracting right behind it.
       expect(e.drawn, 'on the drawn part').toBeGreaterThanOrEqual(e.pos - 0.5);
       expect(e.drawn, 'line retracts behind it').toBeLessThanOrEqual(Math.max(rest, e.pos + 17));
+      // Once the line is off the chip, the arrival signal has gone with the power.
+      if (e.drawn < end - 2) expect(e.others, `other signals with the line drawn to ${e.drawn.toFixed(0)}`).toBe(0);
     }
   });
 
