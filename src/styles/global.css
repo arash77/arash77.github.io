@@ -694,8 +694,12 @@ html.thread-on [data-thread-card]::after {
 .site-thread__silk {
   font: 8px var(--font-mono);
   letter-spacing: 0.12em;
-  fill: hsl(var(--muted-foreground) / 0.75);
+  /* At least 4.5:1 on the page (AA for 8px text): it names the switch. */
+  fill: hsl(var(--muted-foreground) / 0.8);
   transition: opacity 0.15s ease;
+}
+.dark .site-thread__silk {
+  fill: hsl(var(--muted-foreground) / 0.75);
 }
 /* The switch's hover tip opens where its label is, and takes its place. */
 html:has(.site-thread-reset:not([data-side='below'], [data-tip-off]):is(:hover, :focus-visible)) .site-thread__silk {

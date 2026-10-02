@@ -429,6 +429,35 @@ test.describe('scroll thread, reduced motion', () => {
     }
   });
 
+  test('the reset switch label is readable in both themes', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    await ready(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate((dark) => document.documentElement.classList.toggle('dark', dark), theme === 'dark');
+      // The label sits on the page background (the body's colour fades over to it).
+      const bg = await themeColor(page, 'hsl(var(--background))');
+      await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(bg);
+      const ratio = await page.evaluate((bg) => {
+        const rgba = (c: string) => (c.match(/[\d.]+/g) ?? []).map(Number);
+        const lum = (rgb: number[]) => {
+          const [r, g, b] = rgb.map((v) => {
+            const x = v / 255;
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const back = rgba(bg);
+        const [r, g, b, a = 1] = rgba(getComputedStyle(document.querySelector('.site-thread__silk')!).fill);
+        const [x, y] = [lum([r, g, b].map((v, i) => v * a + back[i] * (1 - a))), lum(back)];
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+      }, bg);
+      // WCAG AA for its 8px text: it names the switch at rest.
+      expect(ratio, theme).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   test('the reset switch takes the reader back to the top, also by keyboard', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
