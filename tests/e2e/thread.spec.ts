@@ -1036,6 +1036,58 @@ test.describe('scroll thread, normal motion', () => {
     expect(speed(log[i], log[i + 3]), 'px/ms after the rebuild').toBeGreaterThan(speed(log[i - 4], log[i - 1]) / 2);
   });
 
+  test('a second press during a reset does not start it over: its signal runs on into the start pad', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    // Each painted frame: the reset signal's position; the presses, the second
+    // one (a double click) once the signal is on its way; the start pad's flash.
+    await page.evaluate(() => {
+      const w = window as unknown as { __rw: { t: number; pos: number }[]; __presses: number[]; __second: number; __knot: number };
+      w.__rw = [];
+      w.__presses = [];
+      w.__second = -1;
+      w.__knot = 0;
+      const btn = document.querySelector<HTMLButtonElement>('[data-thread-reset]')!;
+      btn.addEventListener('click', () => w.__presses.push(performance.now()), { capture: true });
+      const k = document.querySelector('[data-thread-knot]')!;
+      new MutationObserver(() => {
+        if (!w.__knot && k.hasAttribute('data-flash')) w.__knot = performance.now();
+      }).observe(k, { attributes: true, attributeFilter: ['data-flash'] });
+      const line = document.querySelector('[data-thread-path]')!;
+      const end = parseFloat(line.getAttribute('pathLength')!);
+      const f = () => {
+        const el = [...document.querySelectorAll('.site-thread__pulse')].find((p) => p.getAttribute('d') === line.getAttribute('d'));
+        if (el) {
+          const pos = 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0');
+          w.__rw.push({ t: performance.now(), pos });
+          if (w.__second < 0 && pos < end - 300) {
+            w.__second = w.__rw.length;
+            btn.click();
+          }
+        }
+        if (!w.__knot) requestAnimationFrame(() => setTimeout(f, 0));
+      };
+      requestAnimationFrame(() => setTimeout(f, 0));
+    });
+    await page.locator('[data-thread-reset]').click();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __knot: number }).__knot), { timeout: 4000 }).toBeGreaterThan(0);
+    const { rw, presses, second, knot } = await page.evaluate(() => {
+      const w = window as unknown as { __rw: { t: number; pos: number }[]; __presses: number[]; __second: number; __knot: number };
+      return { rw: w.__rw, presses: w.__presses, second: w.__second, knot: w.__knot };
+    });
+    expect(presses.length, 'pressed twice').toBe(2);
+    expect(rw.length - second, 'frames after the second press').toBeGreaterThan(5);
+    // It never jumps back towards the chip (started over, it would, by 16px)...
+    for (let i = 1; i < rw.length; i++) expect(rw[i].pos, `frame ${i} (second press at ${second})`).toBeLessThanOrEqual(rw[i - 1].pos + 0.5);
+    // ...goes on at its pace across the press (started over, it would all but stop)...
+    const near = (t: number) => rw.reduce((a, e) => (Math.abs(e.t - t) < Math.abs(a.t - t) ? e : a));
+    const at = rw[second - 1];
+    const speed = (a: (typeof rw)[number], b: (typeof rw)[number]) => (a.pos - b.pos) / (b.t - a.t);
+    expect(speed(at, near(at.t + 100)), 'px/ms after the second press').toBeGreaterThan(speed(near(at.t - 100), at) / 2);
+    // ...and runs into the start pad in the time of one press (2s, with room for a loaded machine).
+    expect(knot - presses[0]).toBeLessThan(2000 + 300);
+  });
+
   test('a height-only resize (mobile URL bar) never makes the drawn length jump', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 788 });
     await page.waitForTimeout(600); // settle at phone width first

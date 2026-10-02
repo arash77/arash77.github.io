@@ -921,10 +921,13 @@ export function initThread(): () => void {
     window.setTimeout(() => boardG!.removeAttribute('data-pressed'), RESET_PRESS_MS);
     // The reset signal runs back up the trace into the start pad and the page
     // follows it (under reduced motion, or without a line, straight to the top).
-    stopRewind();
-    const from = Math.max(0, Math.min(route?.total ?? 0, shown));
-    if (!beginRewind(from, Math.min(REWIND_MAX_S, Math.max(REWIND_MIN_S, from * REWIND_S_PER_PX)))) {
-      window.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' });
+    // Pressed again on its way (a double click), it runs on: started over, it
+    // would jump back, all but stop and end past its time.
+    if (!rewind) {
+      const from = Math.max(0, Math.min(route?.total ?? 0, shown));
+      if (!beginRewind(from, Math.min(REWIND_MAX_S, Math.max(REWIND_MIN_S, from * REWIND_S_PER_PX)))) {
+        window.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' });
+      }
     }
     // Keyboard users continue from the top of the content, not from the footer.
     // Focusable only for that: left so, <main> would take a later click on its
