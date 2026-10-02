@@ -740,6 +740,17 @@ test.describe('scroll thread, normal motion', () => {
     // The line has left the cards: within a moment nothing of the marks is left either.
     await page.waitForTimeout(450);
     expect(Math.max(...(await marks()))).toBeLessThan(0.05);
+
+    // Ink (a company in Experience): the reading line (62%) first below it, then above it.
+    const ink = page.locator('#experience [data-thread-ink]').first();
+    const inkAt = (f: number) => ink.evaluate((el, f) => window.scrollTo(0, el.getBoundingClientRect().bottom + window.scrollY - window.innerHeight * f), f);
+    await inkAt(0.3);
+    await expect(ink).toHaveAttribute('data-thread-done', '', { timeout: 8000 });
+    await expect(ink).toHaveCSS('background-size', '100% 2px', { timeout: 3000 });
+    await inkAt(0.9);
+    await expect(ink).not.toHaveAttribute('data-thread-done', '', { timeout: 3000 });
+    await page.waitForTimeout(450);
+    expect(parseFloat(await ink.evaluate((el) => getComputedStyle(el).backgroundSize))).toBeLessThan(5);
   });
 
   test('the chip powers on as the pen arrives, without a crawling tail, and lights the cards one by one', async ({ page }) => {
