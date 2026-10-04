@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
+import { revealTiming } from '../lib/reveal';
 import { Mail, MapPin } from 'lucide-react';
 import { IconGithub, IconLinkedin } from './BrandIcons';
 import { Button } from './ui/button';
@@ -49,7 +50,7 @@ export default function Contact() {
 
     gsap.set(headingRef.current, { y: 24 });
     gsap.to(headingRef.current, {
-      opacity: 1, visibility: 'inherit', y: 0, duration: 0.6, ease: 'power3.out',
+      opacity: 1, visibility: 'inherit', y: 0, ...revealTiming(sectionRef.current, 0.6), ease: 'power3.out',
       scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
     });
     gsap.set('.contact-item', { y: 20 });
@@ -57,22 +58,21 @@ export default function Contact() {
       opacity: 1,
       visibility: 'inherit',
       y: 0,
-      duration: 0.6,
-      stagger: 0.1,
+      ...revealTiming(sectionRef.current, 0.6, 0.1),
       ease: 'power3.out',
       scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
     });
   }, { scope: sectionRef });
 
   return (
-    <section id="contact" ref={sectionRef} className="py-24">
+    <section id="contact" ref={sectionRef} data-thread-section className="py-24">
       <div className="container mx-auto px-4 max-w-5xl">
         <div ref={headingRef} className="gsap-reveal text-center mb-16">
           <p className="text-sm font-mono text-secondary tracking-widest uppercase mb-2">
             Let's connect
           </p>
           <h2 className="text-4xl font-bold mb-4">Contact</h2>
-          <div className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
+          <div data-thread-bar className="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             I'm always open to interesting conversations, collaboration opportunities, or just saying hi!
           </p>
@@ -85,6 +85,7 @@ export default function Contact() {
               href={href}
               target={href.startsWith('http') ? '_blank' : undefined}
               rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+              data-thread-card
               className="gsap-reveal contact-item group flex items-center gap-4 p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-[border-color,box-shadow] duration-150 cursor-pointer"
             >
               <div className={`p-3 rounded-lg bg-muted transition-colors ${color}`}>

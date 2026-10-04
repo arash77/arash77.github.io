@@ -1,0 +1,49 @@
+---
+/**
+ * Scroll thread: one circuit trace that draws itself down the home page as the
+ * visitor reads, ending in a small chip network wired to the contact cards. The geometry comes from the live layout (src/lib/thread/route.ts);
+ * the runtime (src/lib/thread/runtime.ts) measures, draws and animates it.
+ *
+ * Hidden unless the runtime adds `html.thread-on`, so the page without
+ * JavaScript is unchanged. Purely decorative: aria-hidden, no pointer events.
+ */
+---
+
+<div class="site-thread" data-thread-root aria-hidden="true">
+  <svg class="site-thread__svg" data-thread-svg width="0" height="0" focusable="false">
+    <defs>
+      <linearGradient
+        id="site-thread-gradient"
+        data-thread-gradient
+        gradientUnits="userSpaceOnUse"
+        x1="0"
+        y1="0"
+        x2="0"
+        y2="1000"
+      >
+        <stop offset="0" class="site-thread__stop-from"></stop>
+        <stop offset="1" class="site-thread__stop-to"></stop>
+      </linearGradient>
+    </defs>
+    <path
+      data-thread-path
+      class="site-thread__line"
+      fill="none"
+      stroke="url(#site-thread-gradient)"
+      stroke-width="2.25"
+      stroke-linecap="round"
+      stroke-linejoin="round"></path>
+    <g data-thread-pulses></g>
+    <g data-thread-board class="site-thread__board"></g>
+    <circle data-thread-knot class="site-thread__knot" r="4" cx="0" cy="0"></circle>
+    <circle data-thread-end class="site-thread__end" r="4" cx="0" cy="0"></circle>
+    <circle data-thread-glow class="site-thread__glow" r="11" cx="0" cy="0"></circle>
+    <circle data-thread-pen class="site-thread__pen" r="4.5" cx="0" cy="0" stroke-width="2"></circle>
+  </svg>
+</div>
+
+<script>
+  import { initThread } from '../lib/thread/runtime';
+
+  initThread();
+</script>

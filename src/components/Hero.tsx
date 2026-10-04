@@ -18,14 +18,27 @@ export default function Hero() {
   const tagsRef = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // The scroll thread (SiteThread) starts drawing once the intro has settled,
+    // and arms its start fallback from the intro's start (not from page load),
+    // so a late-hydrating hero still gets its intro first. The data flags cover
+    // a listener that attaches after an event has fired.
+    document.documentElement.dataset.heroIntro = '';
+    window.dispatchEvent(new Event('hero:intro-start'));
+    const revealed = () => {
+      document.documentElement.dataset.heroRevealed = '';
+      window.dispatchEvent(new Event('hero:revealed'));
+    };
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      revealed();
+      return;
+    }
 
     gsap.set(imageRef.current, { scale: 0.8 });
     gsap.set([helloRef.current, tagsRef.current], { y: 15 });
     gsap.set(nameRef.current, { y: 30 });
     gsap.set([subtitleRef.current, ctaRef.current], { y: 20 });
 
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' }, onComplete: revealed });
 
     tl.to(imageRef.current, { opacity: 1, visibility: 'inherit', scale: 1, duration: 0.8 })
       .to(helloRef.current, { opacity: 1, visibility: 'inherit', y: 0, duration: 0.5 }, '-=0.4')
@@ -38,7 +51,8 @@ export default function Hero() {
   return (
     <section
       ref={containerRef}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-mesh pt-16"
+      data-thread-section="hero"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden supports-[overflow:clip]:overflow-clip gradient-mesh pt-16"
     >
       {/* Decorative blobs */}
       <div
@@ -57,7 +71,7 @@ export default function Hero() {
       <div className="container mx-auto px-4 max-w-6xl py-20">
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           {/* Profile image */}
-          <div ref={imageRef} className="gsap-reveal relative shrink-0">
+          <div ref={imageRef} data-thread-avatar className="gsap-reveal relative shrink-0">
             <div className="relative">
               <div className="relative rounded-full border-4 border-background shadow-xl ring-1 ring-border/50 w-44 h-44 lg:w-56 lg:h-56 overflow-hidden">
                 <img
@@ -92,7 +106,7 @@ export default function Hero() {
             </p>
 
             {/* Tags */}
-            <div ref={tagsRef} className="gsap-reveal flex flex-wrap gap-2 justify-center lg:justify-start mb-8">
+            <div ref={tagsRef} data-thread-beads className="gsap-reveal flex flex-wrap gap-2 justify-center lg:justify-start mb-8">
               {['Python', 'FastAPI', 'Galaxy Project', 'Docker', 'CI/CD'].map((tag) => (
                 <span
                   key={tag}
@@ -136,7 +150,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll hint */}
-      <div className="absolute bottom-8 inset-x-0 hidden [@media(min-width:640px)_and_(min-height:44rem)]:flex flex-col items-center gap-2 text-muted-foreground animate-bounce">
+      <div data-thread-hint className="absolute bottom-8 inset-x-0 hidden [@media(min-width:640px)_and_(min-height:44rem)]:flex flex-col items-center gap-2 text-muted-foreground animate-bounce">
         <span className="text-xs font-mono">scroll</span>
         <div className="w-px h-8 bg-linear-to-b from-muted-foreground to-transparent" />
       </div>
