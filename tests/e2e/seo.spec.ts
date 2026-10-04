@@ -46,6 +46,13 @@ for (const path of PAGES) {
   });
 }
 
+test('an unknown URL is served the 404 page, which is noindex', async ({ page }) => {
+  const response = await page.goto('/this-page-does-not-exist');
+  expect(response?.status()).toBe(404);
+  await expect(page.locator('h1')).toHaveText('Page not found');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
+});
+
 test('/og.png returns a valid PNG response', async ({ request }) => {
   const response = await request.get('/og.png');
   expect(response.status()).toBe(200);
@@ -80,8 +87,6 @@ test('sitemap lists the indexable pages and leaves out the noindex ones', async 
     locs.push(...[...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname.replace(/(.)\/$/, '$1')));
   }
 
-  for (const path of PAGES) {
-    if (NOINDEX_PAGES.has(path)) expect(locs).not.toContain(path);
-    else expect(locs).toContain(path);
-  }
+  // Exactly the indexable pages: a noindex page or an unintended route in the sitemap fails.
+  expect(locs.sort()).toEqual(PAGES.filter((path) => !NOINDEX_PAGES.has(path)).sort());
 });
