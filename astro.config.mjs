@@ -23,7 +23,10 @@ export default defineConfig({
   ],
   integrations: [
     react(),
-    sitemap(),
+    sitemap({
+      // Legal pages carry noindex; listing them in the sitemap would contradict it.
+      filter: (page) => !/\/(impressum|datenschutz)\/?$/.test(new URL(page).pathname),
+    }),
   ],
   vite: {
     plugins: [tailwindcss()],

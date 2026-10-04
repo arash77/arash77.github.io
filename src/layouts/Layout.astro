@@ -12,6 +12,8 @@ interface Props {
   description?: string;
   image?: string;
   canonicalURL?: string;
+  /** Keep the page out of search results (legal pages, 404). Links are still followed. */
+  noindex?: boolean;
 }
 
 const {
@@ -19,6 +21,7 @@ const {
   description = 'Software Engineer at Freiburg University, specializing in Python, backend development, and Galaxy Project bioinformatics tooling.',
   image = '/og.png',
   canonicalURL = new URL(Astro.url.pathname, Astro.site),
+  noindex = false,
 } = Astro.props;
 
 const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
@@ -37,6 +40,7 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
