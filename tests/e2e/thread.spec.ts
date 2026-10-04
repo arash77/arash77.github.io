@@ -1821,6 +1821,36 @@ test.describe('scroll thread, normal motion', () => {
     await expect.poll(() => page.evaluate(() => (window as unknown as { __blink: boolean }).__blink), { timeout: 2000 }).toBe(true);
   });
 
+  test('a signal along the hero tags makes each tag blink as it passes, in order', async ({ page }) => {
+    const tags = page.locator('[data-thread-beads] > *');
+    // The run through the tags (the beads) is drawn past the last one.
+    await expect.poll(() => page.evaluate(() => {
+      const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
+      const drawn = parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+      const scale = line.getTotalLength() / parseFloat(line.getAttribute('pathLength')!);
+      const p = line.getPointAtLength(drawn * scale), m = line.getScreenCTM()!;
+      const last = document.querySelector('[data-thread-beads]')!.lastElementChild!.getBoundingClientRect();
+      return m.a * p.x + m.e > last.right + 30 || m.d * p.y + m.f > last.bottom + 10;
+    }), { timeout: 8000 }).toBe(true);
+    await page.locator('[data-thread-beads]').evaluate((row) => {
+      const w = window as unknown as { __blinks: number[] };
+      w.__blinks = [];
+      const kids = [...row.children];
+      new MutationObserver((list) => {
+        for (const m of list) if ((m.target as Element).hasAttribute('data-flash')) w.__blinks.push(kids.indexOf(m.target as Element));
+      }).observe(row, { attributes: true, subtree: true, attributeFilter: ['data-flash'] });
+    });
+    // Sweep across the run just before the first tag: one signal runs right, through every tag.
+    const first = (await tags.first().boundingBox())!;
+    const x = first.x - 8, y = first.y + first.height / 2;
+    await page.mouse.move(x, y - 30);
+    await page.waitForTimeout(300);
+    await page.mouse.move(x, y + 30, { steps: 3 });
+    const n = await tags.count();
+    expect(n).toBeGreaterThan(1);
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __blinks: number[] }).__blinks), { timeout: 3000 }).toEqual([...Array(n).keys()]);
+  });
+
   test('the reset signal blinks each lit heading LED it runs back through', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });

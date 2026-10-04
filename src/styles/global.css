@@ -494,6 +494,10 @@ html.thread-on [data-thread-ink] {
   html.thread-on [data-thread-card][data-thread-lit][data-flash] {
     animation: thread-card-blip 0.7s ease-out;
   }
+  /* A hero tag the trace runs behind (a bead) blinks as a signal passes through it. */
+  html.thread-on [data-thread-beads] > [data-flash] {
+    animation: thread-bead-blip 0.6s ease-out;
+  }
 }
 @keyframes thread-card-blip {
   0% {
@@ -504,6 +508,12 @@ html.thread-on [data-thread-ink] {
 @keyframes thread-led-blip {
   0% {
     box-shadow: 0 0 18px 5px hsl(var(--secondary) / 0.85);
+  }
+}
+@keyframes thread-bead-blip {
+  0% {
+    border-color: hsl(var(--secondary));
+    box-shadow: 0 0 0 1px hsl(var(--secondary) / 0.5), 0 0 16px -2px hsl(var(--secondary) / 0.8);
   }
 }
 

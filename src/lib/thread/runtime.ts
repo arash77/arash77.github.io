@@ -224,6 +224,8 @@ export function initThread(): () => void {
   let inks: Anchor[] = [];
   let cards: Anchor[] = [];
   let leds: Led[] = [];
+  /** The hero tags the line runs behind (the beads): in series on the trace like the LEDs, they blink but never light. */
+  let beads: Led[] = [];
   /** The chip's top pins (the nets start at them, in order). */
   let topPinEls: SVGRectElement[] = [];
   let rebuildTimer = 0;
@@ -281,7 +283,7 @@ export function initThread(): () => void {
    * reveal elements are neutralised for the duration of this synchronous read
    * (`html.thread-measuring`, see global.css). Nothing is painted in between.
    */
-  function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[]; cardEls: Element[]; cardRects: Rect[]; barEls: Element[] } | null {
+  function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[]; cardEls: Element[]; cardRects: Rect[]; barEls: Element[]; tags: { el: Element; r: Rect }[] } | null {
     html.classList.add('thread-measuring');
     try {
       const m = main!.getBoundingClientRect();
@@ -303,7 +305,11 @@ export function initThread(): () => void {
       const heroEl = main!.querySelector('[data-thread-section="hero"]');
       const heroRect = rel(heroEl);
       if (!heroEl || !heroRect) return null;
-      const pills = [...(heroEl.querySelector('[data-thread-beads]')?.children ?? [])].map(rel).filter((r): r is Rect => !!r);
+      const tags = [...(heroEl.querySelector('[data-thread-beads]')?.children ?? [])].flatMap((el) => {
+        const r = rel(el);
+        return r ? [{ el, r }] : [];
+      });
+      const pills = tags.map((t) => t.r);
       // Beads only when the pills sit on a single row.
       const oneRow = pills.length > 0 && pills.every((p) => Math.abs(p.y - pills[0].y) < 2);
       // The scroll hint bounces (CSS animation), so read its untransformed box from offsets.
@@ -378,6 +384,7 @@ export function initThread(): () => void {
         cardEls,
         cardRects,
         barEls,
+        tags: oneRow ? tags : [],
         snap: {
           width,
           rails: computeRails(width, cLeft, cRight),
@@ -541,6 +548,7 @@ export function initThread(): () => void {
     board = buildBoard(next.end, next.endDir, measured.cardRects, w);
     boardCards = measured.cardEls;
     leds = placeLeds(next, measured.snap.sections, measured.barEls);
+    beads = measured.snap.phone ? [] : placeBeads(next, measured.tags);
     drawBoard(board);
     if (wasPowered && board) setPowered(true, true);
     else setPowered(false);
@@ -643,19 +651,31 @@ export function initThread(): () => void {
       const el = els[i];
       const y = r.barRows[i];
       if (!el || y === undefined) return;
-      const x0 = sec.bar.x - LED_PAD, x1 = sec.bar.x + sec.bar.w + LED_PAD;
-      let first = -1, last = -1;
-      for (let k = 0; k < r.count; k++) {
-        const px = r.points[k * 2], py = r.points[k * 2 + 1];
-        if (Math.abs(py - y) < 0.5 && px >= x0 && px <= x1) {
-          if (first < 0) first = k;
-          last = k;
-        } else if (first >= 0) break;
-      }
-      if (first < 0) return;
-      out.push({ el, enter: first * r.step, exit: last * r.step, done: el.hasAttribute('data-thread-done') });
+      const span = runThrough(r, y, sec.bar.x - LED_PAD, sec.bar.x + sec.bar.w + LED_PAD);
+      if (span) out.push({ el, enter: span[0], exit: span[1], done: el.hasAttribute('data-thread-done') });
     });
     return out;
+  }
+
+  /** Where the route's first row, through the hero tags, runs behind each tag. */
+  function placeBeads(r: Route, tags: { el: Element; r: Rect }[]): Led[] {
+    return tags.flatMap(({ el, r: box }) => {
+      const span = runThrough(r, r.start[1], box.x, box.x + box.w);
+      return span ? [{ el, enter: span[0], exit: span[1], done: false }] : [];
+    });
+  }
+
+  /** The lengths at which the route first enters and leaves row `y` between x0 and x1. */
+  function runThrough(r: Route, y: number, x0: number, x1: number): [number, number] | null {
+    let first = -1, last = -1;
+    for (let k = 0; k < r.count; k++) {
+      const px = r.points[k * 2], py = r.points[k * 2 + 1];
+      if (Math.abs(py - y) < 0.5 && px >= x0 && px <= x1) {
+        if (first < 0) first = k;
+        last = k;
+      } else if (first >= 0) break;
+    }
+    return first < 0 ? null : [first * r.step, last * r.step];
   }
 
   /** Draw the chip network (board.ts) into its group; empty when there is none. */
@@ -826,8 +846,11 @@ export function initThread(): () => void {
       const age = t - p.t0;
       const was = p.last ?? p.pos;
       if (!p.held) p.pos = p.from + p.dir * age * p.speed;
-      // A signal through a lit LED makes it blink (it is in series on the trace).
-      if (p.end === undefined) for (const led of leds) if (led.done && Math.min(was, p.pos) <= led.exit && Math.max(was, p.pos) >= led.enter && (was < led.enter || was > led.exit || p.fresh)) flash(led.el);
+      // A signal through a lit LED, or a hero tag, makes it blink (they are in series on the trace).
+      if (p.end === undefined) {
+        blinkThrough(leds, was, p.pos, !!p.fresh);
+        blinkThrough(beads, was, p.pos, !!p.fresh);
+      }
       p.fresh = false;
       p.last = p.pos;
       // On the trace, the light never runs past the drawn line's head: it pours
@@ -856,6 +879,11 @@ export function initThread(): () => void {
       }
       return true;
     });
+  }
+
+  /** Blink each part in series on the trace that a signal moving from `was` to `pos` has entered. */
+  function blinkThrough(list: Led[], was: number, pos: number, fresh: boolean) {
+    for (const led of list) if (led.done && Math.min(was, pos) <= led.exit && Math.max(was, pos) >= led.enter && (was < led.enter || was > led.exit || fresh)) flash(led.el);
   }
 
   /** The arrival pulse: the last stretch of the route, then on up the stub into pin 1. */
@@ -1014,6 +1042,7 @@ export function initThread(): () => void {
         led.el.toggleAttribute('data-thread-done', on);
       }
     }
+    for (const bead of beads) bead.done = started && !veiled && (arrived || L >= bead.enter);
     // The board shows once the line has reached the cards (they have revealed
     // by then), and powers on when the line arrives.
     const boardOn = !!board && started && !veiled && (arrived || cards.some((c) => c.done));
