@@ -74,7 +74,7 @@ export default function Navbar({ currentPath: initialPath = '/' }: NavbarProps) 
           className="flex items-center gap-2 font-semibold text-lg hover:text-primary transition-colors"
           aria-label="Home"
         >
-          <img src="/a-logo.png" alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
+          <img src="/logo.svg" alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
           <span className="font-mono whitespace-nowrap text-base min-[360px]:text-lg">{SITE.name}</span>
         </a>
 
