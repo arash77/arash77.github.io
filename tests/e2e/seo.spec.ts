@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const PAGES = ['/', '/projects', '/resume', '/impressum', '/datenschutz'] as const;
+const NOINDEX_PAGES = new Set<string>(['/impressum', '/datenschutz']);
 
 for (const path of PAGES) {
   test(`${path} has <title> and meta[name="description"]`, async ({ page }) => {
@@ -33,6 +34,16 @@ for (const path of PAGES) {
     expect(canonical).toBeTruthy();
     expect(() => new URL(canonical!)).not.toThrow();
   });
+
+  test(`${path} is ${NOINDEX_PAGES.has(path) ? 'noindex' : 'indexable'}`, async ({ page }) => {
+    await page.goto(path);
+    const robots = page.locator('meta[name="robots"]');
+    if (NOINDEX_PAGES.has(path)) {
+      await expect(robots).toHaveAttribute('content', 'noindex, follow');
+    } else {
+      await expect(robots).toHaveCount(0);
+    }
+  });
 }
 
 test('/og.png returns a valid PNG response', async ({ request }) => {
@@ -58,4 +69,19 @@ test('/sitemap-index.xml exists and is valid XML', async ({ request }) => {
 
   const body = await response.text();
   expect(body).toContain('<sitemapindex');
+});
+
+test('sitemap lists the indexable pages and leaves out the noindex ones', async ({ request }) => {
+  const index = await (await request.get('/sitemap-index.xml')).text();
+  const sitemaps = [...index.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+  const locs: string[] = [];
+  for (const sitemap of sitemaps) {
+    const body = await (await request.get(sitemap)).text();
+    locs.push(...[...body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname.replace(/(.)\/$/, '$1')));
+  }
+
+  for (const path of PAGES) {
+    if (NOINDEX_PAGES.has(path)) expect(locs).not.toContain(path);
+    else expect(locs).toContain(path);
+  }
 });
