@@ -56,8 +56,9 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <meta name="twitter:image" content={new URL(image, siteURL)} />
 
     <!-- Favicons -->
-    <link rel="apple-touch-icon" sizes="180x180" href="/a-logo.png" />
-    <link rel="icon" type="image/png" href="/a-logo.png" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     <!-- Browser theme color (updated dynamically by dark-mode script + Navbar) -->
     <meta name="theme-color" content="#f7fcfc" />
