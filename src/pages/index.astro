@@ -6,16 +6,22 @@ import Skills from '../components/Skills';
 import Experience from '../components/Experience';
 import Education from '../components/Education';
 import Contact from '../components/Contact';
+import SiteThread from '../components/SiteThread.astro';
+
+// The sections hydrate a little before they scroll into view: their reveals
+// are then ready (or, coming back up from below, already complete) when they
+// appear, and the scroll thread does not have to wait for them.
 ---
 
 <Layout
   title="Arash Kadkhodaei – Software Engineer"
   description="Software Engineer at Freiburg University, specializing in Python, backend development, and Galaxy Project bioinformatics tooling."
 >
+  <SiteThread />
   <Hero client:load />
-  <About client:visible />
-  <Skills client:visible />
-  <Experience client:visible />
-  <Education client:visible />
-  <Contact client:visible />
+  <About client:visible={{ rootMargin: '400px' }} />
+  <Skills client:visible={{ rootMargin: '400px' }} />
+  <Experience client:visible={{ rootMargin: '400px' }} />
+  <Education client:visible={{ rootMargin: '400px' }} />
+  <Contact client:visible={{ rootMargin: '400px' }} />
 </Layout>

@@ -75,7 +75,7 @@ export default function Navbar({ currentPath: initialPath = '/' }: NavbarProps) 
           aria-label="Home"
         >
           <img src="/logo.svg" alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
-          <span className="font-mono">{SITE.name}</span>
+          <span className="font-mono whitespace-nowrap text-base min-[360px]:text-lg">{SITE.name}</span>
         </a>
 
         {/* Desktop nav */}

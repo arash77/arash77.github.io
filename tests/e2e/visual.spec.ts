@@ -62,6 +62,12 @@ for (const theme of THEMES) {
         // fallback-font baseline that every later run diffs against.
         await page.evaluate(() => document.fonts.ready.then(() => undefined));
 
+        // The home page's scroll thread is measured from the live layout and
+        // flags readiness once its static (reduced-motion) drawing is in place.
+        if (path === '/') {
+          await page.locator('[data-thread-ready="true"]').waitFor({ state: 'attached' });
+        }
+
         await expect(page).toHaveScreenshot(`${name}-${theme}.png`, {
           fullPage: true,
         });

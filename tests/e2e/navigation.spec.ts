@@ -49,3 +49,15 @@ test('footer links have correct hrefs', async ({ page }) => {
   await expect(footer.locator('a[href="/impressum"]')).toBeVisible();
   await expect(footer.locator('a[href="/datenschutz"]')).toBeVisible();
 });
+
+test('the navbar brand stays on one line at 320px without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto('/');
+  const brand = page.locator('header a[aria-label="Home"] span');
+  const { height, lineHeight } = await brand.evaluate((el) => ({
+    height: el.getBoundingClientRect().height,
+    lineHeight: parseFloat(getComputedStyle(el).lineHeight),
+  }));
+  expect(height).toBeLessThan(lineHeight * 1.5);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});

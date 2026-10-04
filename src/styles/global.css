@@ -300,6 +300,567 @@
 .animate-delay-2 { animation-delay: 0.2s; }
 .animate-delay-3 { animation-delay: 0.35s; }
 
+/* ------------------------------------------------------------------------
+   Scroll thread (home page only; src/components/SiteThread.astro).
+   Everything here is gated on `html.thread-on`, which only the thread's
+   script adds, so the page without JavaScript is unchanged.
+
+   Layering: section backgrounds and the hero blobs < thread < all content.
+   The thread layer is z-index 1 in the root stacking context (main is
+   positioned but has no z-index, so it creates no stacking context), and the
+   section containers and the scroll hint are lifted to z-index 2.
+   ------------------------------------------------------------------------ */
+.site-thread {
+  display: none;
+}
+
+html.thread-on #main-content {
+  position: relative;
+}
+
+html.thread-on .site-thread {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: clip;
+  pointer-events: none;
+}
+
+.site-thread__svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  overflow: hidden;
+}
+
+html.thread-on [data-thread-section] > .container {
+  position: relative;
+  z-index: 2;
+}
+
+html.thread-on [data-thread-hint] {
+  z-index: 2;
+}
+
+/* The thread becomes the timeline spine once it is drawing (not before: a
+   reader landing mid-page must never see the timeline without a spine). */
+html.thread-on.thread-drawing [data-thread-line] {
+  opacity: 0;
+}
+
+/* Measuring: read layout boxes without the GSAP reveal transforms. */
+html.thread-measuring .gsap-reveal,
+html.thread-measuring .timeline-body {
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  rotate: none !important;
+}
+
+.site-thread__stop-from {
+  stop-color: hsl(var(--primary));
+}
+.site-thread__stop-to {
+  stop-color: hsl(var(--secondary));
+}
+/* The trace starts on a solder pad (an annular ring). */
+.site-thread__knot {
+  fill: hsl(var(--background));
+  stroke: hsl(var(--primary));
+  stroke-width: 2.6px;
+  transition: opacity 0.3s ease;
+}
+/* End pad, only when there is no chip network (board.ts). It fades in when the
+   route completes, but goes at once when the line retracts (a transition takes
+   the destination state's value). */
+.site-thread__end {
+  fill: hsl(var(--background));
+  stroke: hsl(var(--secondary));
+  stroke-width: 2.6px;
+  transition: none;
+}
+.site-thread__glow {
+  fill: hsl(var(--secondary) / 0.18);
+  transition: opacity 0.25s ease;
+}
+.site-thread__pen {
+  fill: hsl(var(--background));
+  stroke: hsl(var(--secondary));
+  transition: opacity 0.25s ease;
+}
+.site-thread__knot,
+.site-thread__end,
+.site-thread__glow,
+.site-thread__pen {
+  opacity: 0;
+}
+.site-thread__end[data-on] {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Timeline nodes light up as the pen passes. The fill and the icon change in
+   opposite directions (light to dark, dark to light), so a cross-fade would
+   pass through a moment where both have the same tone and the icon vanishes.
+   The icon colour switches in one step instead, at the point of the fill's
+   transition where both icon colours read best (each direction, both themes). */
+html.thread-on [data-thread-node] {
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0s linear 0.11s;
+}
+html.thread-on [data-thread-node][data-thread-done] {
+  transition: background-color 0.4s ease, border-color 0.4s ease, color 0s linear 0.13s;
+}
+@media screen {
+  html.thread-on [data-thread-node][data-thread-done] {
+    background-color: hsl(var(--primary));
+    border-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+  /* Every node starts unlit, the current job's too (it is filled without the
+     thread; the pulsing dot by its dates still marks it as current). */
+  html.thread-on [data-thread-node]:not([data-thread-done]) {
+    background-color: hsl(var(--card));
+    border-color: hsl(var(--border));
+    color: hsl(var(--muted-foreground));
+  }
+}
+
+/* Ink: an underline sweeps in under marked words when the pen passes. */
+html.thread-on [data-thread-ink] {
+  background-image: linear-gradient(hsl(var(--primary)), hsl(var(--primary)));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 2px;
+  /* Inline padding paints below the glyphs without moving the line box: the
+     underline sits clear of the descenders (g, y) instead of through them. */
+  padding-bottom: 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  /* Wiped out quickly as the line retracts past it; swept in slowly (below). */
+  transition: background-size 0.3s ease-out;
+}
+@media screen {
+  html.thread-on [data-thread-ink][data-thread-done] {
+    background-size: 100% 2px;
+    transition: background-size 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+}
+
+/* Section heading bars: the trace runs through each heading's row, and the
+   bar is an indicator LED on it, with solder pads at both ends (like the
+   reset switch's). Off until the line enters it, then lit, and it blinks
+   when a signal passes through. Screen only: print and the page without
+   JavaScript keep the plain bar. */
+@media screen {
+  html.thread-on [data-thread-bar] {
+    --led-off: hsl(var(--muted-foreground) / 0.3);
+    --led-body: linear-gradient(var(--led-off), var(--led-off));
+    --led-glow: hsl(var(--secondary) / 0.3);
+    position: relative;
+    border-radius: 1px;
+    background: var(--led-body);
+    transition: box-shadow 0.35s ease-out;
+  }
+  html.thread-on.dark [data-thread-bar] {
+    --led-glow: hsl(var(--secondary) / 0.5);
+  }
+  html.thread-on [data-thread-bar]::before,
+  html.thread-on [data-thread-bar]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 5px;
+    height: 9px;
+    margin-top: -4.5px;
+    border-radius: 1px;
+    background: hsl(var(--primary) / 0.85);
+  }
+  html.thread-on [data-thread-bar]::before {
+    left: -4px;
+  }
+  html.thread-on [data-thread-bar]::after {
+    right: -4px;
+  }
+  html.thread-on [data-thread-bar][data-thread-done] {
+    --led-body: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--secondary)));
+    box-shadow: 0 0 10px 1px var(--led-glow);
+  }
+  html.thread-on [data-thread-bar][data-flash] {
+    animation: thread-led-blip 0.6s ease-out;
+  }
+  /* A signal down its net makes a lit contact card blink. */
+  html.thread-on [data-thread-card][data-thread-lit][data-flash] {
+    animation: thread-card-blip 0.7s ease-out;
+  }
+  /* A hero tag the trace runs behind (a bead) blinks as a signal passes through it. */
+  html.thread-on [data-thread-beads] > [data-flash] {
+    animation: thread-bead-blip 0.6s ease-out;
+  }
+}
+@keyframes thread-card-blip {
+  0% {
+    border-color: hsl(var(--secondary));
+    box-shadow: 0 0 0 1px hsl(var(--secondary) / 0.6), 0 0 26px -4px hsl(var(--secondary) / 0.8);
+  }
+}
+@keyframes thread-led-blip {
+  0% {
+    box-shadow: 0 0 18px 5px hsl(var(--secondary) / 0.85);
+  }
+}
+@keyframes thread-bead-blip {
+  0% {
+    border-color: hsl(var(--secondary));
+    box-shadow: 0 0 0 1px hsl(var(--secondary) / 0.5), 0 0 16px -2px hsl(var(--secondary) / 0.8);
+  }
+}
+
+/* Room under the chip network at the end of the line for its ground symbol
+   (py-24 otherwise). The board reaches a fixed 141px below the cards (route.ts
+   END_GAP and its drop to the ground), so with the grid's mb-10 the room never
+   falls below 152px, also at a small browser font. Screen only: the board does
+   not print. */
+@media screen {
+  html.thread-on #contact {
+    padding-bottom: max(7rem, 152px - 2.5rem);
+  }
+}
+
+/* Contact cards: silkscreen corner marks, like a component's footprint on a
+   board, shown when the line has reached the cards; lit by the chip network
+   when the signal arrives. */
+html.thread-on [data-thread-card] {
+  position: relative;
+  transition: border-color 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+html.thread-on [data-thread-card]::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  --mark: hsl(var(--primary) / 0.65);
+  background:
+    linear-gradient(var(--mark), var(--mark)) top left / 12px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top left / 1.5px 12px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top right / 12px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top right / 1.5px 12px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom left / 12px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom left / 1.5px 12px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom right / 12px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom right / 1.5px 12px no-repeat;
+  opacity: 0;
+  /* Gone quickly as the line retracts past the cards; shown slowly (below). */
+  transition: opacity 0.3s ease-out;
+}
+@media screen {
+  html.thread-on [data-thread-card][data-thread-done]::after {
+    opacity: 1;
+    transition: opacity 0.6s ease;
+  }
+  /* Lit by its net: the delay is when the net's pulse reaches the card (set by the runtime). */
+  html.thread-on [data-thread-card][data-thread-lit] {
+    border-color: hsl(var(--secondary) / 0.6);
+    box-shadow: 0 0 0 1px hsl(var(--secondary) / 0.2), 0 12px 30px -16px hsl(var(--secondary) / 0.55);
+    transition: border-color 0.45s ease var(--thread-lit-delay, 0s), box-shadow 0.6s ease var(--thread-lit-delay, 0s);
+  }
+  html.thread-on [data-thread-card][data-thread-lit]::after {
+    --mark: hsl(var(--secondary));
+  }
+}
+
+/* Chip network at the end of the trace (board.ts): drawn dim, powered when
+   the line arrives. */
+.site-thread__board {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.site-thread__board[data-on] {
+  opacity: 1;
+}
+.site-thread__wire {
+  fill: none;
+  stroke: url(#site-thread-gradient);
+  stroke-width: 1.8px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The stub into pin 1 continues the trace: hidden until the line arrives (no wire dangling below the chip). */
+.site-thread__stub {
+  opacity: 0;
+}
+.site-thread__board[data-powered] .site-thread__stub {
+  opacity: 1;
+}
+.site-thread__net {
+  fill: none;
+  stroke: hsl(var(--primary) / 0.35);
+  stroke-width: 1.7px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.25s ease;
+}
+.site-thread__net-pulse {
+  fill: none;
+  stroke: hsl(var(--secondary));
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-dasharray: 16px calc(var(--len) * 1px + 40px);
+  opacity: 0;
+}
+.site-thread__board[data-powered] .site-thread__net {
+  stroke: hsl(var(--secondary) / 0.9);
+  transition: stroke 0.4s ease var(--lit-at);
+}
+.site-thread__board[data-powered] .site-thread__net-pulse {
+  /* NET_MS_PER_PX in runtime.ts: 1.4ms per px. */
+  animation: thread-net-pulse calc(var(--len) * 1.4ms) linear var(--delay) both;
+}
+/* Rebuilt while powered (a resize): stay lit, play nothing again. */
+.site-thread__board[data-settled] .site-thread__net-pulse {
+  animation: none;
+}
+.site-thread__board[data-settled] .site-thread__net {
+  transition: none;
+}
+@keyframes thread-net-pulse {
+  0% {
+    opacity: 1;
+    stroke-dashoffset: 16px;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    stroke-dashoffset: calc(var(--len) * -1px);
+  }
+}
+.site-thread__pin {
+  fill: hsl(var(--muted-foreground) / 0.7);
+  /* No outline at rest, but one its flash can shrink into (`none` snaps off halfway). */
+  stroke: transparent;
+  stroke-width: 0;
+}
+.site-thread__pin--in {
+  transition: fill 0.25s ease;
+}
+.site-thread__board[data-powered] .site-thread__pin--in {
+  fill: hsl(var(--secondary));
+  /* Lit when the arrival pulse reaches it (--pin-at, set by the runtime). */
+  transition: fill 0.2s ease var(--pin-at, 0s);
+}
+.site-thread__board[data-settled] .site-thread__pin--in {
+  transition: none;
+}
+/* Where a pulse arrives: the start pad, the pen's glow or pin 1 flash. */
+.site-thread__knot[data-flash],
+.site-thread__pin[data-flash] {
+  animation: thread-flash 0.7s ease-out;
+}
+.site-thread__glow[data-flash] {
+  animation: thread-flash-glow 0.7s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+/* No CSS filters on the thread: GPUs draw them in tiles, with seams. */
+@keyframes thread-flash {
+  0% {
+    stroke: hsl(var(--secondary));
+    fill: hsl(var(--secondary));
+    stroke-width: 4.5px;
+  }
+}
+@keyframes thread-flash-glow {
+  0% {
+    /* As far as there is room by the viewport edge (--glow-flash, set by the runtime). */
+    transform: scale(var(--glow-flash, 1.8));
+    fill: hsl(var(--secondary) / 0.45);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.site-thread__chip {
+  fill: hsl(186 28% 14%);
+  stroke: hsl(186 20% 30%);
+  stroke-width: 1px;
+}
+.dark .site-thread__chip {
+  fill: hsl(186 22% 20%);
+  stroke: hsl(186 18% 34%);
+}
+.site-thread__chip-notch {
+  fill: none;
+  stroke: hsl(186 20% 45%);
+  stroke-width: 1px;
+}
+.site-thread__chip-text {
+  font: 600 7.5px var(--font-mono);
+  letter-spacing: 0.1em;
+  fill: hsl(186 16% 66%);
+}
+.site-thread__silk {
+  font: 8px var(--font-mono);
+  letter-spacing: 0.12em;
+  /* At least 4.5:1 on the page (AA for 8px text): it names the switch. */
+  fill: hsl(var(--muted-foreground) / 0.8);
+  transition: opacity 0.15s ease;
+}
+.dark .site-thread__silk {
+  fill: hsl(var(--muted-foreground) / 0.75);
+}
+/* The switch's hover tip opens where its label is, and takes its place. */
+html:has(.site-thread-reset:not([data-side='below'], [data-tip-off]):is(:hover, :focus-visible)) .site-thread__silk {
+  opacity: 0;
+}
+.site-thread__pad {
+  fill: hsl(var(--primary) / 0.85);
+}
+.site-thread__switch-body {
+  fill: hsl(var(--muted-foreground) / 0.18);
+  stroke: hsl(var(--muted-foreground) / 0.55);
+  stroke-width: 1px;
+}
+.site-thread__switch-act {
+  fill: hsl(var(--foreground) / 0.72);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.12s ease, fill 0.12s ease;
+}
+.site-thread__board[data-pressed] .site-thread__switch-act {
+  fill: hsl(var(--secondary));
+  transform: scale(0.7);
+}
+.site-thread__pulse,
+.site-thread__pulse-halo {
+  fill: none;
+  stroke: hsl(var(--secondary));
+  stroke-linecap: round;
+  pointer-events: none;
+}
+.site-thread__pulse-halo--0 {
+  stroke-opacity: 0.08;
+}
+.site-thread__pulse-halo--1 {
+  stroke-opacity: 0.2;
+}
+
+/* The reset switch's button (created by the runtime, so never without JS). */
+.site-thread-reset {
+  display: none;
+}
+html.thread-on .site-thread-reset {
+  display: block;
+  position: absolute;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+html.thread-on .site-thread-reset[hidden] {
+  display: none;
+}
+.site-thread-reset:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 1px;
+}
+/* The reset moves focus to <main> (so Tab continues from the top); it is a
+   programmatic target, not a control: no ring around the whole page. */
+html.thread-on #main-content:focus {
+  outline: none;
+}
+.site-thread-reset__tip {
+  position: absolute;
+  top: 50%;
+  /* Where the switch's label starts (it takes the label's place). */
+  left: calc(100% + 7px);
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font: 11px/1.2 var(--font-mono);
+  color: hsl(var(--foreground));
+  background: hsl(var(--background) / 0.95);
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  padding: 3px 7px;
+  box-shadow: 0 6px 16px -10px rgb(0 0 0 / 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.site-thread-reset[data-side='left'] .site-thread-reset__tip {
+  left: auto;
+  right: calc(100% + 7px);
+}
+.site-thread-reset[data-side='below'] .site-thread-reset__tip {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* Escape dismisses it (data-tip-off, until the next hover or focus). */
+.site-thread-reset:not([data-tip-off]):is(:hover, :focus-visible) .site-thread-reset__tip {
+  opacity: 1;
+}
+/* The pointer can move onto the shown tip: it keeps the switch hovered, and
+   its edge bridges the gap to it. */
+.site-thread-reset:not([data-tip-off]):hover .site-thread-reset__tip {
+  pointer-events: auto;
+}
+.site-thread-reset__tip::before {
+  content: '';
+  position: absolute;
+  inset: -9px;
+}
+/* The button hit-tests as a circle, which falls away from the tip's edge
+   off its centre line: while hovered, its whole square keeps the hover. */
+.site-thread-reset:not([data-tip-off]):hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* Print: the route is laid out for the screen, not for the paper width, so
+   it would run through the reflowed text. Print the page as it is without the
+   thread, timeline line included (node fill, ink and the cards' marks and
+   lighting are screen-only above). */
+@media print {
+  html.thread-on .site-thread,
+  html.thread-on .site-thread-reset {
+    display: none;
+  }
+  html.thread-on [data-thread-card]::after {
+    display: none;
+  }
+  html.thread-on.thread-drawing [data-thread-line] {
+    opacity: 1;
+  }
+}
+
+/* Reduced motion: the thread is a static drawing; no sweeps, no staggered delays. */
+@media (prefers-reduced-motion: reduce) {
+  html.thread-on [data-thread-node],
+  html.thread-on [data-thread-ink],
+  html.thread-on [data-thread-card],
+  html.thread-on [data-thread-card]::after,
+  html.thread-on [data-thread-bar],
+  .site-thread__board,
+  .site-thread__net,
+  .site-thread__pin--in,
+  .site-thread__switch-act,
+  .site-thread__knot,
+  .site-thread__end,
+  .site-thread__glow,
+  .site-thread__pen {
+    transition: none !important;
+  }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,
