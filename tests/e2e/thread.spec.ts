@@ -2715,7 +2715,8 @@ test.describe('scroll thread, start', () => {
   });
 
   test('on a slow connection the thread still waits for the hero intro', async ({ page }) => {
-    await page.route(/\/_astro\/Hero\.[^/]*\.js$/, async (route) => {
+    // The scripts (the thread's and the one reporting the intro) arrive late.
+    await page.route(/\/_astro\/[^/]*\.js$/, async (route) => {
       await new Promise((r) => setTimeout(r, 2000));
       await route.continue();
     });
