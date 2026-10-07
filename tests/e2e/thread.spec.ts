@@ -1432,6 +1432,51 @@ test.describe('scroll thread, normal motion', () => {
     expect(state).toEqual({ powered: false, lit: 0 });
   });
 
+  test('a focused reset switch keeps its focus while the line retracts from the board, and goes once focus has left it', async ({ page }) => {
+    const board = page.locator('[data-thread-board]');
+    const reset = page.locator('[data-thread-reset]');
+    const onSwitch = async () => {
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await expect(board).toHaveAttribute('data-powered', '', { timeout: 8000 });
+      // By keyboard: back from the first footer link.
+      await page.locator('footer a').first().focus();
+      await page.keyboard.press('Shift+Tab');
+      await expect(reset).toBeFocused();
+      // Scrolled up until the line has left the contact cards: the board goes.
+      await page.evaluate(() => window.scrollBy(0, -500));
+      await expect(page.locator('[data-thread-card][data-thread-done]')).toHaveCount(0, { timeout: 3000 });
+      await expect(board).not.toHaveAttribute('data-on', '');
+    };
+    await onSwitch();
+    // The switch stays (focus does not drop to <body>)...
+    await expect(reset).toBeFocused();
+    await expect(reset).toBeVisible();
+    // The line at rest (its length unchanged for a few frames): no frame runs
+    // that could tidy up after the blur.
+    const still = () =>
+      page.locator('[data-thread-path]').evaluate(
+        (p) =>
+          new Promise<boolean>((res) => {
+            const a = p.getAttribute('stroke-dasharray');
+            let n = 0;
+            const f = () => (p.getAttribute('stroke-dasharray') !== a ? res(false) : ++n < 6 ? requestAnimationFrame(f) : res(true));
+            requestAnimationFrame(f);
+          }),
+      );
+    await expect.poll(still, { timeout: 4000 }).toBe(true);
+    // Leaving the window blurs it but keeps the focus on it: it stays.
+    await reset.dispatchEvent('blur');
+    await expect(reset).toBeVisible();
+    // It goes once focus leaves it.
+    await reset.blur();
+    await expect(reset).toBeHidden();
+    // Enter on it still takes the reader back to the top.
+    await onSwitch();
+    await page.keyboard.press('Enter');
+    await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 4000 }).toBe(0);
+    expect(await page.evaluate(() => document.activeElement?.id)).toBe('main-content');
+  });
+
   test('pulled back from the chip as it arrives, the line takes the arrival signal with it: no light past its head, no flash in pin 1', async ({ page }) => {
     // Board shown, line not arrived yet.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight - 500));

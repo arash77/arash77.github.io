@@ -739,6 +739,12 @@ export function initThread(): () => void {
         if (e.key === 'Escape' && resetBtn?.matches(':hover, :focus')) resetBtn.setAttribute('data-tip-off', '');
       }, { signal });
       for (const type of ['pointerenter', 'focus'] as const) resetBtn.addEventListener(type, () => resetBtn?.removeAttribute('data-tip-off'), { signal });
+      // Kept while focused with the board gone (render): it goes with that
+      // focus, as the loop may be at rest by then. A blur from leaving the
+      // window keeps the focus on it, and the switch with it.
+      resetBtn.addEventListener('blur', () => {
+        if (document.activeElement !== resetBtn && !boardG!.hasAttribute('data-on')) resetBtn?.setAttribute('hidden', '');
+      }, { signal });
     }
     if (resetBtn.parentElement !== main) main!.append(resetBtn);
     resetBtn.style.left = `${sx}px`;
@@ -1057,7 +1063,9 @@ export function initThread(): () => void {
     // by then), and powers on when the line arrives.
     const boardOn = !!board && started && !veiled && (arrived || cards.some((c) => c.done));
     boardG!.toggleAttribute('data-on', boardOn);
-    if (resetBtn) resetBtn.toggleAttribute('hidden', !boardOn);
+    // A focused switch stays until focus leaves it (hidden, it would drop
+    // focus to <body> and take the reader's Enter with it).
+    if (resetBtn) resetBtn.toggleAttribute('hidden', !boardOn && document.activeElement !== resetBtn);
     if (arrived && !powered && board && !reduced && !veiled) arrivalPulse(r);
     setPowered(arrived && !veiled && !!board);
   }
