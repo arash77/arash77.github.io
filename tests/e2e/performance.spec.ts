@@ -3,10 +3,9 @@ import { test, expect } from '@playwright/test';
 // On a phone the hero is the whole first screen and its name is the page's
 // largest paint (LCP). These guard what made it slow on a mobile connection.
 
-test('the hero name shows without waiting for the hero island', async ({ page }) => {
-  // Its script never arrives (nor Astro's retry, ?astro-retry=…): the intro
-  // plays in CSS anyway and the name shows.
-  await page.route(/\/_astro\/Hero\.[^/?]*\.js(\?.*)?$/, (route) => route.abort());
+test('the hero name shows without waiting for any script', async ({ page }) => {
+  // No script arrives at all: the intro plays in CSS anyway and the name shows.
+  await page.route(/\.js(\?.*)?$/, (route) => route.abort());
   await page.goto('/');
   const name = page.getByRole('heading', { level: 1 });
   await expect.poll(() => name.evaluate((el) => parseFloat(getComputedStyle(el).opacity)), { timeout: 3000 }).toBeGreaterThan(0.99);

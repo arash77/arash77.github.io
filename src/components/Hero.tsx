@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { ArrowRight, Download } from 'lucide-react';
 import { IconGithub, IconLinkedin } from './BrandIcons';
 import { Button } from './ui/button';
@@ -10,42 +9,6 @@ interface Props {
 }
 
 export default function Hero({ avatar }: Props) {
-  const ctaRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // The intro plays in CSS from the first paint (global.css: hero-intro);
-    // this island only reports it. The scroll thread (SiteThread) starts
-    // drawing once the intro has settled, and arms its start fallback from the
-    // intro's start (not from page load), so a late-hydrating hero still gets
-    // its intro first. The data flags cover a listener that attaches after an
-    // event has fired.
-    document.documentElement.dataset.heroIntro = '';
-    window.dispatchEvent(new Event('hero:intro-start'));
-    const ac = new AbortController();
-    const revealed = () => {
-      document.documentElement.dataset.heroRevealed = '';
-      window.dispatchEvent(new Event('hero:revealed'));
-    };
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      revealed();
-      return;
-    }
-    // The intro ends with the call-to-action row (already over if the island
-    // hydrated late). Only a reader who could see it has had it: in a hidden
-    // tab, wait until the page shows.
-    const shown = () => {
-      if (ac.signal.aborted) return;
-      if (document.visibilityState !== 'hidden') revealed();
-      else document.addEventListener('visibilitychange', shown, { once: true, signal: ac.signal });
-    };
-    const last = ctaRef.current
-      ?.getAnimations()
-      .find((a) => a instanceof CSSAnimation && a.animationName === 'hero-intro');
-    if (last) last.finished.then(shown, () => {});
-    else shown();
-    return () => ac.abort();
-  }, []);
-
   return (
     <section
       data-thread-section="hero"
@@ -118,7 +81,6 @@ export default function Hero({ avatar }: Props) {
             </div>
 
             <div
-              ref={ctaRef}
               data-hero-intro="cta"
               className="gsap-reveal flex flex-col sm:flex-row flex-wrap items-center gap-4 justify-center lg:justify-start"
             >

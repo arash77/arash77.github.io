@@ -281,11 +281,17 @@
 /* Hero intro: played in CSS from the first paint rather than by GSAP once the
    island has hydrated, so the name (the page's largest paint) never waits on
    JavaScript. The timeline is the GSAP one it replaces (power3.out; each
-   block's start and length below). Hero.tsx only reports its start and end
-   to the scroll thread. */
+   block's start and length below). src/lib/heroIntro.ts reports its start
+   and end to the scroll thread. It animates only opacity and transform, so it runs
+   on the compositor and stays smooth while the page is still loading
+   (visibility in the keyframes would put it on the busy main thread): the
+   blocks are visible throughout, hidden by their opacity until they start. */
 .js-enabled [data-hero-intro] {
   --hero-intro-from: translateY(20px);
+  visibility: visible;
   animation: hero-intro 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) both;
+  /* power3.out exactly; without linear() the cubic-bezier above (within 4.5%). */
+  animation-timing-function: linear(0, 0.1855, 0.3439, 0.478, 0.5904, 0.6836, 0.7599, 0.8215, 0.8704, 0.9085, 0.9375, 0.959, 0.9744, 0.985, 0.9919, 0.9961, 0.9984, 0.9995, 0.9999, 1, 1);
 }
 .js-enabled [data-hero-intro='avatar'] {
   --hero-intro-from: scale(0.8);
@@ -315,12 +321,10 @@
 @keyframes hero-intro {
   from {
     opacity: 0;
-    visibility: hidden;
     transform: var(--hero-intro-from);
   }
   to {
     opacity: 1;
-    visibility: visible;
     transform: none;
   }
 }
