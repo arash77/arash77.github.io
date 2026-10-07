@@ -21,12 +21,12 @@ test('nav links navigate correctly', async ({ page }) => {
   await page.goto('/');
 
   // Click "Projects" in the desktop nav
-  await page.locator('header nav a[href="/projects"]').first().click();
-  await expect(page).toHaveURL('/projects');
+  await page.locator('header nav a[href="/projects/"]').first().click();
+  await expect(page).toHaveURL('/projects/');
 
   // Click "Resume"
-  await page.locator('header nav a[href="/resume"]').first().click();
-  await expect(page).toHaveURL('/resume');
+  await page.locator('header nav a[href="/resume/"]').first().click();
+  await expect(page).toHaveURL('/resume/');
 
   // Click "Home" (logo link)
   await page.locator('header a[href="/"]').first().click();
@@ -46,8 +46,8 @@ test('footer links have correct hrefs', async ({ page }) => {
   await expect(footer.locator('a[href*="github.com"]')).toBeVisible();
   await expect(footer.locator('a[href*="linkedin.com"]')).toBeVisible();
   await expect(footer.locator('a[href^="mailto:"]')).toBeVisible();
-  await expect(footer.locator('a[href="/impressum"]')).toBeVisible();
-  await expect(footer.locator('a[href="/datenschutz"]')).toBeVisible();
+  await expect(footer.locator('a[href="/impressum/"]')).toBeVisible();
+  await expect(footer.locator('a[href="/datenschutz/"]')).toBeVisible();
 });
 
 test('the navbar brand stays on one line at 320px without horizontal overflow', async ({ page }) => {

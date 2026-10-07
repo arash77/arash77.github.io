@@ -74,8 +74,8 @@ describe('NAV_LINKS', () => {
   it('contains the correct hrefs', () => {
     const hrefs = NAV_LINKS.map((l) => l.href);
     expect(hrefs).toContain('/');
-    expect(hrefs).toContain('/projects');
-    expect(hrefs).toContain('/resume');
+    expect(hrefs).toContain('/projects/');
+    expect(hrefs).toContain('/resume/');
   });
 
   it('each entry has a non-empty label', () => {

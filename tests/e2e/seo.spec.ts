@@ -35,6 +35,20 @@ for (const path of PAGES) {
     expect(() => new URL(canonical!)).not.toThrow();
   });
 
+  // Pages build as directories (/projects/index.html) with canonical URLs that
+  // end in a slash, and Cloudflare Pages answers the bare path with a 308 to
+  // it: a link without the slash costs every click a redirect, which Search
+  // Console reports as "Page with redirect".
+  test(`${path} links to pages by their canonical URL, with the trailing slash`, async ({ page }) => {
+    await page.goto(path);
+    const hrefs = await page.locator('a[href^="/"]').evaluateAll((links) => links.map((a) => a.getAttribute('href')!));
+    const pageLinks = hrefs
+      .map((href) => new URL(href, 'https://kadkhodaei.de').pathname)
+      .filter((pathname) => !/\.[a-z0-9]+$/i.test(pathname));
+    expect(pageLinks.length).toBeGreaterThan(0);
+    expect(pageLinks.filter((pathname) => !pathname.endsWith('/'))).toEqual([]);
+  });
+
   test(`${path} is ${NOINDEX_PAGES.has(path) ? 'noindex' : 'indexable'}`, async ({ page }) => {
     await page.goto(path);
     const robots = page.locator('meta[name="robots"]');
