@@ -376,6 +376,9 @@ html.thread-on .site-thread {
   z-index: 1;
   overflow: clip;
   pointer-events: none;
+  /* Decorative (aria-hidden) silk: not part of selected or copied text. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .site-thread__svg {
@@ -548,6 +551,15 @@ html.thread-on [data-thread-ink] {
   /* A hero tag the trace runs behind (a bead) blinks as a signal passes through it. */
   html.thread-on [data-thread-beads] > [data-flash] {
     animation: thread-bead-blip 0.6s ease-out;
+  }
+}
+/* Forced colors paint the pads in the Canvas colour (the bar body is already
+   gone) while the trace keeps its own: over the line they would cut two gaps
+   into it at every heading. There the heading row is just the trace. */
+@media (forced-colors: active) {
+  html.thread-on [data-thread-bar]::before,
+  html.thread-on [data-thread-bar]::after {
+    display: none;
   }
 }
 @keyframes thread-card-blip {
@@ -843,20 +855,27 @@ html.thread-on #main-content:focus {
   box-shadow: 0 6px 16px -10px rgb(0 0 0 / 0.4);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+  /* Hidden, not only transparent: out of copied text and find in page. It
+     turns visible as it starts to fade in and hidden once it has faded out. */
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s;
 }
 .site-thread-reset[data-side='left'] .site-thread-reset__tip {
   left: auto;
   right: calc(100% + 7px);
 }
+/* Below, it hangs under the ground symbol, whose bars sit at the switch
+   centre +18/+22/+26 (board.ts: SW_PAD_Y + GROUND_DROP, GROUND_BAR_GAP), so
+   it never cuts the symbol: its edge at +29 is 2px under the last bar. */
 .site-thread-reset[data-side='below'] .site-thread-reset__tip {
-  top: calc(100% + 8px);
+  top: calc(100% + 14px);
   left: 50%;
   transform: translateX(-50%);
 }
 /* Escape dismisses it (data-tip-off, until the next hover or focus). */
 .site-thread-reset:not([data-tip-off]):is(:hover, :focus-visible) .site-thread-reset__tip {
   opacity: 1;
+  visibility: visible;
 }
 /* The pointer can move onto the shown tip: it keeps the switch hovered, and
    its edge bridges the gap to it. */
@@ -867,6 +886,10 @@ html.thread-on #main-content:focus {
   content: '';
   position: absolute;
   inset: -9px;
+}
+/* Below, the gap runs past the ground symbol: the bridge still reaches the switch. */
+.site-thread-reset[data-side='below'] .site-thread-reset__tip::before {
+  top: -15px;
 }
 /* The button hit-tests as a circle, which falls away from the tip's edge
    off its centre line: while hovered, its whole square keeps the hover. */

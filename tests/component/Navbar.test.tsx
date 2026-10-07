@@ -48,8 +48,8 @@ describe('Navbar', () => {
 
   it('nav links have correct hrefs', () => {
     render(<Navbar />);
-    for (const { href } of NAV_LINKS) {
-      const links = screen.getAllByRole('link', { name: new RegExp(href === '/' ? 'Home' : href.slice(1), 'i') });
+    for (const { href, label } of NAV_LINKS) {
+      const links = screen.getAllByRole('link', { name: new RegExp(label, 'i') });
       const matchingHref = links.some((el) => el.getAttribute('href') === href);
       expect(matchingHref, `No link with href="${href}" found`).toBe(true);
     }
