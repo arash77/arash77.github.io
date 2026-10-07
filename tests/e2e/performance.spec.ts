@@ -31,3 +31,13 @@ test('no stylesheet request holds up the first paint: the CSS comes with the HTM
   await expect(page.locator('link[rel="stylesheet"]')).toHaveCount(0);
   await expect(page.locator('head style')).not.toHaveCount(0);
 });
+
+test('only the fonts of the first screen are preloaded', async ({ page }) => {
+  // Every preload is fetched at once, ahead of the avatar and the scripts:
+  // preloading all weights (16 files) held those back by about 2 s on a
+  // slow phone connection. The rest load on demand.
+  await page.goto('/');
+  const preloads = await page.locator('link[rel="preload"][as="font"]').count();
+  expect(preloads).toBeGreaterThan(0);
+  expect(preloads).toBeLessThanOrEqual(3);
+});

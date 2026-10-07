@@ -68,8 +68,17 @@ const siteURL = Astro.site?.origin ?? 'https://kadkhodaei.de';
     <meta name="theme-color" content="#f7fcfc" />
 
     <!-- Fonts: Inter + JetBrains Mono (self-hosted via Astro Fonts API) -->
-    <Font cssVariable="--font-inter" preload />
-    <Font cssVariable="--font-jetbrains-mono" preload />
+    <!-- Only what the first screen needs (body text, the hero name, the mono
+         labels): every preload is fetched at once, ahead of the avatar and the
+         scripts, and the rest load on demand. -->
+    <Font
+      cssVariable="--font-inter"
+      preload={[
+        { weight: 400, style: 'normal', subset: 'latin' },
+        { weight: 700, style: 'normal', subset: 'latin' },
+      ]}
+    />
+    <Font cssVariable="--font-jetbrains-mono" preload={[{ weight: 400, style: 'normal', subset: 'latin' }]} />
 
     <!-- JSON-LD Person schema -->
     <script type="application/ld+json" is:inline set:html={JSON.stringify({
