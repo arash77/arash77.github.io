@@ -370,6 +370,55 @@ test.describe('scroll thread, reduced motion', () => {
     }
   });
 
+  test('in forced colors the heading bars never cut gaps into the trace', async ({ page }) => {
+    // Forced colors turn the pads' background into the Canvas colour while the
+    // trace keeps its own: pads over the line would show as two gaps per bar.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ reducedMotion: 'reduce', forcedColors: 'active', colorScheme: scheme });
+      await page.goto('/');
+      await ready(page);
+      const bars = page.locator('[data-thread-bar]');
+      const n = await bars.count();
+      expect(n).toBeGreaterThan(3);
+      const bad: string[] = [];
+      for (let i = 0; i < n; i++) {
+        await bars.nth(i).scrollIntoViewIfNeeded();
+        const b = (await bars.nth(i).boundingBox())!;
+        const w = Math.round(b.width);
+        const png = (await page.screenshot({ clip: { x: Math.round(b.x) - 20, y: Math.round(b.y + b.height / 2) - 4, width: w + 40, height: 8 } })).toString('base64');
+        // A column's strength: its largest colour distance from the Canvas
+        // (the clip's top-left pixel, above the line). Through each pad's
+        // centre the row must show at least half the line's strength beside the bar.
+        const s = await page.evaluate(
+          async ({ png, cols }) => {
+            const img = new Image();
+            img.src = `data:image/png;base64,${png}`;
+            await img.decode();
+            const c = document.createElement('canvas');
+            [c.width, c.height] = [img.width, img.height];
+            const ctx = c.getContext('2d')!;
+            ctx.drawImage(img, 0, 0);
+            const d = ctx.getImageData(0, 0, c.width, c.height).data;
+            return cols.map((x) => {
+              let m = 0;
+              for (let y = 0; y < img.height; y++) {
+                const k = (y * img.width + x) * 4;
+                m = Math.max(m, Math.abs(d[k] - d[0]) + Math.abs(d[k + 1] - d[1]) + Math.abs(d[k + 2] - d[2]));
+              }
+              return m;
+            });
+          },
+          // The clip starts 20px left of the bar; the pads overhang its ends by 4px.
+          { png, cols: [20 - 12, 20 - 2, 20 + w + 1, 20 + w + 12] },
+        );
+        const line = Math.min(s[0], s[3]);
+        if (s[1] < line / 2 || s[2] < line / 2) bad.push(`bar ${i}: line ${line}, pads ${s[1]} / ${s[2]}`);
+      }
+      expect(bad, scheme).toEqual([]);
+    }
+  });
+
   test('the reset switch hover label stays on screen at every width', async ({ page }) => {
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 900 });

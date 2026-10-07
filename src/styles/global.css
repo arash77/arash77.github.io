@@ -499,6 +499,15 @@ html.thread-on [data-thread-ink] {
     animation: thread-bead-blip 0.6s ease-out;
   }
 }
+/* Forced colors paint the pads in the Canvas colour (the bar body is already
+   gone) while the trace keeps its own: over the line they would cut two gaps
+   into it at every heading. There the heading row is just the trace. */
+@media (forced-colors: active) {
+  html.thread-on [data-thread-bar]::before,
+  html.thread-on [data-thread-bar]::after {
+    display: none;
+  }
+}
 @keyframes thread-card-blip {
   0% {
     border-color: hsl(var(--secondary));
