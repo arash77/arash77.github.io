@@ -7,6 +7,9 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   site: process.env.SITE ?? 'https://kadkhodaei.de',
   output: 'static',
+  // One small stylesheet: inlined, it renders with the HTML instead of
+  // blocking the first paint on a second request.
+  build: { inlineStylesheets: 'always' },
   fonts: [
     {
       name: 'Inter',

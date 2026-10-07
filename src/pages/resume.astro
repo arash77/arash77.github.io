@@ -3,7 +3,11 @@ import Layout from '../layouts/Layout.astro';
 import { experiences, education, languages, resumeSkillTiers, conferences } from '../data/resume';
 import { Download, MapPin, Mail, Briefcase, GraduationCap, BookOpen, FileText, ExternalLink, User, Globe, Code } from 'lucide-react';
 import { IconGithub, IconLinkedin, IconOrcid } from '../components/BrandIcons';
-import { SITE } from '../lib/utils';
+import { getImage } from 'astro:assets';
+import avatarSource from '../assets/img/avatar.jpg';
+
+// Shown at 80px, zoomed 1.75x inside its circle.
+const avatar = await getImage({ src: avatarSource, widths: [160, 320], format: 'avif' });
 
 function formatContributors(contributors: string[]) {
   const isUser = (name: string) => name.toLowerCase().includes('arash kadkhodaei');
@@ -41,7 +45,9 @@ function formatContributors(contributors: string[]) {
         <div class="flex items-center gap-5">
           <div class="w-20 h-20 rounded-full border-2 border-primary/30 shadow-md overflow-hidden shrink-0">
             <img
-              src={SITE.avatar}
+              src={avatar.src}
+              srcset={avatar.srcSet.attribute}
+              sizes="140px"
               alt="Arash Kadkhodaei"
               width="80"
               height="80"

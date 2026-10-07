@@ -8,7 +8,7 @@ import { SITE } from '@/lib/utils';
 
 const interRegular  = readFileSync(resolve('src/assets/fonts/Inter-Regular.otf'));
 const interSemiBold = readFileSync(resolve('src/assets/fonts/Inter-SemiBold.otf'));
-const avatarData    = `data:image/jpeg;base64,${readFileSync(resolve('public/assets/img/avatar.jpg')).toString('base64')}`;
+const avatarData    = `data:image/jpeg;base64,${readFileSync(resolve('src/assets/img/avatar.jpg')).toString('base64')}`;
 
 // Distributed node-graph as a pre-built SVG data URI (satori can't render SVG children)
 const graphNodes: [number, number, number][] = [

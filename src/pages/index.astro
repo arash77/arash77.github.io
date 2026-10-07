@@ -7,10 +7,16 @@ import Experience from '../components/Experience';
 import Education from '../components/Education';
 import Contact from '../components/Contact';
 import SiteThread from '../components/SiteThread.astro';
+import { getImage } from 'astro:assets';
+import avatarSource from '../assets/img/avatar.jpg';
 
 // The sections hydrate a little before they scroll into view: their reveals
 // are then ready (or, coming back up from below, already complete) when they
 // appear, and the scroll thread does not have to wait for them.
+
+// The avatar shows at 176/224px, zoomed 1.75x inside its circle (Hero.tsx):
+// sized for that and its pixel density instead of the 1200px original.
+const avatar = await getImage({ src: avatarSource, widths: [320, 640, 960], format: 'avif' });
 ---
 
 <Layout
@@ -18,7 +24,7 @@ import SiteThread from '../components/SiteThread.astro';
   description="Software Engineer at Freiburg University, specializing in Python, backend development, and Galaxy Project bioinformatics tooling."
 >
   <SiteThread />
-  <Hero client:load />
+  <Hero client:load avatar={{ src: avatar.src, srcSet: avatar.srcSet.attribute }} />
   <About client:visible={{ rootMargin: '400px' }} />
   <Skills client:visible={{ rootMargin: '400px' }} />
   <Experience client:visible={{ rootMargin: '400px' }} />

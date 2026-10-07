@@ -23,7 +23,6 @@ export const SITE = {
   github: 'https://github.com/arash77',
   linkedin: 'https://linkedin.com/in/kadarash',
   location: 'Freiburg, Germany',
-  avatar: '/assets/img/avatar.jpg',
 } as const;
 
 export const NAV_LINKS = [
