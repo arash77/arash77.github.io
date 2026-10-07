@@ -275,6 +275,17 @@ export function initThread(): () => void {
    * when the lock ends.
    */
   const layoutWidth = () => main!.clientWidth;
+  /** What the ResizeObserver watches. A scrollbar appearing or going resizes only the root (see layoutWidth). */
+  const observed = [main, html, ...main.querySelectorAll('[data-thread-section]')];
+  const observedSizes = () =>
+    observed
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        return `${r.width}x${r.height}`;
+      })
+      .join('|');
+  /** observedSizes() as the last measure() saw them. */
+  let measuredSizes = '';
 
   html.classList.add('thread-on');
 
@@ -288,6 +299,7 @@ export function initThread(): () => void {
   function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[]; cardEls: Element[]; cardRects: Rect[]; barEls: Element[]; tags: { el: Element; r: Rect }[] } | null {
     html.classList.add('thread-measuring');
     try {
+      measuredSizes = observedSizes();
       const m = main!.getBoundingClientRect();
       mainTop = m.top + window.scrollY;
       mainLeft = m.left + window.scrollX;
@@ -1345,12 +1357,14 @@ export function initThread(): () => void {
   // Layout changes (resize drags, rotation, reflow): the callback runs after
   // layout and before paint, so rebuilding here means no frame ever shows the
   // old geometry over the new layout. Our own writes (the absolutely
-  // positioned, clipped SVG) cannot resize the observed elements.
-  const ro = new ResizeObserver(() => rebuildInFrame());
-  ro.observe(main);
-  // A scrollbar appearing or going resizes only the root (see layoutWidth).
-  ro.observe(html);
-  for (const el of main.querySelectorAll('[data-thread-section]')) ro.observe(el);
+  // positioned, clipped SVG) cannot resize the observed elements. observe()
+  // always reports once at first, right after the boot rebuild has measured
+  // the same sizes: only sizes that differ from the last measure rebuild.
+  const ro = new ResizeObserver(() => {
+    if (route && observedSizes() === measuredSizes) return;
+    rebuildInFrame();
+  });
+  for (const el of observed) ro.observe(el);
 
   return () => {
     ac.abort();

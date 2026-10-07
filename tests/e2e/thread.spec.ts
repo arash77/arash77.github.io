@@ -2423,6 +2423,51 @@ test.describe('scroll thread, start', () => {
     expect(beadsOpacity).toBeGreaterThan(0.99);
   });
 
+  test('boot builds the thread once: no ResizeObserver rebuild when nothing it watches has changed size', async ({ page }) => {
+    // Each rebuild is spotted by measure() adding html.thread-measuring; it
+    // records whether it ran inside a ResizeObserver callback and the observed
+    // boxes (<main>, <html>, every section) as it started.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __rebuilds: { fromRO: boolean; boxes: string }[] };
+      w.__rebuilds = [];
+      let inRO = 0;
+      const RO = window.ResizeObserver;
+      window.ResizeObserver = class extends RO {
+        constructor(cb: ResizeObserverCallback) {
+          super((entries, obs) => {
+            inRO++;
+            try {
+              cb(entries, obs);
+            } finally {
+              inRO--;
+            }
+          });
+        }
+      };
+      const add = DOMTokenList.prototype.add;
+      DOMTokenList.prototype.add = function (...tokens: string[]) {
+        if (tokens.includes('thread-measuring')) {
+          const main = document.getElementById('main-content')!;
+          const boxes = [main, document.documentElement, ...main.querySelectorAll('[data-thread-section]')].map((el) => {
+            const r = el.getBoundingClientRect();
+            return `${r.width}x${r.height}`;
+          });
+          w.__rebuilds.push({ fromRO: inRO > 0, boxes: boxes.join('|') });
+        }
+        return add.apply(this, tokens);
+      };
+    });
+    for (const [width, height] of [[412, 823], [1440, 900]] as const) {
+      await page.setViewportSize({ width, height });
+      await page.goto('/');
+      await ready(page);
+      await page.waitForTimeout(500);
+      const rebuilds = await page.evaluate(() => (window as unknown as { __rebuilds: { fromRO: boolean; boxes: string }[] }).__rebuilds);
+      const redundant = rebuilds.filter((r, i) => r.fromRO && i > 0 && r.boxes === rebuilds[i - 1].boxes);
+      expect(redundant, `${width}px, rebuilds: ${rebuilds.map((r) => (r.fromRO ? 'RO' : 'direct')).join(', ')}`).toEqual([]);
+    }
+  });
+
   for (const [w, h] of [[1440, 900], [768, 800]] as const) {
     test(`a deep link mid-page starts in place and never draws over content that has not revealed (${w}px)`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h });
