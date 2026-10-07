@@ -224,19 +224,34 @@ jobs:
             || { echo '::error::served HTML does not look like the portfolio'; exit 1; }
 
           # Styling is the thing the pre-merge visual suite guards; here just
-          # confirm a stylesheet is actually referenced and fetchable, which
-          # catches asset-path breakage from a bundler upgrade.
-          CSS_PATH="$(grep -o 'href="[^"]*\.css"' /tmp/live.html | head -1 | cut -d'"' -f2)"
-          if [ -z "$CSS_PATH" ]; then
-            echo '::error::no stylesheet referenced in the served HTML'
-            exit 1
+          # confirm the build's styles reach the page: a referenced stylesheet
+          # must be fetchable, or, as astro.config.mjs inlines it
+          # (build.inlineStylesheets), the built rules must be in the HTML.
+          # (`|| true`: no match, or head closing the pipe early, must not trip
+          # errexit before the checks below can report what is wrong.)
+          CSS_PATH="$(grep -o 'href="[^"]*\.css"' /tmp/live.html | head -1 | cut -d'"' -f2 || true)"
+          if [ -n "$CSS_PATH" ]; then
+            case "$CSS_PATH" in
+              http*) CSS_URL="$CSS_PATH" ;;
+              *)     CSS_URL="$SITE$CSS_PATH" ;;
+            esac
+            curl -fsS --max-time 20 --retry 4 --retry-delay 10 --retry-all-errors "$CSS_URL" -o /dev/null \
+              || { echo "::error::stylesheet $CSS_URL is not fetchable"; exit 1; }
+            CSS_NOTE="CSS at $CSS_PATH loads"
+          else
+            grep -q '\.gradient-mesh{' /tmp/live.html \
+              || { echo '::error::no stylesheet referenced and no built styles inlined in the served HTML'; exit 1; }
+            CSS_NOTE="CSS inlined"
           fi
-          case "$CSS_PATH" in
-            http*) CSS_URL="$CSS_PATH" ;;
-            *)     CSS_URL="$SITE$CSS_PATH" ;;
-          esac
-          curl -fsS --max-time 20 "$CSS_URL" -o /dev/null \
-            || { echo "::error::stylesheet $CSS_URL is not fetchable"; exit 1; }
+
+          # A bundled asset the page references must be fetchable, which
+          # catches asset-path breakage from a bundler upgrade. Retried: right
+          # after a deploy an edge can serve the new HTML a moment before a
+          # newly hashed asset reaches it.
+          ASSET_PATH="$(grep -o '"/_astro/[^"]*\.\(js\|css\|woff2\|avif\|webp\)"' /tmp/live.html | head -1 | tr -d '"' || true)"
+          [ -n "$ASSET_PATH" ] || { echo '::error::no bundled /_astro/ asset referenced in the served HTML'; exit 1; }
+          curl -fsS --max-time 20 --retry 4 --retry-delay 10 --retry-all-errors "$SITE$ASSET_PATH" -o /dev/null \
+            || { echo "::error::asset $SITE$ASSET_PATH is not fetchable"; exit 1; }
 
           # Unknown paths must stay 404s. Cloudflare Pages answers them with the
           # homepage and a 200 when the build has no 404.html; `deploy`
@@ -247,7 +262,7 @@ jobs:
           [ "$STATUS" = 404 ] \
             || { echo "::error::$MISSING returned $STATUS, expected 404"; exit 1; }
 
-          echo "Live site OK: title present, content matches, CSS at $CSS_PATH loads, unknown paths 404."
+          echo "Live site OK: title present, content matches, $CSS_NOTE, $ASSET_PATH loads, unknown paths 404."
 
       - name: Open an issue if the live site is broken
         if: failure()
