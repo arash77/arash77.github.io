@@ -865,6 +865,55 @@ test.describe('scroll thread, reduced motion', () => {
     await expect(page.locator('.site-thread')).toBeVisible();
     expect((await page.locator('[data-thread-path]').getAttribute('d'))?.length).toBeGreaterThan(100);
   });
+
+  test('under reduced motion the reset jumps to the top at once, with no signal', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    await ready(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+    await page.locator('[data-thread-reset]').click();
+    // Read once, without retrying: a smooth scroll or the eased rewind would also get to the top, just later.
+    const { y, pulses } = await page.evaluate(
+      () =>
+        new Promise<{ y: number; pulses: number }>((res) =>
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => res({ y: window.scrollY, pulses: document.querySelectorAll('[data-thread-pulses] path').length })),
+          ),
+        ),
+    );
+    expect(y, 'scrollY two frames after the press').toBe(0);
+    expect(pulses, 'reset signal paths').toBe(0);
+  });
+
+  test("the reset switch hover label takes the RESET label's place: the label hides while it shows", async ({ page }) => {
+    const sides = new Set<string>();
+    for (const width of [1280, 600]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await ready(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const reset = page.locator('[data-thread-reset]');
+      const tip = page.locator('.site-thread-reset__tip');
+      const silk = page.locator('.site-thread__silk');
+      const side = (await reset.getAttribute('data-side'))!;
+      sides.add(side);
+      await expect(silk, `${width}px ${side}: at rest`).toHaveCSS('opacity', '1');
+      // Hover: the tip opens over the label, which goes.
+      await reset.hover();
+      await expect(tip).toHaveCSS('opacity', '1');
+      await expect(silk, `${width}px ${side}: hover`).toHaveCSS('opacity', '0');
+      await page.mouse.move(5, 5);
+      await expect(silk).toHaveCSS('opacity', '1');
+      // Keyboard focus: the same.
+      await page.locator('footer a').first().focus();
+      await page.keyboard.press('Shift+Tab');
+      await expect(reset).toBeFocused();
+      await expect(tip).toHaveCSS('opacity', '1');
+      await expect(silk, `${width}px ${side}: focus`).toHaveCSS('opacity', '0');
+    }
+    expect([...sides].sort()).toEqual(['left', 'right']);
+  });
 });
 
 test.describe('scroll thread, normal motion', () => {
@@ -2256,6 +2305,270 @@ test.describe('scroll thread, normal motion', () => {
     await page.mouse.move(pen.x - 60, pen.y + 220, { steps: 2 });
     await page.waitForTimeout(400);
     expect(await pulsesSeen(page)).toBe(0);
+  });
+
+  test('a key press that does not scroll, during a reset, hands the page back to the reader', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    const max = await page.evaluate(() => window.scrollY);
+    await page.locator('[data-thread-reset]').click();
+    // Early in the run, well before it could end by itself.
+    await page.waitForFunction((max) => window.scrollY < max - 200, max, { polling: 'raf' });
+    await page.keyboard.press('Shift');
+    // Read at once: the reset's own signal is gone (not only once it has run into the start pad).
+    const { y, pulses } = await page.evaluate(() => ({ y: window.scrollY, pulses: document.querySelectorAll('[data-thread-pulses] path').length }));
+    expect(pulses, 'reset signal right after the key').toBe(0);
+    await page.waitForTimeout(600);
+    const y2 = await page.evaluate(() => window.scrollY);
+    expect(Math.abs(y2 - y), `scrollY ${y} then ${y2} 600 ms later`).toBeLessThan(2);
+    expect(y2).toBeGreaterThan(100);
+  });
+
+  test('a finger put down without moving, during a reset, hands the page back to the reader', async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, hasTouch: true, reducedMotion: 'no-preference' });
+    const page = await context.newPage();
+    await page.goto('/');
+    await page.addStyleTag({ content: 'html { scroll-behavior: auto !important; }' });
+    await ready(page);
+    await expect(page.locator('[data-thread-knot]')).toHaveCSS('opacity', '1', { timeout: 6000 });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    const max = await page.evaluate(() => window.scrollY);
+    await page.locator('[data-thread-reset]').click();
+    await page.waitForFunction((max) => window.scrollY < max - 200, max, { polling: 'raf' });
+    // A touch start with no move: nothing scrolls the page, so only the touch itself can stop the reset.
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 640, y: 400 }] });
+    const { y, pulses } = await page.evaluate(() => ({ y: window.scrollY, pulses: document.querySelectorAll('[data-thread-pulses] path').length }));
+    expect(pulses, 'reset signal right after the touch').toBe(0);
+    await page.waitForTimeout(600);
+    const y2 = await page.evaluate(() => window.scrollY);
+    expect(Math.abs(y2 - y), `scrollY ${y} then ${y2} 600 ms later`).toBeLessThan(2);
+    expect(y2).toBeGreaterThan(100);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await context.close();
+  });
+
+  test('on a route too long to run back in 2 s (large browser font), the reset still takes at most 2 s', async ({ page }) => {
+    // A 24px default font at 1920 wide makes the route ~15500 px: 2.8 s at the reset's pace, so only its 2 s cap holds it.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Page.setFontSizes', { fontSizes: { standard: 24 } });
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.reload();
+    await page.addStyleTag({ content: 'html { scroll-behavior: auto !important; }' });
+    await ready(page);
+    await expect(page.locator('[data-thread-knot]')).toHaveCSS('opacity', '1', { timeout: 6000 });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 10000 });
+    const from = await page.locator('[data-thread-path]').evaluate((p) => parseFloat(p.getAttribute('pathLength')!));
+    expect(from, 'route length (px)').toBeGreaterThan(11000 * 1.1);
+    // The reset signal's position in each frame, stamped with that frame's time
+    // (the time the runtime moves it by), until it runs into the start pad.
+    await page.evaluate(() => {
+      const w = window as unknown as { __rw: { t: number; pos: number }[]; __knot: boolean };
+      w.__rw = [];
+      w.__knot = false;
+      const line = document.querySelector('[data-thread-path]')!;
+      const k = document.querySelector('[data-thread-knot]')!;
+      new MutationObserver(() => (w.__knot ||= k.hasAttribute('data-flash'))).observe(k, { attributes: true, attributeFilter: ['data-flash'] });
+      new MutationObserver((recs) => {
+        if (w.__knot) return;
+        const el = recs.map((r) => r.target as Element).find((p) => p.classList.contains('site-thread__pulse') && p.getAttribute('d') === line.getAttribute('d'));
+        if (el) w.__rw.push({ t: Number(document.timeline.currentTime), pos: 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0') });
+      }).observe(document.querySelector('[data-thread-pulses]')!, { subtree: true, attributes: true, attributeFilter: ['stroke-dashoffset'] });
+    });
+    await page.locator('[data-thread-reset]').click();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __knot: boolean }).__knot), { timeout: 6000 }).toBe(true);
+    const rw = await page.evaluate(() => (window as unknown as { __rw: { t: number; pos: number }[] }).__rw);
+    // Its eased path, pos = from - (from + 26) * (1 - cos(pi * u)) / 2 with u = (t - t0) / T,
+    // gives each frame's progress u; two frames in the middle of the run give T without t0,
+    // so a loaded machine (late or dropped frames) does not move it.
+    const u = (pos: number) => Math.acos(1 - (2 * (from - pos)) / (from + 26)) / Math.PI;
+    const mid = rw.filter((e) => u(e.pos) > 0.1 && u(e.pos) < 0.9);
+    expect(mid.length, 'frames in the middle of the run').toBeGreaterThan(3);
+    const [a, b] = [mid[0], mid[mid.length - 1]];
+    const T = (b.t - a.t) / 1000 / (u(b.pos) - u(a.pos));
+    expect(T, 'reset run time (s)').toBeGreaterThan(1.9);
+    expect(T, 'reset run time (s)').toBeLessThanOrEqual(2.02);
+  });
+
+  test('a signal that starts inside a lit heading LED makes it blink too', async ({ page }) => {
+    const bar = page.locator('#about [data-thread-bar]');
+    await bar.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 300));
+    await expect(bar).toHaveAttribute('data-thread-done', '', { timeout: 4000 });
+    await page.waitForTimeout(1500);
+    await bar.evaluate((el) => {
+      const w = window as unknown as { __blink: boolean };
+      w.__blink = false;
+      new MutationObserver(() => {
+        if (el.hasAttribute('data-flash')) w.__blink = true;
+      }).observe(el, { attributes: true, attributeFilter: ['data-flash'] });
+    });
+    await countPulses(page);
+    // Sweep straight across the middle of the bar: both signals start inside its LED.
+    const r = await bar.evaluate((el) => el.getBoundingClientRect().toJSON());
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    await page.mouse.move(x, y - 40);
+    await page.waitForTimeout(300);
+    await page.mouse.move(x, y + 40, { steps: 2 });
+    await expect.poll(() => pulsesSeen(page), { timeout: 2000 }).toBe(2);
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __blink: boolean }).__blink), { timeout: 2000 }).toBe(true);
+  });
+
+  test('a slow pointer across the drawn trace sends nothing; the same crossing done fast sends a pair', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 1250));
+    await page.waitForTimeout(2500); // the pen comes to rest on the right rail
+    const pen = await page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+      const path = svg.querySelector<SVGPathElement>('[data-thread-path]')!;
+      const c = svg.querySelector('[data-thread-pen]')!;
+      const s = svg.getBoundingClientRect();
+      const dash = parseFloat((path.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+      const a = path.getPointAtLength(dash - 140), b = path.getPointAtLength(dash);
+      return { x: s.left + parseFloat(c.getAttribute('cx')!), y: s.top + parseFloat(c.getAttribute('cy')!), vertical: Math.abs(a.x - b.x) < 0.5 && b.y - a.y > 139 };
+    });
+    expect(pen.vertical, 'the last 140px drawn are the rail').toBe(true);
+    await countPulses(page);
+    const y = pen.y - 100;
+    // A stroll: 1px per 20ms or slower (50px/s at most, under the 400px/s of a sweep) across the rail.
+    await page.mouse.move(pen.x - 10.5, y);
+    for (let i = 1; i <= 21; i++) {
+      await page.mouse.move(pen.x - 10.5 + i, y);
+      await page.waitForTimeout(20);
+    }
+    await page.waitForTimeout(400);
+    expect(await pulsesSeen(page), 'a slow crossing sends nothing').toBe(0);
+    // A sweep across the same spot: one signal each way.
+    await page.mouse.move(pen.x + 60, y);
+    await page.waitForTimeout(300);
+    await page.mouse.move(pen.x - 60, y, { steps: 2 });
+    await expect.poll(() => pulsesSeen(page), { timeout: 2000 }).toBe(2);
+  });
+
+  test('one crossing sends one pair of signals, also when a pointer event lands right on the wire: on the trace and on a powered net', async ({ page }) => {
+    // The trace: the right rail above the pen at rest.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => window.scrollTo(0, 1250));
+    const penAtRest = () =>
+      page.evaluate(async () => {
+        const c = document.querySelector('[data-thread-pen]')!;
+        const at = () => `${c.getAttribute('cx')} ${c.getAttribute('cy')}`;
+        const was = at();
+        for (let i = 0; i < 6; i++) await new Promise(requestAnimationFrame);
+        return at() === was;
+      });
+    await page.waitForTimeout(1500);
+    await expect.poll(penAtRest, { timeout: 8000 }).toBe(true);
+    const pen = await page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+      const path = svg.querySelector<SVGPathElement>('[data-thread-path]')!;
+      const c = svg.querySelector('[data-thread-pen]')!;
+      const s = svg.getBoundingClientRect();
+      const dash = parseFloat((path.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+      const a = path.getPointAtLength(dash - 120), b = path.getPointAtLength(dash);
+      return { x: s.left + parseFloat(c.getAttribute('cx')!), y: s.top + parseFloat(c.getAttribute('cy')!), vertical: Math.abs(a.x - b.x) < 0.5 && b.y - a.y > 119 };
+    });
+    expect(pen.vertical, 'the pen rests on a rail, 120px of it drawn above').toBe(true);
+    await countPulses(page);
+    await page.mouse.move(pen.x + 60, pen.y - 80);
+    await page.waitForTimeout(300);
+    await page.mouse.move(pen.x + 59, pen.y - 80); // after the pause: only sets where the sweep starts
+    // Two events, the first exactly on the rail: both see the same crossing.
+    await page.mouse.move(pen.x - 59, pen.y - 80, { steps: 2 });
+    await page.waitForTimeout(300);
+    expect(await pulsesSeen(page), 'trace').toBe(2);
+
+    // A powered net: the middle of the longest level leg of the first one.
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+    await page.waitForTimeout(2500); // the power-on sequence has played
+    const leg = await page.evaluate(() => {
+      const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+      const s = svg.getBoundingClientRect();
+      const pts = [...(svg.querySelector('.site-thread__net')!.getAttribute('d') ?? '').matchAll(/[ML](-?[\d.]+),(-?[\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+      let best = { len: 0, x: 0, y: 0 };
+      for (let i = 1; i < pts.length; i++) {
+        const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+        if (Math.abs(ay - by) < 0.01 && Math.abs(bx - ax) > best.len) best = { len: Math.abs(bx - ax), x: s.left + (ax + bx) / 2, y: s.top + ay };
+      }
+      return best;
+    });
+    expect(leg.len).toBeGreaterThan(30);
+    // The same counter (a second countPulses would add a second observer).
+    await page.evaluate(() => ((window as unknown as { __pulses: number }).__pulses = 0));
+    await page.mouse.move(leg.x, leg.y - 25);
+    await page.waitForTimeout(300);
+    await page.mouse.move(leg.x, leg.y - 24); // after the pause: only sets where the sweep starts
+    // Two events, the first exactly on the net: both see the same crossing.
+    await page.mouse.move(leg.x, leg.y + 24, { steps: 2 });
+    await page.waitForTimeout(300);
+    expect(await pulsesSeen(page), 'net').toBe(2);
+  });
+
+  test('a signal glows with layered strokes: two wider, fainter halos under its core', async ({ page }) => {
+    await page.locator('#skills').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 300));
+    await page.waitForTimeout(2500);
+    // A drawn horizontal stretch of at least 300px on screen.
+    const row = await page.evaluate(() => {
+      const line = document.querySelector<SVGPathElement>('[data-thread-path]')!;
+      const drawn = parseFloat((line.getAttribute('stroke-dasharray') ?? '0').split(/[ ,]+/)[0]);
+      const scale = line.getTotalLength() / parseFloat(line.getAttribute('pathLength')!);
+      const m = line.getScreenCTM()!;
+      for (let l = 0; l < drawn - 300; l += 4) {
+        const a = line.getPointAtLength(l * scale), c = line.getPointAtLength((l + 300) * scale);
+        const y = m.d * a.y + m.f;
+        if (Math.abs(a.y - c.y) < 0.01 && Math.abs(a.x - c.x) > 299 && y > 100 && y < window.innerHeight - 100) {
+          return { x: m.a * (a.x + c.x) / 2 + m.e, y };
+        }
+      }
+      return null;
+    });
+    expect(row, 'a horizontal wire on screen').not.toBeNull();
+    // Every stroke added to the signal layer, in order.
+    type Stroke = { cls: string; d: string; off: string; width: number; opacity: number };
+    await page.evaluate(() => {
+      const w = window as unknown as { __strokes: Stroke[] };
+      w.__strokes = [];
+      new MutationObserver((list) => {
+        for (const m of list) {
+          for (const n of m.addedNodes) {
+            if (!(n instanceof SVGPathElement)) continue;
+            w.__strokes.push({ cls: n.getAttribute('class') ?? '', d: n.getAttribute('d') ?? '', off: n.getAttribute('stroke-dashoffset') ?? '', width: parseFloat(n.getAttribute('stroke-width') ?? 'NaN'), opacity: parseFloat(getComputedStyle(n).strokeOpacity) });
+          }
+        }
+      }).observe(document.querySelector('[data-thread-pulses]')!, { childList: true });
+    });
+    await page.mouse.move(row!.x, row!.y - 40);
+    await page.waitForTimeout(300);
+    await page.mouse.move(row!.x, row!.y + 40, { steps: 2 });
+    const strokes = () => page.evaluate(() => (window as unknown as { __strokes: Stroke[] }).__strokes);
+    await expect.poll(async () => (await strokes()).filter((s) => s.cls === 'site-thread__pulse').length, { timeout: 2000 }).toBe(2);
+    const all = await strokes();
+    all.forEach((core, i) => {
+      if (core.cls !== 'site-thread__pulse') return;
+      // Its glow goes in just before it, on the same dash.
+      const halos = all.slice(Math.max(0, i - 2), i).filter((h) => h.cls.includes('site-thread__pulse-halo') && h.d === core.d && h.off === core.off);
+      expect(halos, all.map((s) => s.cls).join()).toHaveLength(2);
+      for (const h of halos) {
+        expect(h.width, 'a halo is wider than the core').toBeGreaterThan(core.width);
+        expect(h.opacity, 'a halo is fainter than the core').toBeLessThan(core.opacity);
+      }
+    });
+  });
+
+  test('a heading LED is dark until the line enters it: no glow, a dim body; lit after', async ({ page }) => {
+    // At the top of the page the line has not reached the last heading (Contact).
+    const bar = page.locator('#contact [data-thread-bar]');
+    await expect(bar).not.toHaveAttribute('data-thread-done', '');
+    const look = () => bar.evaluate((el) => [getComputedStyle(el).boxShadow, getComputedStyle(el).backgroundImage]);
+    const dim = await themeColor(page, 'hsl(var(--muted-foreground) / 0.3)');
+    expect(await look(), 'unlit').toEqual(['none', `linear-gradient(${dim}, ${dim})`]);
+    // Once the line has entered it: the glow and the primary-to-secondary body.
+    await bar.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.3));
+    await expect(bar).toHaveAttribute('data-thread-done', '', { timeout: 6000 });
+    const primary = await themeColor(page, 'hsl(var(--primary))');
+    await expect.poll(look, { timeout: 2000 }).toEqual([expect.not.stringMatching(/^none$/), expect.stringContaining(primary)]);
   });
 });
 
