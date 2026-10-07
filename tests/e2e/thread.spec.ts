@@ -386,6 +386,39 @@ test.describe('scroll thread, reduced motion', () => {
     }
   });
 
+  test('the reset switch hover label below the switch hangs clear of the ground symbol', async ({ page }) => {
+    for (const width of [390, 360, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      await ready(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const reset = page.locator('[data-thread-reset]');
+      await expect(reset).toHaveAttribute('data-side', 'below');
+      await reset.hover();
+      await expect(page.locator('.site-thread-reset__tip')).toHaveCSS('opacity', '1');
+      const { tip, bars } = await page.evaluate(() => {
+        const svg = document.querySelector<SVGSVGElement>('[data-thread-svg]')!;
+        const s = svg.getBoundingClientRect();
+        const b = document.querySelector('[data-thread-reset]')!.getBoundingClientRect();
+        const cy = b.top + b.height / 2;
+        // The ground symbol's bars: the board's level wires (M x,y H x2) under the switch, stroke included.
+        const bars = [...svg.querySelectorAll<SVGPathElement>('[data-thread-board] > path.site-thread__wire')]
+          .filter((p) => /^M[\d.]+,[\d.]+H[\d.]+$/.test(p.getAttribute('d') ?? ''))
+          .map((p) => {
+            const bb = p.getBBox();
+            const sw = parseFloat(getComputedStyle(p).strokeWidth);
+            return { x0: s.left + bb.x - sw / 2, x1: s.left + bb.x + bb.width + sw / 2, y0: s.top + bb.y - sw / 2, y1: s.top + bb.y + bb.height + sw / 2 };
+          })
+          .filter((r) => r.y0 > cy);
+        return { tip: document.querySelector('.site-thread-reset__tip')!.getBoundingClientRect().toJSON(), bars };
+      });
+      expect(bars, `${width}px: the ground symbol's bars`).toHaveLength(3);
+      // All three bars show: none under the tip, none touching its edge.
+      const gaps = bars.map((r) => +Math.max(tip.top - r.y1, r.y0 - tip.bottom, tip.left - r.x1, r.x0 - tip.right).toFixed(2));
+      for (const gap of gaps) expect(gap, `${width}px: tip top ${tip.top}, gaps to the bars ${gaps.join(', ')}`).toBeGreaterThanOrEqual(1.5);
+    }
+  });
+
   test('the reset switch hover label can be hovered, and Escape dismisses it', async ({ page }) => {
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 900 });
@@ -395,7 +428,7 @@ test.describe('scroll thread, reduced motion', () => {
       const reset = page.locator('[data-thread-reset]');
       const tip = page.locator('.site-thread-reset__tip');
       const silk = page.locator('.site-thread__silk');
-      // Beside the switch the tip takes the label's place; below it, it covers the ground symbol.
+      // Beside the switch the tip takes the label's place; below it, it hangs under the ground symbol.
       const beside = (await reset.getAttribute('data-side')) !== 'below';
       const hovered = () => reset.evaluate((el) => el.matches(':hover'));
       // Hoverable: the pointer moves from the switch onto the tip, which stays.
