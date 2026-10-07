@@ -216,8 +216,10 @@ export function initThread(): () => void {
    * The reset in flight: its signal runs back up the trace from `from` over
    * `T` seconds, the line retracting behind it and the page following it.
    * `y` is the scroll position it set last (any other means the reader took over).
+   * `lag` is how far the page sat below the reading line's place for the signal
+   * at the press, which the page eases off as the signal sets out.
    */
-  let rewind: { p: Pulse; from: number; t0: number; T: number; y: number } | null = null;
+  let rewind: { p: Pulse; from: number; t0: number; T: number; y: number; lag: number } | null = null;
   let ptr: { x: number; y: number; t: number } | null = null;
   let hash = new Map<number, number[]>();
   let nodes: Anchor[] = [];
@@ -273,6 +275,17 @@ export function initThread(): () => void {
    * when the lock ends.
    */
   const layoutWidth = () => main!.clientWidth;
+  /** What the ResizeObserver watches. A scrollbar appearing or going resizes only the root (see layoutWidth). */
+  const observed = [main, html, ...main.querySelectorAll('[data-thread-section]')];
+  const observedSizes = () =>
+    observed
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        return `${r.width}x${r.height}`;
+      })
+      .join('|');
+  /** observedSizes() as the last measure() saw them. */
+  let measuredSizes = '';
 
   html.classList.add('thread-on');
 
@@ -286,6 +299,7 @@ export function initThread(): () => void {
   function measure(): { snap: LayoutSnapshot; height: number; gateSpecs: GateSpec[]; cardEls: Element[]; cardRects: Rect[]; barEls: Element[]; tags: { el: Element; r: Rect }[] } | null {
     html.classList.add('thread-measuring');
     try {
+      measuredSizes = observedSizes();
       const m = main!.getBoundingClientRect();
       mainTop = m.top + window.scrollY;
       mainLeft = m.left + window.scrollX;
@@ -596,7 +610,7 @@ export function initThread(): () => void {
       const t = now();
       // The part of its run still to go (the ease in stepRewind).
       const left = Math.max(1e-6, (1 + Math.cos(Math.PI * Math.min(1, (t - rw.t0) / rw.T))) / 2);
-      if (beginRewind((carryOver(prev, next, Math.max(0, rw.p.pos)) + PULSE_LEN) / left - PULSE_LEN, rw.T, rw.t0)) stepRewind(t);
+      if (beginRewind((carryOver(prev, next, Math.max(0, rw.p.pos)) + PULSE_LEN) / left - PULSE_LEN, rw.T, rw.t0, rw.lag)) stepRewind(t);
     }
     render(now());
     schedule();
@@ -737,6 +751,12 @@ export function initThread(): () => void {
         if (e.key === 'Escape' && resetBtn?.matches(':hover, :focus')) resetBtn.setAttribute('data-tip-off', '');
       }, { signal });
       for (const type of ['pointerenter', 'focus'] as const) resetBtn.addEventListener(type, () => resetBtn?.removeAttribute('data-tip-off'), { signal });
+      // Kept while focused with the board gone (render): it goes with that
+      // focus, as the loop may be at rest by then. A blur from leaving the
+      // window keeps the focus on it, and the switch with it.
+      resetBtn.addEventListener('blur', () => {
+        if (document.activeElement !== resetBtn && !boardG!.hasAttribute('data-on')) resetBtn?.setAttribute('hidden', '');
+      }, { signal });
     }
     if (resetBtn.parentElement !== main) main!.append(resetBtn);
     resetBtn.style.left = `${sx}px`;
@@ -898,10 +918,16 @@ export function initThread(): () => void {
     spawnPulse(0, 1, { d: polyline(pts), end: len, life: len / PULSE_SPEED + 0.2, onEnd: () => flash(boardG!.querySelector('.site-thread__pin--in')) });
   }
 
-  function beginRewind(from: number, T: number, t0 = now()): boolean {
+  /** The scroll position that puts length `len` of the route on the reading line, as near as the page allows. */
+  function followAt(r: Route, len: number): number {
+    const vh = window.innerHeight;
+    return Math.max(0, Math.min(html.scrollHeight - vh, mainTop + pointAt(r, Math.max(0, len))[1] - vh * READ_LINE));
+  }
+
+  function beginRewind(from: number, T: number, t0 = now(), lag?: number): boolean {
     const p = from > 0 ? spawnPulse(from, -1, { held: true, life: Infinity }) : null;
     if (!p) return false;
-    rewind = { p, from, t0, T, y: window.scrollY };
+    rewind = { p, from, t0, T, y: window.scrollY, lag: lag ?? window.scrollY - followAt(route!, from) };
     return true;
   }
 
@@ -935,10 +961,12 @@ export function initThread(): () => void {
     const rest = Math.max(r.minLen, lengthAtY(r, vh * READ_LINE - mainTop));
     shown = Math.max(rest, Math.min(rw.from, rw.p.pos + PULSE_LEN / 2 + HEAD_INSET));
     vel = 0;
-    const follow = Math.max(0, Math.min(html.scrollHeight - vh, mainTop + pointAt(r, Math.max(0, rw.p.pos))[1] - vh * READ_LINE));
-    // In the last stretch the page settles on the very top (the start pad can sit below the reading line).
+    const follow = followAt(r, rw.p.pos);
+    // In the first stretch the page eases from where it was onto the reading line (at the bottom of a short window the chip sits above it)...
+    const j = Math.min(1, u / 0.15);
+    // ...and in the last stretch it settles on the very top (the start pad can sit below the reading line).
     const k = Math.min(1, Math.max(0, (u - 0.85) / 0.15));
-    window.scrollTo({ top: follow * (1 - k * k * (3 - 2 * k)), behavior: 'instant' });
+    window.scrollTo({ top: (follow + rw.lag * (1 - j * j * (3 - 2 * j))) * (1 - k * k * (3 - 2 * k)), behavior: 'instant' });
     rw.y = window.scrollY;
     if (u >= 1) rewind = null;
     return true;
@@ -1047,7 +1075,9 @@ export function initThread(): () => void {
     // by then), and powers on when the line arrives.
     const boardOn = !!board && started && !veiled && (arrived || cards.some((c) => c.done));
     boardG!.toggleAttribute('data-on', boardOn);
-    if (resetBtn) resetBtn.toggleAttribute('hidden', !boardOn);
+    // A focused switch stays until focus leaves it (hidden, it would drop
+    // focus to <body> and take the reader's Enter with it).
+    if (resetBtn) resetBtn.toggleAttribute('hidden', !boardOn && document.activeElement !== resetBtn);
     if (arrived && !powered && board && !reduced && !veiled) arrivalPulse(r);
     setPowered(arrived && !veiled && !!board);
   }
@@ -1327,12 +1357,14 @@ export function initThread(): () => void {
   // Layout changes (resize drags, rotation, reflow): the callback runs after
   // layout and before paint, so rebuilding here means no frame ever shows the
   // old geometry over the new layout. Our own writes (the absolutely
-  // positioned, clipped SVG) cannot resize the observed elements.
-  const ro = new ResizeObserver(() => rebuildInFrame());
-  ro.observe(main);
-  // A scrollbar appearing or going resizes only the root (see layoutWidth).
-  ro.observe(html);
-  for (const el of main.querySelectorAll('[data-thread-section]')) ro.observe(el);
+  // positioned, clipped SVG) cannot resize the observed elements. observe()
+  // always reports once at first, right after the boot rebuild has measured
+  // the same sizes: only sizes that differ from the last measure rebuild.
+  const ro = new ResizeObserver(() => {
+    if (route && observedSizes() === measuredSizes) return;
+    rebuildInFrame();
+  });
+  for (const el of observed) ro.observe(el);
 
   return () => {
     ac.abort();
