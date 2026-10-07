@@ -585,6 +585,33 @@ test.describe('scroll thread, reduced motion', () => {
     }
   });
 
+  test('the board text and the hidden hover label stay out of copied text and find in page', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    await ready(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.locator('[data-thread-board][data-powered]').waitFor({ state: 'attached' });
+    await page.mouse.move(5, 5);
+    const tip = page.locator('.site-thread-reset__tip');
+    await expect(tip).toHaveCSS('opacity', '0');
+    // Select all + copy, through the real clipboard.
+    await page.keyboard.press('Control+A');
+    await page.keyboard.press('Control+C');
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied, 'the tip nobody sees').not.toContain('Back to top');
+    expect(copied, 'the decorative silk').not.toMatch(/AK-01|RESET/);
+    const found = await page.evaluate(() => {
+      window.getSelection()!.removeAllRanges();
+      return (window as unknown as { find: (s: string) => boolean }).find('Back to top');
+    });
+    expect(found, 'find in page').toBe(false);
+    // Still there for the reader who hovers the switch.
+    await page.locator('[data-thread-reset]').hover();
+    await expect(tip).toBeVisible();
+    await expect(tip).toHaveCSS('opacity', '1');
+  });
+
   test('the reset switch takes the reader back to the top, also by keyboard', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');

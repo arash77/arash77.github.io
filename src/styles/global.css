@@ -325,6 +325,9 @@ html.thread-on .site-thread {
   z-index: 1;
   overflow: clip;
   pointer-events: none;
+  /* Decorative (aria-hidden) silk: not part of selected or copied text. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .site-thread__svg {
@@ -801,7 +804,10 @@ html.thread-on #main-content:focus {
   box-shadow: 0 6px 16px -10px rgb(0 0 0 / 0.4);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+  /* Hidden, not only transparent: out of copied text and find in page. It
+     turns visible as it starts to fade in and hidden once it has faded out. */
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s;
 }
 .site-thread-reset[data-side='left'] .site-thread-reset__tip {
   left: auto;
@@ -818,6 +824,7 @@ html.thread-on #main-content:focus {
 /* Escape dismisses it (data-tip-off, until the next hover or focus). */
 .site-thread-reset:not([data-tip-off]):is(:hover, :focus-visible) .site-thread-reset__tip {
   opacity: 1;
+  visibility: visible;
 }
 /* The pointer can move onto the shown tip: it keeps the switch hovered, and
    its edge bridges the gap to it. */
