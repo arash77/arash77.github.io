@@ -1019,6 +1019,48 @@ test.describe('scroll thread, normal motion', () => {
     }
   });
 
+  for (const [w, h] of [[900, 420], [844, 390]] as const) {
+    test(`in a short window the page sets off with the reset signal, never ahead of it (${w}x${h})`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
+      // At the bottom of a short window the chip sits well above the reading line.
+      const above = await page.evaluate(() => {
+        const svg = document.querySelector('[data-thread-svg]')!.getBoundingClientRect();
+        return window.innerHeight * 0.62 - (svg.top + parseFloat(document.querySelector('[data-thread-end]')!.getAttribute('cy')!));
+      });
+      expect(above, 'px from the chip down to the reading line').toBeGreaterThan(40);
+      // Each painted frame: the page's scroll position and how far along the
+      // trace the reset signal is (where it sets off, the line's end, until it
+      // shows), up to halfway back. Pressed by script, so the click never
+      // scrolls the switch into view first.
+      const { log, end } = await page.evaluate(
+        () =>
+          new Promise<{ log: { y: number; pos: number }[]; end: number }>((resolve) => {
+            const line = document.querySelector('[data-thread-path]')!;
+            const end = parseFloat(line.getAttribute('pathLength')!);
+            const log: { y: number; pos: number }[] = [];
+            const f = () => {
+              const el = [...document.querySelectorAll('.site-thread__pulse')].find((p) => p.getAttribute('d') === line.getAttribute('d'));
+              log.push({ y: window.scrollY, pos: el ? 13 - parseFloat(el.getAttribute('stroke-dashoffset') ?? '0') : end });
+              if (log.length === 2) document.querySelector<HTMLButtonElement>('[data-thread-reset]')!.click();
+              if (log.length < 300 && log[log.length - 1].pos > end / 2) requestAnimationFrame(f);
+              else resolve({ log, end });
+            };
+            requestAnimationFrame(f);
+          }),
+      );
+      expect(log[log.length - 1].pos, 'the signal halfway back').toBeLessThan(end / 2);
+      // The page follows the signal: in no frame does it move farther than the
+      // signal does along the trace (snapped to the reading line at once, it
+      // would jump in the frame of the press, before the signal has moved).
+      for (let i = 1; i < log.length; i++) {
+        const moved = log[i - 1].y - log[i].y, ran = log[i - 1].pos - log[i].pos;
+        expect(moved - ran, `frame ${i}: page moved ${moved}px, the signal ${ran.toFixed(1)}px`).toBeLessThan(4);
+      }
+    });
+  }
+
   test('scrolling during a reset hands the page back to the reader', async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect(page.locator('[data-thread-board]')).toHaveAttribute('data-powered', '', { timeout: 8000 });
