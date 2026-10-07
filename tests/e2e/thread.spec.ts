@@ -724,7 +724,7 @@ test.describe('scroll thread, reduced motion', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
     await ready(page);
-    for (const sel of ['main a[href="/projects"]', '[data-thread-card]', '[data-thread-node]', '[data-thread-reset]']) {
+    for (const sel of ['main a[href="/projects/"]', '[data-thread-card]', '[data-thread-node]', '[data-thread-reset]']) {
       const el = page.locator(sel).first();
       await el.scrollIntoViewIfNeeded();
       const hit = await el.evaluate((target) => {
@@ -841,7 +841,7 @@ test.describe('scroll thread, reduced motion', () => {
       probe.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:200%;pointer-events:none';
       hero.append(probe);
       hero.scrollTop = 80;
-      document.querySelector<HTMLElement>('main a[href="/projects"]')!.scrollIntoView({ block: 'center' });
+      document.querySelector<HTMLElement>('main a[href="/projects/"]')!.scrollIntoView({ block: 'center' });
       const top = hero.scrollTop;
       probe.remove();
       return top;

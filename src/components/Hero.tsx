@@ -122,7 +122,7 @@ export default function Hero() {
               className="gsap-reveal flex flex-col sm:flex-row flex-wrap items-center gap-4 justify-center lg:justify-start"
             >
               <Button asChild size="lg" className="gap-2 w-full sm:w-auto">
-                <a href="/projects">
+                <a href="/projects/">
                   View Projects <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>
