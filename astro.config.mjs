@@ -28,7 +28,7 @@ export default defineConfig({
     react(),
     sitemap({
       // Legal pages carry noindex; listing them in the sitemap would contradict it.
-      filter: (page) => !/\/(impressum|datenschutz)\/?$/.test(new URL(page).pathname),
+      filter: (page) => !/\/(impressum|datenschutz|lpg-trip\/privacy)\/?$/.test(new URL(page).pathname),
     }),
   ],
   vite: {

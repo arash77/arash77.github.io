@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-const PAGES = ['/', '/projects', '/resume', '/impressum', '/datenschutz'] as const;
-const NOINDEX_PAGES = new Set<string>(['/impressum', '/datenschutz']);
+const PAGES = ['/', '/projects', '/resume', '/impressum', '/datenschutz', '/lpg-trip', '/lpg-trip/privacy'] as const;
+const NOINDEX_PAGES = new Set<string>(['/impressum', '/datenschutz', '/lpg-trip/privacy']);
 
 for (const path of PAGES) {
   test(`${path} has <title> and meta[name="description"]`, async ({ page }) => {

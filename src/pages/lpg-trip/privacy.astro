@@ -1,0 +1,248 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const link = 'text-primary underline';
+const strong = 'font-medium text-foreground';
+
+/** Each online service the app contacts: what it is for, what it receives, and its own privacy policy. */
+const services = [
+  {
+    name: 'Place search: Photon (komoot) and, as a fallback, Nominatim (OpenStreetMap Foundation)',
+    sends:
+      'The text you search for (or a calendar event’s place, see below), your approximate position so that nearby results come first, and the coordinates of a point you pick on the map, to find its name.',
+    policies: [
+      { label: 'komoot', href: 'https://www.komoot.com/privacy' },
+      { label: 'OpenStreetMap Foundation', href: 'https://osmfoundation.org/wiki/Privacy_Policy' },
+    ],
+  },
+  {
+    name: 'Routing: Valhalla and OSRM on the servers of FOSSGIS e.V.; TomTom only if you enter your own TomTom key',
+    sends: 'The coordinates of the trip’s start, stops and destination. TomTom also receives your key and the departure time.',
+    policies: [
+      { label: 'FOSSGIS e.V.', href: 'https://www.fossgis.de/datenschutzerkl%C3%A4rung/' },
+      { label: 'TomTom', href: 'https://www.tomtom.com/privacy/' },
+    ],
+  },
+  {
+    name: 'Weather and elevation: Open-Meteo',
+    sends: 'Points along the route and the travel dates.',
+    policies: [{ label: 'Open-Meteo', href: 'https://open-meteo.com/en/terms#privacy' }],
+  },
+  {
+    name: 'Roadworks: the Autobahn API of Die Autobahn GmbH des Bundes',
+    sends: 'Only the numbers of the motorways on your route (for example “A5”).',
+    policies: [{ label: 'Die Autobahn GmbH', href: 'https://www.autobahn.de/datenschutz' }],
+  },
+  {
+    name: 'Map: OpenFreeMap',
+    sends: 'Requests for the map tiles of the area shown on the screen.',
+    policies: [{ label: 'OpenFreeMap', href: 'https://openfreemap.org/privacy/' }],
+  },
+  {
+    name: 'LPG prices: mylpg.eu, clever-tanken.de and gas-tankstellen.de',
+    sends:
+      'mylpg.eu: the app downloads its list of German LPG stations and the pages of stations you link; nothing about your position. clever-tanken.de: the positions of LPG stations near your route or near you, each as a price list within 2 km, and station pages. gas-tankstellen.de: the positions of LPG stations near your route or near you, each as a search within 25 km. Each site can be switched off in the app’s settings.',
+    policies: [
+      { label: 'mylpg.eu', href: 'https://www.mylpg.eu/legal/' },
+      { label: 'clever-tanken.de', href: 'https://www.clever-tanken.de/datenschutz' },
+      { label: 'gas-tankstellen.de', href: 'https://www.gas-tankstellen.de/datenschutzerklaerung.php' },
+    ],
+  },
+  {
+    name: 'Petrol price: Tankerkönig, only when the app has a Tankerkönig key (yours, or one built into the app)',
+    sends: 'The position of the trip’s start, to find petrol stations near it, and the key.',
+    policies: [{ label: 'Tankerkönig', href: 'https://www.tankerkoenig.de/datenschutz' }],
+  },
+  {
+    name: 'Car parks and the station list: the Overpass API (overpass-api.de of FOSSGIS e.V.; if it does not answer, the mirrors overpass.kumi.systems, overpass.private.coffee and maps.mail.ru, in that order)',
+    sends:
+      'The destination’s position, to find up to three car parks near it. Updating the station list (in the settings) downloads all LPG stations in Germany and sends no position.',
+    policies: [{ label: 'FOSSGIS e.V.', href: 'https://www.fossgis.de/datenschutzerkl%C3%A4rung/' }],
+  },
+  {
+    name: 'Google Maps',
+    sends:
+      'When you tap Navigate, the app hands the coordinates and name of the stop or destination (for the whole trip: the start, stops and destination) to Google Maps, or to another map app when Google Maps is not installed; with no map app at all, it opens the place on openstreetmap.org in your browser. When you share a place from Google Maps to the app as a short link (maps.app.goo.gl), the app opens that link once, following only its redirects, to read the coordinates.',
+    policies: [{ label: 'Google', href: 'https://policies.google.com/privacy' }],
+  },
+];
+---
+
+<Layout
+  title="LPG Trip Planner Privacy Policy · Arash Kadkhodaei"
+  description="Privacy policy of the LPG Trip Planner Android app: what stays on your phone, which online services the app contacts and what they receive, and the optional Google Drive backup."
+  noindex
+>
+  <section class="py-24">
+    <div class="container mx-auto px-4 max-w-3xl">
+      <div class="text-center mb-12 animate-fade-up animate-delay-1">
+        <p class="text-sm font-mono text-secondary tracking-widest uppercase mb-2">LPG Trip Planner</p>
+        <h1 class="text-4xl font-bold mb-4">Privacy Policy</h1>
+        <div class="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
+        <p class="text-sm text-muted-foreground">Effective date: <time datetime="2026-10-10">10 October 2026</time></p>
+      </div>
+
+      <div class="space-y-10 text-sm leading-relaxed text-foreground animate-fade-up animate-delay-2">
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">1. In short</h2>
+          <p class="text-muted-foreground">
+            <a href="/lpg-trip/" class={link}>LPG Trip Planner</a> keeps your data on your phone. It needs no account and
+            has no ads, no analytics and no telemetry. I, the developer, run no server for it and receive nothing from it.
+            To plan trips, the app asks public online services for routes, places, weather and fuel prices; section 4
+            lists each of them and what it receives.
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">2. Who is responsible</h2>
+          <p class="text-muted-foreground">
+            LPG Trip Planner is a personal app by Arash Kadkhodaei, Freiburg, Germany (postal address in the <a href="/impressum/" class={link}>Impressum</a>).
+            Email: <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a>
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">3. What stays on your phone</h2>
+          <p class="text-muted-foreground">
+            Everything the app records or you enter is stored in the app’s private storage on your phone: drives (with
+            their start and end points), fill-ups, tank levels, saved trips, your places (Home, favourites, recent
+            places), prices, links to station price pages, recent place-search results, settings and any API keys you
+            enter. GPS tracks are recorded only if you turn on “Record GPS tracks” in the developer options; those files
+            stay on the phone and are never uploaded or backed up.
+          </p>
+          <ul class="list-disc list-inside text-muted-foreground mt-3 space-y-1">
+            <li>
+              <strong class={strong}>Location</strong> is used to plan from where you are and to record drives. In the
+              background it is used only while Android Auto is connected, and for at most two minutes after your car’s
+              Bluetooth device connects while the app waits for Android Auto.
+            </li>
+            <li>
+              <strong class={strong}>Bluetooth (nearby devices)</strong> is used only to recognise the one car device you
+              pair. The app keeps that device’s name and address on the phone, reads nothing else over Bluetooth and sends
+              nothing.
+            </li>
+            <li>
+              <strong class={strong}>Notifications</strong> show a running drive and questions such as whether you filled
+              up.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">4. Online services the app contacts</h2>
+          <p class="text-muted-foreground">
+            The app talks to these services directly from your phone. Like any internet connection, each request shows
+            the service your phone’s IP address. Apart from the Google Drive backup (section 7), no request carries an
+            account, your name or a device identifier. What each service does with a request is governed by its own
+            privacy policy.
+          </p>
+          <ul class="text-muted-foreground mt-4 space-y-4">
+            {services.map(({ name, sends, policies }) => (
+              <li>
+                <strong class={strong}>{name}</strong>
+                <br />
+                {sends}
+                <br />
+                Privacy policy:{' '}
+                {policies.map(({ label, href }, i) => (
+                  <>
+                    {i > 0 && ', '}
+                    <a href={href} target="_blank" rel="noopener noreferrer" class={link}>{label}</a>
+                  </>
+                ))}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">5. Calendar</h2>
+          <p class="text-muted-foreground">
+            Only if you allow it, the app reads the events of the next 14 days that have a place, to suggest trips to
+            them. Only an event’s place is sent to the map search (Photon, then Nominatim), never its title or guests.
+            Titles, times, notes and guests stay on the phone, and search results are kept on the phone for 30 days. You
+            can turn this off, or leave out single calendars, in the app’s settings.
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">6. Receipt scanning</h2>
+          <p class="text-muted-foreground">
+            A photo of a pump receipt is read on the phone by Google’s ML Kit text recognition, using the model built into
+            the app, offline. The photo is deleted right after it is read. The app has no camera permission (your
+            camera app takes the photo), and ML Kit’s component for sending usage logs is removed from the app, so
+            nothing about your receipts is sent to Google or anyone else.
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">7. Backups</h2>
+          <p class="text-muted-foreground">
+            <strong class={strong}>Google Drive (optional, from version 1.3.0).</strong> Only if you turn it on, Google
+            asks you to choose an account and to allow the app access. The app asks only for
+            the <code class="font-mono text-xs bg-muted px-1 rounded">drive.appdata</code> permission: it stores a backup file
+            of the app’s data (drives, fill-ups, tank levels, saved trips, prices and settings, without your API keys),
+            plus the backup before it, in the hidden app-data folder of your own Google Drive. That folder is hidden from
+            you and other apps, only this app can read it, and the app cannot see any of your other Drive files. The
+            backup goes directly from your phone to Google; it never passes through me.
+          </p>
+          <p class="text-muted-foreground mt-3">
+            Data obtained from Google APIs is used only to back up your app data and restore it to your phone. It is never
+            shared with anyone, sold, or used for advertising or any other purpose. LPG Trip Planner’s use and transfer to
+            any other app of information received from Google APIs will adhere to <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" class={link}>Google API Services User Data Policy</a>,
+            including the Limited Use requirements.
+          </p>
+          <p class="text-muted-foreground mt-3">
+            To delete the Drive backup, turn the Drive backup off in the app and choose to delete it there. You can also
+            delete it in Google Drive on a computer, under Settings › Manage apps › LPG Trip Planner › Options, where
+            Google offers to delete the app’s hidden data. You can remove the app’s access at any time in your <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer" class={link}>Google Account</a>;
+            after that, the app can no longer read or write the backup.
+          </p>
+          <p class="text-muted-foreground mt-3">
+            <strong class={strong}>Backup file (optional, from version 1.3.0).</strong> If you choose a folder, the app
+            writes the same backup file there. The file is then yours: whoever provides that storage keeps it, and you
+            can delete it like any other file.
+          </p>
+          <p class="text-muted-foreground mt-3">
+            <strong class={strong}>Android backup.</strong> If backup is turned on for your phone, Android may store the
+            app’s data in your Google account, as Android allows for every app. The settings file (with your API keys),
+            the current plan and GPS track files are left out. A direct transfer to a new phone copies everything except
+            the GPS track files.
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">8. Deleting your data</h2>
+          <p class="text-muted-foreground">
+            Uninstalling the app deletes its data on your phone. From version 1.3.0, Android 10 and later ask whether to
+            keep the app’s data when you uninstall; if you keep it, it stays on the phone for a later reinstall. Within the
+            app you can delete single fill-ups and clear downloaded prices at any time. Delete backup files yourself, and the Drive backup as described in section 7. Because I receive no data from the
+            app, I hold nothing about you that I could show, correct or delete.
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">9. Children</h2>
+          <p class="text-muted-foreground">The app is meant for drivers and is not directed at children.</p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">10. Changes to this policy</h2>
+          <p class="text-muted-foreground">
+            If the app starts using another service or handles your data differently, I update this page and its date
+            first.
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">11. Contact</h2>
+          <p class="text-muted-foreground">
+            Questions about this policy or the app: <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a>
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+</Layout>

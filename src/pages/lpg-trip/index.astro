@@ -1,0 +1,85 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { buttonVariants } from '../../components/ui/button';
+import { cn } from '@/lib/utils';
+
+const link = 'text-primary underline';
+const privacyLink = cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'active:scale-[0.98]');
+---
+
+<Layout
+  title="LPG Trip Planner – Arash Kadkhodaei"
+  description="LPG Trip Planner is a free personal Android app for a bi-fuel LPG car: it plans trips around cheap LPG stations, records drives by itself and estimates the tank. No account, no ads, no tracking."
+>
+  <section class="py-24">
+    <div class="container mx-auto px-4 max-w-3xl">
+      <div class="text-center mb-12 animate-fade-up animate-delay-1">
+        <p class="text-sm font-mono text-secondary tracking-widest uppercase mb-2">Android app</p>
+        <h1 class="text-4xl font-bold mb-4">LPG Trip Planner</h1>
+        <div class="w-16 h-1 bg-linear-to-r from-primary to-secondary mx-auto rounded-full mb-6" />
+        <p class="text-muted-foreground text-lg">
+          A free, personal Android app for driving a bi-fuel car (LPG and petrol) in Germany. It plans trips around
+          cheap LPG stations and keeps track of the tank for you.
+        </p>
+      </div>
+
+      <div class="space-y-10 text-sm leading-relaxed text-foreground animate-fade-up animate-delay-2">
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">What it does</h2>
+          <ul class="list-disc list-inside text-muted-foreground space-y-1">
+            <li>
+              Plans a trip the way an electric-car route planner does: from the route, speed limits, weather and
+              roadworks it predicts the LPG you will use, picks the cheapest LPG stations along the way and shows the
+              total cost and each person's share.
+            </li>
+            <li>Records your drives by itself when Android Auto or your car's Bluetooth connects.</li>
+            <li>
+              Estimates how much LPG is left in the tank from your fill-ups and drives; a photo of the pump receipt fills
+              in a fill-up.
+            </li>
+            <li>
+              Works in the car with Android Auto: the next stop, LPG stations nearby, and messages that Android Auto can
+              read aloud. Google Maps does the navigating.
+            </li>
+            <li>Speaks Persian and English, following your phone's language.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">Your data stays yours</h2>
+          <p class="text-muted-foreground">
+            No account is needed, and the app has no ads, no tracking and no analytics. Your drives, fill-ups and trips
+            are stored on your phone. To plan a trip, the app asks public online services for routes, places, weather
+            and fuel prices. If you want, it can also keep a backup in your own Google Drive, in a hidden folder that only
+            this app can read.
+          </p>
+          <p class="text-muted-foreground mt-3">
+            The <a href="/lpg-trip/privacy/" class={link}>privacy policy</a> lists every service the app contacts and
+            what it sends.
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">Availability</h2>
+          <p class="text-muted-foreground">
+            LPG Trip Planner is a personal project of mine. It is free and not on Google Play: it is installed from an
+            APK file.
+          </p>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold mb-3 text-foreground">Contact</h2>
+          <p class="text-muted-foreground">
+            Questions or problems: <a href="mailto:arash@kadkhodaei.de" class={link}>arash@kadkhodaei.de</a>
+          </p>
+        </div>
+
+        <div class="text-center pt-2">
+          <a href="/lpg-trip/privacy/" class={privacyLink}>Privacy policy</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+</Layout>

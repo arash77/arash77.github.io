@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const PAGES = ['/', '/projects', '/resume', '/impressum', '/datenschutz'] as const;
+const PAGES = ['/', '/projects', '/resume', '/impressum', '/datenschutz', '/lpg-trip', '/lpg-trip/privacy'] as const;
 
 for (const path of PAGES) {
   test(`${path} loads with status 200`, async ({ page }) => {

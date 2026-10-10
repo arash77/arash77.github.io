@@ -25,6 +25,8 @@ const PAGES = [
   { path: '/resume', name: 'resume' },
   { path: '/impressum', name: 'impressum' },
   { path: '/datenschutz', name: 'datenschutz' },
+  { path: '/lpg-trip', name: 'lpg-trip' },
+  { path: '/lpg-trip/privacy', name: 'lpg-trip-privacy' },
 ] as const;
 
 const THEMES = ['light', 'dark'] as const;
