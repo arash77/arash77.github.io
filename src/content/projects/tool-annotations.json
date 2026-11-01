@@ -1,0 +1,12 @@
+{
+  "title": "Galaxy Tool Annotations",
+  "description": "Built a weekly GitHub Action that collects the installed tools of usegalaxy.eu, usegalaxy.org and usegalaxy.org.au into the shared tool annotations file, tagging each tool with its tool panel section and opening a pull request with the additions. It only adds tags, reuses the existing spelling for section names that differ only slightly, and supports aliases for renamed sections, so the catalog stays current without manual curation.",
+  "category": "UseGalaxy.eu",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/usegalaxy-eu/tool-annotations" },
+    { "label": "PRs (1)", "url": "https://github.com/usegalaxy-eu/tool-annotations/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["GitHub Actions", "CI/CD", "Automation", "Galaxy", "Bioinformatics"],
+  "featured": false,
+  "order": 99
+}
