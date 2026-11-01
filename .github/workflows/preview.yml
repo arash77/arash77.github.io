@@ -31,7 +31,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: '24'
+          node-version: '26'
           # A pull_request run can read main's cache but only write its own PR
           # scope, so a PR cannot poison what later runs restore; and this job
           # only publishes pr-N preview branches, never production.
