@@ -1,0 +1,12 @@
+{
+  "title": "Galaxy Tool Annotations",
+  "description": "Implemented an automated synchronization workflow to update tool annotations across major global Galaxy instances including usegalaxy.eu, usegalaxy.org, and usegalaxy.org.au. Created a scheduled GitHub Action that discovers newly installed tools, associates them with corresponding tool panel section tags, and opens automated pull requests. This automation streamlines catalog maintenance and ensures consistent metadata tagging across the Galaxy ecosystem.",
+  "category": "UseGalaxy.eu",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/usegalaxy-eu/tool-annotations" },
+    { "label": "PRs (1)", "url": "https://github.com/usegalaxy-eu/tool-annotations/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["GitHub Actions", "CI/CD", "Automation", "Galaxy", "Bioinformatics"],
+  "featured": false,
+  "order": 99
+}

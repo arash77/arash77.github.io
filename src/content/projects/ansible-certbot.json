@@ -1,0 +1,12 @@
+{
+  "title": "Ansible Certbot Role",
+  "description": "Updated CI/CD workflows for the Ansible Certbot automation role to align with platform security policies. Migrated the automated ansible-lint pipeline from pull_request_target to pull_request triggers, removing unnecessary security exposure. This adjustment ensures that incoming pull request changes are directly linted while adhering to modern repository workflow standards.",
+  "category": "UseGalaxy.eu",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/usegalaxy-eu/ansible-certbot" },
+    { "label": "PRs (1)", "url": "https://github.com/usegalaxy-eu/ansible-certbot/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Ansible", "CI/CD", "GitHub Actions", "DevOps"],
+  "featured": false,
+  "order": 99
+}

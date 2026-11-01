@@ -1,0 +1,12 @@
+{
+  "title": "Ansible Galaxy Subdomains",
+  "description": "Updated the continuous integration workflows by transitioning linting execution from pull_request_target to standard pull_request events to adhere to updated GitHub Actions security policies. This adjustment removed the need for elevated access permissions while ensuring workflows remain functional. Consequently, ansible-lint now accurately evaluates changes introduced directly within incoming pull requests.",
+  "category": "UseGalaxy.eu",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/usegalaxy-eu/ansible-galaxy-subdomains" },
+    { "label": "PRs (1)", "url": "https://github.com/usegalaxy-eu/ansible-galaxy-subdomains/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Ansible", "CI/CD", "GitHub Actions", "Galaxy"],
+  "featured": false,
+  "order": 99
+}

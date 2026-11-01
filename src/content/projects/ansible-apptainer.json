@@ -1,0 +1,12 @@
+{
+  "title": "Ansible Apptainer Role",
+  "description": "Maintained and secured continuous integration workflows for the Apptainer Ansible automation role. Migrated linting workflows from pull_request_target to standard pull_request triggers to comply with updated GitHub Actions security policies. This enhanced workflow safety while ensuring ansible-lint directly and accurately evaluates incoming pull request changes.",
+  "category": "UseGalaxy.eu",
+  "links": [
+    { "label": "Repository", "url": "https://github.com/usegalaxy-eu/ansible-apptainer" },
+    { "label": "PRs (1)", "url": "https://github.com/usegalaxy-eu/ansible-apptainer/pulls?q=is%3Apr+author%3Aarash77+is%3Amerged" }
+  ],
+  "tags": ["Ansible", "CI/CD", "GitHub Actions", "DevOps"],
+  "featured": false,
+  "order": 99
+}
