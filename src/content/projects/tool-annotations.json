@@ -1,6 +1,6 @@
 {
   "title": "Galaxy Tool Annotations",
-  "description": "Implemented an automated synchronization workflow to update tool annotations across major global Galaxy instances including usegalaxy.eu, usegalaxy.org, and usegalaxy.org.au. Created a scheduled GitHub Action that discovers newly installed tools, associates them with corresponding tool panel section tags, and opens automated pull requests. This automation streamlines catalog maintenance and ensures consistent metadata tagging across the Galaxy ecosystem.",
+  "description": "Built a weekly GitHub Action that collects the installed tools of usegalaxy.eu, usegalaxy.org and usegalaxy.org.au into the shared tool annotations file, tagging each tool with its tool panel section and opening a pull request with the additions. It only adds tags, reuses the existing spelling for section names that differ only slightly, and supports aliases for renamed sections, so the catalog stays current without manual curation.",
   "category": "UseGalaxy.eu",
   "links": [
     { "label": "Repository", "url": "https://github.com/usegalaxy-eu/tool-annotations" },
