@@ -2,5 +2,5 @@
 # it -- unpinned entries give Renovate no version to compute an update from and
 # are silently never updated.
 -r requirements.txt
-pytest==9.1.1
-ruff==0.16.9
+pytest==9.2.0
+ruff==0.17.3
