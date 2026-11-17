@@ -11,8 +11,10 @@
   "automergeStrategy": "squash",
   "postUpdateOptions": ["pnpmDedupe"],
   "osvVulnerabilityAlerts": true,
-  "dependencyDashboard": true,
-  "dependencyDashboardOSVVulnerabilitySummary": "unresolved",
+  "dependencyDashboard": {
+    "enabled": true,
+    "osvVulnerabilitySummary": "unresolved"
+  },
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true,
